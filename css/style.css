@@ -1,0 +1,402 @@
+/* ══════════════════════════════════════════════
+   LUXURY HOUSE — Survey Sheet Styles
+   Dark theme for app / Clean white for A4 print
+══════════════════════════════════════════════ */
+
+:root {
+  --red:        #c0392b;
+  --red-dark:   #922b21;
+  --red-light:  #e74c3c;
+  --bg:         #181818;
+  --black2:     #1e1e1e;
+  --black3:     #262626;
+  --black4:     #303030;
+  --border:     #3a3a3a;
+  --text:       #f0f0f0;
+  --muted:      #999;
+  --radius:     12px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* ── Header ─────────────────────────────────── */
+header {
+  background: linear-gradient(135deg, #0d0d0d 0%, #1a0404 100%);
+  border-bottom: 2px solid var(--red-dark);
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 62px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.logo          { display: flex; align-items: center; gap: 10px; }
+.logo-icon     { width: 36px; height: 36px; background: var(--red); border-radius: 8px;
+                 display: flex; align-items: center; justify-content: center;
+                 font-size: 18px; flex-shrink: 0; }
+.logo-text     { font-size: 15px; color: #fff; letter-spacing: 2px; text-transform: uppercase; font-weight: bold; }
+.logo-sub      { font-size: 9px; color: var(--muted); letter-spacing: 1px; }
+.header-right  { display: flex; align-items: center; gap: 12px; }
+.header-date   { font-size: 12px; color: var(--muted); }
+
+/* ── Layout ─────────────────────────────────── */
+main { max-width: 860px; margin: 0 auto; padding: 20px 14px 50px; }
+
+/* ── Cards ──────────────────────────────────── */
+.card {
+  background: var(--black2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+.card-title {
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--red-light);
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+  font-weight: bold;
+}
+
+.sub-heading {
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--red-light);
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(192,57,43,0.25);
+}
+.sub-heading.muted {
+  color: var(--muted);
+  border-bottom-color: var(--border);
+}
+
+/* ── Forms ───────────────────────────────────── */
+.form-grid  { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-group.full { grid-column: 1 / -1; }
+
+label {
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.req { color: var(--red-light); }
+
+input, select, textarea {
+  background: var(--black4);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 11px 13px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-family: inherit;
+  width: 100%;
+  transition: border-color 0.2s;
+  -webkit-appearance: none;
+  appearance: none;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--red);
+}
+select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7'%3E%3Cpath fill='%23999' d='M5 7L0 0h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 13px center;
+  padding-right: 32px;
+}
+textarea { resize: vertical; min-height: 62px; }
+
+/* ── Buttons ─────────────────────────────────── */
+.btn {
+  padding: 12px 20px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  font-family: inherit;
+  font-weight: bold;
+  transition: opacity 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  touch-action: manipulation;
+  white-space: nowrap;
+}
+.btn:active { opacity: 0.8; }
+.btn-red     { background: linear-gradient(135deg, var(--red-light), var(--red-dark)); color: #fff; }
+.btn-outline { background: none; border: 1px solid var(--red); color: var(--red-light); }
+.btn-dark    { background: var(--black4); border: 1px solid var(--border); color: var(--text); }
+.btn-danger  { background: var(--red-dark); color: #fff; }
+.btn-sm      { padding: 8px 14px; font-size: 11px; min-height: 36px; }
+
+.btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 24px; align-items: center; }
+
+/* ── Room Card ───────────────────────────────── */
+.room-card {
+  background: var(--black2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+.room-card-header {
+  background: linear-gradient(135deg, #1a0606 0%, var(--black2) 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.room-header-left   { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+.room-number        { font-size: 10px; color: var(--red-light); letter-spacing: 2px; text-transform: uppercase; }
+.room-name-input    {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  color: var(--text);
+  font-size: 16px;
+  font-weight: bold;
+  padding: 3px 0;
+  width: 100%;
+}
+.room-name-input:focus       { outline: none; border-bottom-color: var(--red); }
+.room-name-input::placeholder { color: var(--muted); font-weight: normal; }
+
+.room-card-body { padding: 18px; }
+
+/* ── Dimensions ──────────────────────────────── */
+.dims-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.dim-group           { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 68px; }
+.dim-group label     { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+.dim-input {
+  background: var(--black4);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 10px 6px;
+  border-radius: 8px;
+  font-size: 22px;
+  font-weight: bold;
+  width: 100%;
+  text-align: center;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.dim-input:focus { outline: none; border-color: var(--red); }
+.dim-unit  { font-size: 10px; color: var(--muted); text-align: center; letter-spacing: 1px; margin-top: 3px; }
+
+/* ── Sketch ──────────────────────────────────── */
+.sketch-section { margin-bottom: 18px; }
+.sketch-label {
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--red-light);
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(192,57,43,0.25);
+}
+
+.sketch-toolbar {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.sk-btn {
+  padding: 7px 12px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--black3);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+  font-family: inherit;
+  transition: all 0.15s;
+  white-space: nowrap;
+  min-height: 36px;
+  touch-action: manipulation;
+}
+.sk-btn.active { border-color: var(--red); color: var(--red-light); background: rgba(192,57,43,0.12); }
+.sk-btn:active { opacity: 0.7; }
+
+.sk-sep { width: 1px; height: 28px; background: var(--border); margin: 0 2px; flex-shrink: 0; }
+
+.colour-dots { display: flex; gap: 7px; align-items: center; }
+.colour-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+.colour-dot.active { border-color: #fff; transform: scale(1.2); }
+
+.canvas-wrap {
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid var(--border);
+  position: relative;
+  touch-action: none;
+}
+.room-canvas {
+  display: block;
+  touch-action: none;
+  cursor: crosshair;
+  width: 100%;
+}
+
+/* ── Notes ───────────────────────────────────── */
+.notes-group         { display: flex; flex-direction: column; gap: 5px; }
+.notes-group label   { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+.notes-group textarea { font-size: 14px; }
+
+/* ── Toast ───────────────────────────────────── */
+#toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: var(--black2);
+  border: 1px solid var(--red);
+  border-radius: 10px;
+  padding: 12px 18px;
+  font-size: 13px;
+  z-index: 999;
+  display: none;
+  max-width: 280px;
+  color: var(--text);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+
+/* ── Mobile ──────────────────────────────────── */
+@media (max-width: 600px) {
+  .form-grid    { grid-template-columns: 1fr; }
+  header        { padding: 0 12px; }
+  .header-date  { display: none; }
+  .sketch-toolbar { gap: 5px; }
+  .sk-btn       { padding: 6px 10px; font-size: 11px; }
+  .dim-input    { font-size: 18px; }
+}
+
+/* ══════════════════════════════════════════════
+   PRINT — Clean A4 white sheet
+══════════════════════════════════════════════ */
+@media print {
+  @page { size: A4 portrait; margin: 10mm 12mm; }
+
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  .no-print { display: none !important; }
+
+  body {
+    background: #fff !important;
+    color: #111 !important;
+    font-size: 11px;
+    font-family: Arial, sans-serif;
+  }
+
+  header {
+    background: #fff !important;
+    border-bottom: 2px solid #c0392b !important;
+    position: relative !important;
+    height: auto;
+    padding: 8px 0 6px;
+  }
+  .logo-icon  { background: #c0392b !important; }
+  .logo-text  { color: #c0392b !important; font-size: 14px; }
+  .logo-sub   { color: #777 !important; }
+  .header-date { display: block !important; color: #555 !important; font-size: 11px; }
+
+  main { padding: 6px 0 0; max-width: 100%; }
+
+  .card, .room-card {
+    background: #fff !important;
+    border: 1px solid #ddd !important;
+    border-radius: 3px;
+    margin-bottom: 8px;
+    page-break-inside: avoid;
+  }
+  .card-title   { color: #c0392b !important; border-color: #f5b7b1 !important; font-size: 9px; margin-bottom: 10px; padding-bottom: 7px; }
+  .sub-heading  { color: #c0392b !important; border-color: #fadddd !important; font-size: 8px; }
+  .sub-heading.muted { color: #777 !important; border-color: #ddd !important; }
+
+  .form-grid  { gap: 8px; }
+  label       { color: #555 !important; font-size: 8px; }
+  .req        { color: #c0392b !important; }
+  input, select, textarea {
+    background: #f8f8f8 !important;
+    border: 1px solid #ccc !important;
+    color: #111 !important;
+    font-size: 10px;
+    padding: 5px 7px;
+    border-radius: 2px;
+  }
+
+  .room-card-header {
+    background: #fff5f5 !important;
+    border-bottom: 1px solid #eee !important;
+    padding: 7px 12px;
+  }
+  .room-number     { color: #c0392b !important; font-size: 8px; }
+  .room-name-input {
+    color: #111 !important;
+    border-bottom-color: #ccc !important;
+    font-size: 13px;
+    padding: 2px 0;
+    background: transparent !important;
+    border: none !important;
+    border-bottom: 1px solid #ccc !important;
+  }
+  .room-card-body { padding: 8px 12px; }
+
+  .dims-row   { gap: 6px; margin-bottom: 10px; }
+  .dim-input  {
+    font-size: 14px;
+    padding: 4px 4px;
+    background: #f8f8f8 !important;
+    border: 1px solid #ccc !important;
+    color: #111 !important;
+    border-radius: 2px;
+    font-weight: bold;
+  }
+  .dim-unit { color: #555 !important; font-size: 8px; }
+
+  .sketch-label   { color: #c0392b !important; border-color: #fadddd !important; font-size: 8px; }
+  .sketch-toolbar { display: none !important; }
+  .canvas-wrap    { border: 1px solid #bbb !important; border-radius: 2px; }
+
+  .notes-group label    { color: #555 !important; font-size: 8px; }
+  .notes-group textarea { background: #f8f8f8 !important; border: 1px solid #ccc !important; color: #111 !important; font-size: 10px; border-radius: 2px; }
+
+  .btn-row { display: none !important; }
+}

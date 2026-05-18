@@ -1,240 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-<title>Luxury House — Quote & Order System</title>
-
-<link rel="manifest" href="manifest.json">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="LuxuryHouse">
-<link rel="apple-touch-icon" href="https://via.placeholder.com/192">
-<style>
-  :root {
-    --red: #c0392b; --red-dark: #922b21; --red-light: #e74c3c;
-    --bg: #181818; --black2: #1e1e1e; --black3: #262626; --black4: #303030;
-    --border: #3a3a3a; --text: #f0f0f0; --text-muted: #999;
-    --gold: #c9a84c; --success: #27ae60; --warning: #f39c12; --info: #2980b9;
-    --radius: 12px;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Arial, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
-
-  header { background: linear-gradient(135deg, #0d0d0d 0%, #1a0404 100%); border-bottom: 2px solid var(--red-dark); padding: 0 20px; display: flex; align-items: center; justify-content: space-between; height: 62px; position: sticky; top: 0; z-index: 100; }
-  .logo-icon { width: 36px; height: 36px; background: var(--red); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; margin-right: 10px; }
-  .logo { display: flex; align-items: center; }
-  .logo-text { font-size: 15px; color: #fff; letter-spacing: 2px; text-transform: uppercase; font-weight: bold; }
-  .logo-sub { font-size: 9px; color: var(--text-muted); letter-spacing: 1px; }
-  nav { display: flex; }
-  .nav-btn { background: none; border: none; color: var(--text-muted); font-size: 12px; padding: 8px 14px; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; font-family: inherit; }
-  .nav-btn.active { color: var(--red-light); border-bottom-color: var(--red-light); }
-
-  main { max-width: 1100px; margin: 0 auto; padding: 20px 14px; }
-  .page { display: none; } .page.active { display: block; }
-
-  .card { background: var(--black2); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 18px; }
-  .card-title { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--red-light); margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
-
-  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-  .form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
-  .form-group { display: flex; flex-direction: column; gap: 5px; }
-  .form-group.full { grid-column: 1 / -1; }
-  label { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); }
-  input, select, textarea { background: var(--black4); border: 1px solid var(--border); color: var(--text); padding: 10px 13px; border-radius: 8px; font-size: 14px; font-family: inherit; width: 100%; transition: border-color 0.2s; }
-  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--red); }
-  textarea { resize: vertical; min-height: 70px; }
-
-  .btn { padding: 12px 18px; border-radius: 8px; border: none; cursor: pointer; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; font-family: inherit; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; font-weight: bold; min-height: 44px; touch-action: manipulation; }
-  .btn-red { background: linear-gradient(135deg, var(--red-light), var(--red-dark)); color: #fff; }
-  .btn-outline { background: none; border: 1px solid var(--red); color: var(--red-light); }
-  .btn-dark { background: var(--black4); border: 1px solid var(--border); color: var(--text); }
-  .btn-success { background: var(--success); color: #fff; }
-  .btn-info { background: var(--info); color: #fff; }
-  .btn-whatsapp { background: #25D366; color: #fff; }
-  .btn-danger { background: var(--red-dark); color: #fff; }
-  .btn-sm { padding: 7px 13px; font-size: 11px; }
-  .btn-row { display: flex; gap: 9px; flex-wrap: wrap; margin-top: 16px; }
-
-  .toggle-group { display: flex; flex-wrap: wrap; gap: 7px; }
-  .toggle-opt { padding: 7px 14px; border-radius: 18px; border: 1px solid var(--border); cursor: pointer; font-size: 13px; transition: all 0.2s; color: var(--text-muted); background: var(--black3); user-select: none; }
-  .toggle-opt.selected { border-color: var(--red); color: var(--red-light); background: rgba(192,57,43,0.12); }
-
-  .swatch-grid { display: grid; grid-template-columns: repeat(auto-fill, 70px); gap: 8px; }
-  .swatch { width: 70px; border-radius: 8px; cursor: pointer; border: 3px solid transparent; transition: all 0.2s; overflow: hidden; }
-  .swatch.selected { border-color: var(--red-light); transform: scale(1.08); }
-  .swatch-colour { height: 44px; }
-  .swatch-name { font-size: 7px; color: var(--text-muted); text-align: center; padding: 3px 2px; background: var(--black3); line-height: 1.3; }
-  .swatch.selected .swatch-name { color: var(--red-light); }
-
-  .stepper { display: flex; align-items: center; margin-bottom: 20px; overflow-x: auto; padding: 10px 14px; background: var(--black2); border-radius: var(--radius); border: 1px solid var(--border); gap: 4px; }
-  .step { display: flex; align-items: center; gap: 6px; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); padding: 4px 6px; white-space: nowrap; }
-  .step.active { color: var(--red-light); }
-  .step.done { color: var(--success); }
-  .step-num { width: 22px; height: 22px; border-radius: 50%; background: var(--black4); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0; }
-  .step.active .step-num { background: var(--red); color: #fff; border-color: var(--red); font-weight: bold; }
-  .step.done .step-num { background: var(--success); color: #fff; border-color: var(--success); }
-  .step-arrow { color: var(--border); }
-
-  .quote-section { display: none; } .quote-section.active { display: block; }
-
-  /* Item card */
-  .item-card { background: var(--black2); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 20px; overflow: hidden; }
-  .item-card-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px 12px; background: linear-gradient(135deg, #1a0606 0%, var(--black2) 100%); border-bottom: 1px solid var(--border); }
-  .item-card-title { color: var(--red-light); font-size: 14px; letter-spacing: 1px; text-transform: uppercase; font-weight: bold; }
-  .item-card-subtitle { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
-  .item-tabs { display: flex; gap: 0; background: var(--black3); border-bottom: 1px solid var(--border); overflow-x: auto; }
-  .item-tab { padding: 11px 18px; font-size: 12px; font-weight: bold; cursor: pointer; color: var(--text-muted); border-bottom: 3px solid transparent; font-family: inherit; background: none; border-top: none; border-left: none; border-right: none; white-space: nowrap; transition: all 0.2s; letter-spacing: 0.5px; }
-  .item-tab.active { color: #fff; border-bottom-color: var(--red); background: rgba(192,57,43,0.08); }
-  .item-tab-body { padding: 18px; }
-  .tab-section { margin-bottom: 20px; }
-  .tab-section-title { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--red-light); margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid rgba(192,57,43,0.2); }
-  
-  /* Designer CTA */
-  .designer-cta { background: linear-gradient(135deg, #1a0404, #2a0808); border: 1px solid var(--red-dark); border-radius: 10px; padding: 16px; display: flex; gap: 14px; align-items: center; margin-bottom: 18px; }
-  .designer-cta-icon { font-size: 32px; flex-shrink: 0; }
-  .designer-cta-text h3 { font-size: 13px; color: var(--red-light); font-weight: bold; letter-spacing: 1px; margin-bottom: 3px; }
-  .designer-cta-text p { font-size: 11px; color: var(--text-muted); line-height: 1.5; }
-  .designer-cta-btn { margin-left: auto; flex-shrink: 0; }
-  
-  /* Sketch thumbnail */
-  .sketch-thumb-box { background: var(--black4); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
-  .sketch-thumb-box img { width: 100%; display: block; }
-  .sketch-thumb-empty { height: 70px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 12px; }
-  
-  .dim-display { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
-  .dim-pill { background: rgba(192,57,43,0.1); border: 1px solid rgba(192,57,43,0.3); border-radius: 20px; padding: 4px 12px; font-size: 12px; color: var(--red-light); font-weight: bold; }
-  .dim-pill.empty { background: var(--black4); border-color: var(--border); color: var(--text-muted); }
-
-  .price-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
-  .price-row:last-child { border-bottom: none; }
-  .price-label { color: var(--text-muted); }
-  .price-total { font-size: 20px; color: var(--red-light); font-weight: bold; }
-
-  .grand-bar { background: linear-gradient(135deg, var(--red-dark), #0d0d0d); border-radius: 10px; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-
-  .deposit-box { border-radius: 10px; padding: 14px 16px; }
-  .dep-rec { background: rgba(201,168,76,0.07); border: 1px solid rgba(201,168,76,0.3); }
-  .dep-act { background: rgba(39,174,96,0.07); border: 1px solid rgba(39,174,96,0.35); }
-  .deposit-label { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 5px; }
-  .deposit-note { font-size: 11px; color: var(--text-muted); margin-top: 4px; font-style: italic; }
-
-  .internal-box { background: rgba(243,156,18,0.07); border: 1px solid rgba(243,156,18,0.3); border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; font-size: 12px; color: #f5b041; }
-
-  .sig-canvas { background: #fff; border-radius: 8px; border: 2px dashed #555; display: block; width: 100%; touch-action: none; cursor: crosshair; }
-
-  /* ── PRINT STYLES ──────────────────────────── */
-  @media print {
-    body > *:not(#print-frame) { display: none !important; }
-    #print-frame { display: block !important; position: fixed; inset: 0; background: #fff; z-index: 9999; padding: 0; }
-    #print-frame .no-print { display: none !important; }
-    .qp { max-width: 100%; font-size: 11px; }
-    .qp-header { padding: 12px 0; }
-    .qp-item-box { page-break-inside: avoid; }
-    @page { size: A4; margin: 15mm 12mm; }
-  }
-  #print-frame { display: none; position: fixed; inset: 0; background: #fff; z-index: 9999; overflow-y: auto; padding: 20px; }
-  #print-frame-inner { max-width: 700px; margin: 0 auto; }
-  .print-toolbar { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #eee; }
-
-  /* ── SKETCH DESIGNER ─────────────────────────────── */
-  .sketch-overlay { position: fixed; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; width: 100% !important; height: 100% !important; z-index: 9999; background: #1a1a1a; display: none; flex-direction: column; box-sizing: border-box; }
-  .sketch-overlay.open { display: flex; }
-  .sketch-overlay-header { background: #0d0d0d; border-bottom: 2px solid var(--red-dark); padding: 0 16px; height: 56px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
-  .sketch-overlay-title { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: var(--red-light); font-weight: bold; }
-  .sketch-item-selector { display: flex; gap: 6px; align-items: center; overflow-x: auto; max-width: 60vw; }
-  .sketch-item-btn { padding: 5px 12px; border-radius: 16px; border: 1px solid var(--border); background: var(--black3); color: var(--text-muted); font-size: 11px; cursor: pointer; font-family: inherit; transition: all 0.2s; white-space: nowrap; }
-  .sketch-item-btn.active { border-color: var(--red); color: var(--red-light); background: rgba(192,57,43,0.12); }
-
-  .sketch-overlay-body { display: flex; flex: 1 1 0; overflow: hidden; min-height: 0; width: 100%; box-sizing: border-box; }
-  .sketch-sidebar { width: 180px; min-width: 180px; max-width: 180px; background: #111; border-right: 1px solid var(--border); padding: 12px 10px; overflow-y: auto; flex-shrink: 0; }
-  .sketch-sidebar-section { margin-bottom: 16px; }
-  .sketch-sidebar-title { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
-  .sketch-tool-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
-  .sk-tool { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 7px 4px; border-radius: 8px; border: 1px solid var(--border); background: var(--black3); color: var(--text-muted); cursor: pointer; font-family: inherit; font-size: 16px; transition: all 0.2s; }
-  .sk-tool span { font-size: 8px; letter-spacing: 0.5px; text-transform: uppercase; }
-  .sk-tool.active { border-color: var(--red); color: var(--red-light); background: rgba(192,57,43,0.12); }
-  .sk-tool:hover { border-color: var(--red-dark); color: var(--text); }
-  .sk-presets { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
-  .sk-preset { padding: 6px 4px; border-radius: 7px; border: 1px solid var(--border); background: var(--black3); color: var(--text-muted); cursor: pointer; font-size: 9px; text-align: center; font-family: inherit; transition: all 0.2s; line-height: 1.3; }
-  .sk-preset:hover { border-color: var(--red-dark); color: var(--text); }
-  .colour-swatch-row { display: flex; flex-wrap: wrap; gap: 5px; }
-  .sk-colour { width: 24px; height: 24px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: transform 0.15s; }
-  .sk-colour.active { border-color: #fff; transform: scale(1.2); }
-  .sk-size-row { display: flex; gap: 5px; align-items: center; }
-  .sk-size { padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--black3); color: var(--text-muted); cursor: pointer; font-family: inherit; font-size: 11px; transition: all 0.2s; }
-  .sk-size.active { border-color: var(--red); color: var(--red-light); }
-  .sk-label-row { display: flex; flex-direction: column; gap: 5px; }
-
-  .sketch-canvas-area { flex: 1 1 0; min-width: 0; min-height: 0; display: flex; align-items: center; justify-content: center; background: #1e1e1e; padding: 12px; overflow: hidden; }
-  .sketch-canvas-wrap { background: #fff; border-radius: 4px; box-shadow: 0 8px 40px rgba(0,0,0,0.8); position: relative; }
-  #sk-main-canvas { display: block; cursor: crosshair; touch-action: none; }
-
-  .sketch-bottom-bar { height: 48px; background: #0d0d0d; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 16px; flex-shrink: 0; overflow: hidden; }
-  .sketch-close-btn { background: none; border: 1px solid var(--border); color: var(--text-muted); padding: 6px 14px; border-radius: 7px; cursor: pointer; font-family: inherit; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
-  .sketch-save-btn { background: linear-gradient(135deg, var(--red-light), var(--red-dark)); color: #fff; border: none; padding: 8px 20px; border-radius: 7px; cursor: pointer; font-family: inherit; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; font-weight: bold; white-space: nowrap; }
-  .sketch-status { font-size: 11px; color: var(--text-muted); }
-
-  .orders-grid { display: flex; flex-direction: column; gap: 12px; }
-  .order-card { background: var(--black2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; cursor: pointer; transition: border-color 0.2s; }
-  .order-card:hover { border-color: var(--red-dark); }
-  .order-id { font-size: 11px; color: var(--red-light); letter-spacing: 1px; }
-  .order-name { font-size: 16px; margin: 3px 0; }
-  .order-detail { font-size: 12px; color: var(--text-muted); }
-  .status-badge { padding: 4px 11px; border-radius: 18px; font-size: 10px; text-transform: uppercase; font-weight: bold; white-space: nowrap; }
-  .s-quoted { background: rgba(142,68,173,0.2); color: #c39bd3; border: 1px solid rgba(142,68,173,0.4); }
-  .s-deposit { background: rgba(41,128,185,0.2); color: #5dade2; border: 1px solid rgba(41,128,185,0.4); }
-  .s-manufacture { background: rgba(243,156,18,0.2); color: #f5b041; border: 1px solid rgba(243,156,18,0.4); }
-  .s-delivery { background: rgba(142,68,173,0.2); color: #c39bd3; border: 1px solid rgba(142,68,173,0.4); }
-  .s-installed { background: rgba(39,174,96,0.2); color: #58d68d; border: 1px solid rgba(39,174,96,0.4); }
-  .s-complete { background: rgba(192,57,43,0.2); color: var(--red-light); border: 1px solid rgba(192,57,43,0.4); }
-
-  .pipeline { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; }
-  .pipe-col { min-width: 180px; background: var(--black3); border-radius: 10px; padding: 12px; flex-shrink: 0; }
-  .pipe-col-title { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px; }
-  .pipe-card { background: var(--black2); border: 1px solid var(--border); border-radius: 8px; padding: 10px; margin-bottom: 7px; font-size: 12px; cursor: pointer; }
-  .pipe-card:hover { border-color: var(--red-dark); }
-
-  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; display: none; align-items: center; justify-content: center; padding: 14px; }
-  .modal-overlay.open { display: flex; }
-  .modal { background: var(--black2); border: 1px solid var(--red-dark); border-radius: var(--radius); max-width: 760px; width: 100%; max-height: 92vh; overflow-y: auto; }
-  .modal-header { padding: 18px 22px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-  .modal-body { padding: 22px; }
-  .modal-footer { padding: 14px 22px; border-top: 1px solid var(--border); display: flex; gap: 9px; justify-content: flex-end; }
-  .close-btn { background: none; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer; }
-
-  .tc-box { background: var(--black3); border: 1px solid var(--border); border-radius: 8px; padding: 14px; font-size: 12px; color: var(--text-muted); max-height: 200px; overflow-y: auto; line-height: 1.7; }
-  .tc-accept { display: flex; align-items: flex-start; gap: 9px; margin-top: 12px; }
-  .tc-accept input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--red); margin-top: 2px; flex-shrink: 0; }
-
-  /* QUOTE PREVIEW (white paper) */
-  .qp { background: #fff; color: #111; border-radius: var(--radius); padding: 28px; font-family: Arial, sans-serif; }
-  .qp-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; padding-bottom: 14px; border-bottom: 3px solid #c0392b; }
-  .qp-logo { font-size: 20px; font-weight: bold; color: #c0392b; letter-spacing: 2px; }
-  .qp-section { margin-bottom: 16px; }
-  .qp-section h3 { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #c0392b; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #f5b7b1; }
-  .qp-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 12px; border-bottom: 1px solid #f5f5f5; }
-  .qp-item-box { background: #fafafa; border: 1px solid #eee; border-radius: 6px; padding: 14px; margin-bottom: 14px; }
-  .qp-item-title { font-size: 12px; font-weight: bold; color: #c0392b; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
-  .qp-sig-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 16px; }
-  .qp-sig-box { border-top: 1px solid #333; padding-top: 6px; font-size: 10px; color: #555; margin-top: 6px; }
-  .qp-tc { font-size: 9px; color: #777; margin-top: 14px; padding-top: 10px; border-top: 1px solid #eee; line-height: 1.6; }
-
-  .divider { height: 1px; background: var(--border); margin: 14px 0; }
-  .muted { color: var(--text-muted); font-size: 13px; }
-  .counter { display: flex; align-items: center; gap: 9px; }
-  .counter button { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--border); background: var(--black3); color: var(--text); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-  .counter span { font-size: 17px; min-width: 26px; text-align: center; }
-
-  #toast { position: fixed; bottom: 20px; right: 20px; background: var(--black2); border: 1px solid var(--red); border-radius: 10px; padding: 12px 18px; font-size: 13px; z-index: 999; display: none; max-width: 300px; }
-
-  @media (max-width: 600px) {
-    .form-grid { grid-template-columns: 1fr; }
-    .form-grid-3 { grid-template-columns: 1fr 1fr; }
-    .nav-btn { padding: 8px 8px; font-size: 10px; }
-    .qp-sig-row { grid-template-columns: 1fr; }
-  }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+  <title>Luxury House — Survey Sheet</title>
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
@@ -243,160 +13,86 @@
     <div class="logo-icon">🏠</div>
     <div>
       <div class="logo-text">Luxury House</div>
-      <div class="logo-sub">Quote &amp; Order Management</div>
+      <div class="logo-sub">Survey &amp; Measurement Sheet</div>
     </div>
   </div>
-  <nav>
-    <button class="nav-btn active" onclick="showPage('quote')" id="tab-quote">✏️ New Quote</button>
-    <button class="nav-btn" onclick="showPage('orders')" id="tab-orders">📋 Orders</button>
-    <button class="nav-btn" onclick="showPage('pipeline')" id="tab-pipeline">📊 Pipeline</button>
-  </nav>
+  <div class="header-right">
+    <span id="header-date" class="header-date"></span>
+    <button class="btn btn-outline no-print" onclick="Survey.print()">🖨️ Print / PDF</button>
+  </div>
 </header>
 
 <main>
 
-<div class="page active" id="page-quote">
-  <div class="stepper">
-    <div class="step active" id="si-1"><span class="step-num">1</span> Customer</div>
-    <div class="step-arrow">›</div>
-    <div class="step" id="si-2"><span class="step-num">2</span> Items</div>
-    <div class="step-arrow">›</div>
-    <div class="step" id="si-3"><span class="step-num">3</span> Deposit &amp; Sign</div>
-    <div class="step-arrow">›</div>
-    <div class="step" id="si-4"><span class="step-num">4</span> Send</div>
-  </div>
+  <!-- ── Customer Details ── -->
+  <div class="card" id="customer-card">
+    <div class="card-title">👤 Customer Details</div>
 
-  <div class="quote-section active" id="qs-1">
-    <div class="card">
-      <div class="card-title">👤 Customer Details</div>
-      <div style="margin-bottom:18px">
-        <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--red-light);margin-bottom:12px;border-bottom:1px solid rgba(192,57,43,0.2);padding-bottom:6px">Required Details</div>
-        <div class="form-grid">
-          <div class="form-group">
-            <label>First Name <span style="color:var(--red-light)">*</span></label>
-            <input type="text" id="c-first" placeholder="James" style="font-size:16px">
-          </div>
-          <div class="form-group">
-            <label>Phone / WhatsApp <span style="color:var(--red-light)">*</span></label>
-            <input type="tel" id="c-phone" placeholder="+44 7700 900000" style="font-size:16px">
-          </div>
-          <div class="form-group full">
-            <label>Installation Address <span style="color:var(--red-light)">*</span></label>
-            <input type="text" id="c-address" placeholder="12 Manor Road, London, SW1A 1AA" style="font-size:16px">
-          </div>
-        </div>
+    <div class="sub-heading">Required</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>First Name <span class="req">*</span></label>
+        <input type="text" id="c-first" placeholder="James" autocomplete="given-name">
       </div>
-
-      <div style="margin-bottom:18px">
-        <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:6px">Additional Details (optional)</div>
-        <div class="form-grid">
-          <div class="form-group">
-            <label>Last Name</label>
-            <input type="text" id="c-last" placeholder="Mitchell">
-          </div>
-          <div class="form-group">
-            <label>Email</label>
-            <input type="email" id="c-email" placeholder="james@email.com">
-          </div>
-          <div class="form-group">
-            <label>Lead Source</label>
-            <select id="c-source">
-              <option>Website Enquiry</option><option>Referral</option><option>Social Media</option>
-              <option>Showroom Visit</option><option>Google Ads</option><option>Other</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Agent / Salesman</label>
-            <input type="text" id="c-surveyor" placeholder="Your name">
-          </div>
-          <div class="form-group full">
-            <label>🔒 Internal Notes</label>
-            <textarea id="c-notes" rows="2" placeholder="Deposit agreed, customer preferences, follow-up actions..."></textarea>
-          </div>
-        </div>
+      <div class="form-group">
+        <label>Phone / WhatsApp <span class="req">*</span></label>
+        <input type="tel" id="c-phone" placeholder="+44 7700 900000" autocomplete="tel">
       </div>
+      <div class="form-group full">
+        <label>Installation Address <span class="req">*</span></label>
+        <input type="text" id="c-address" placeholder="12 Manor Road, London, SW1A 1AA" autocomplete="street-address">
+      </div>
+    </div>
 
-      <div class="btn-row"><button class="btn btn-red" onclick="goStep(2)" style="font-size:14px;padding:14px 28px">Next: Add Items →</button></div>
+    <div class="sub-heading muted" style="margin-top:18px">Optional</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Last Name</label>
+        <input type="text" id="c-last" placeholder="Mitchell" autocomplete="family-name">
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="c-email" placeholder="james@email.com" autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label>Lead Source</label>
+        <select id="c-source">
+          <option>Website Enquiry</option>
+          <option>Referral</option>
+          <option>Social Media</option>
+          <option>Showroom Visit</option>
+          <option>Google Ads</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Surveyor / Rep</label>
+        <input type="text" id="surveyor" placeholder="Your name">
+      </div>
+      <div class="form-group">
+        <label>Survey Date</label>
+        <input type="date" id="survey-date">
+      </div>
+      <div class="form-group">
+        <label>🔒 Internal Notes</label>
+        <input type="text" id="c-notes" placeholder="e.g. Referred by Smith family">
+      </div>
     </div>
   </div>
 
-  <div class="quote-section" id="qs-2">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:12px">
-      <div>
-        <div style="font-size:18px;font-weight:bold;color:var(--red-light);letter-spacing:1px">Wardrobe Items</div>
-        <div style="font-size:12px;color:var(--text-muted);margin-top:3px">One card per wardrobe or room — design, finish, interior and price all in one place</div>
-      </div>
-      <button class="btn btn-outline" onclick="addItem()" style="white-space:nowrap;flex-shrink:0">+ Add Room</button>
-    </div>
-    <div id="items-container"></div>
-    <div class="btn-row" style="margin-top:20px">
-      <button class="btn btn-dark btn-sm" onclick="goStep(1)">← Back</button>
-      <button class="btn btn-red" onclick="goStep(3)" style="font-size:14px;padding:14px 28px">Next: Deposit &amp; Sign →</button>
-    </div>
+  <!-- ── Rooms / Wardrobes ── -->
+  <div id="rooms-container"></div>
+
+  <div class="btn-row no-print">
+    <button class="btn btn-red" onclick="Survey.addRoom()">+ Add Wardrobe / Room</button>
+    <button class="btn btn-dark" onclick="Survey.clearAll()" style="margin-left:auto">🗑 New Survey</button>
   </div>
 
-  <div class="quote-section" id="qs-3">
-    <div class="internal-box"><strong style="font-size:10px;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:4px">🔒 Internal — not shown on customer quote</strong>Deposit details and agent notes are for your records only.</div>
-    <div id="grand-total-display"></div>
-    <div class="card">
-      <div class="card-title">💳 Deposit & Payment</div>
-      <div style="margin-bottom:16px">
-        <div class="deposit-box dep-act" style="max-width:360px">
-          <div class="deposit-label">Deposit Taken Today</div>
-          <div style="display:flex;align-items:center;gap:6px;margin-top:6px">
-            <span style="font-size:20px;color:#58d68d">£</span>
-            <input type="number" id="deposit-actual" placeholder="e.g. 500"
-              style="font-size:22px;font-weight:bold;color:#58d68d;background:transparent;border:none;border-bottom:2px solid #27ae60;border-radius:0;padding:4px 0;width:130px"
-              oninput="updateGrandTotal()">
-          </div>
-          <div class="deposit-note">Enter the agreed deposit amount</div>
-        </div>
-      </div>
-      <div id="balance-breakdown"></div>
-      <div class="form-grid" style="margin-top:16px">
-        <div class="form-group"><label>Payment Method</label>
-          <select id="payment-method"><option>Bank Transfer</option><option>Card (in person)</option><option>Card (payment link)</option><option>Cash</option><option>Cheque</option></select>
-        </div>
-        <div class="form-group"><label>Expected Install Date</label><input type="date" id="install-date"></div>
-        <div class="form-group"><label>Lead Time</label>
-          <select id="lead-time"><option>6–8 Weeks</option><option>8–10 Weeks</option><option>10–12 Weeks</option><option>12–14 Weeks</option><option>Custom (see notes)</option></select>
-        </div>
-        <div class="form-group"><label>Discount (£)</label><input type="number" id="discount-amt" placeholder="0" oninput="updateGrandTotal()"></div>
-      </div>
-    </div>
+</main>
 
-    <div class="card">
-      <div class="card-title">📄 Terms &amp; Conditions</div>
-      <div class="tc-box">
-        <strong>Bespoke Furniture Terms &amp; Conditions — Luxury House Online / Luxury Fitted Wardrobes</strong><br><br>
-        <strong>1. Bespoke Orders.</strong> All furniture is manufactured to the customer's exact specifications. Orders are non-cancellable and non-refundable once manufacturing commences. Any deposit paid is strictly non-refundable.<br><br>
-        <strong>2. Deposit &amp; Payment.</strong> A deposit is required to confirm the order. The balance is due in full on the day of installation prior to fitting. The company reserves the right to withhold installation until full payment is received.<br><br>
-        <strong>3. Survey &amp; Dimensions.</strong> Dimensions are taken at survey. The customer must ensure the space is clear and accessible on the agreed installation date.<br><br>
-        <strong>4. Lead Times.</strong> Estimated lead times are provided in good faith and are not contractually binding. Standard lead time is 6–14 weeks from deposit receipt.<br><br>
-        <strong>5. Colours &amp; Finishes.</strong> Egger and Kronospan board samples are representative. Minor colour or grain variations within industry tolerances are not defects.<br><br>
-        <strong>6. Warranty.</strong> 2-year workmanship warranty. 5-year structural warranty under normal domestic use. Does not cover misuse, moisture, heat, or third-party modifications.<br><br>
-        <strong>7. Installation.</strong> Customer must provide clear access. Includes fitting and packaging waste removal. Company not responsible for redecoration after installation.<br><br>
-        <strong>8. Overdue Balances.</strong> Outstanding balances incur interest at 8% per annum after 14 days. The company reserves the right to recover goods in cases of non-payment.<br><br>
-        <strong>9. Governing Law.</strong> These terms are governed by the laws of England and Wales.<br><br>
-        <strong>10. Quote Validity.</strong> This quote is valid for 30 days from the date of issue.
-      </div>
-      <div class="tc-accept">
-        <input type="checkbox" id="tc-checkbox">
-        <label for="tc-checkbox" style="text-transform:none;letter-spacing:0;font-size:13px;color:var(--text)">I confirm the customer has been presented with and agrees to these Terms &amp; Conditions.</label>
-      </div>
-    </div>
+<div id="toast"></div>
 
-    <div class="card">
-      <div class="card-title">✍️ Signatures</div>
-      <div class="form-grid">
-        <div>
-          <div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px">Customer Signature</div>
-          <canvas id="sig-customer" class="sig-canvas" height="120"></canvas>
-          <button class="btn btn-dark btn-sm" style="margin-top:6px" onclick="clearSig('sig-customer')">Clear</button>
-          <div class="form-grid" style="margin-top:10px;grid-template-columns:1fr 1fr;gap:10px">
-            <div class="form-group"><label>Customer Printed Name</label><input type="text" id="sig-customer-name" placeholder="Full name"></div>
-            <div class="form-group"><label>Date Signed</label><input type="date" id="sig-customer-date"></div>
-          </div>
-        </div>
-        <div>
-          <div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color
+<script src="js/sketch.js"></script>
+<script src="js/survey.js"></script>
+</body>
+</html>
