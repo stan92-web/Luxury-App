@@ -164,6 +164,56 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
 .btn-wa:hover       { background: #1ebe5a; }
 .btn-row            { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 24px; align-items: center; }
 
+/* ── Pricing ─────────────────────────────────── */
+.pricing-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.price-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 130px;
+}
+.price-group label { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); font-weight: bold; }
+.price-wrap {
+  display: flex;
+  align-items: center;
+  background: var(--input-bg);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.price-wrap:focus-within { border-color: var(--red); }
+.price-sym {
+  font-size: 22px;
+  font-weight: bold;
+  color: var(--muted);
+  padding: 10px 4px 10px 14px;
+  flex-shrink: 0;
+}
+.price-wrap input {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  font-size: 26px;
+  font-weight: bold;
+  padding: 10px 12px 10px 4px;
+  flex: 1;
+  min-width: 0;
+  color: var(--text);
+}
+.price-wrap input:focus { outline: none; box-shadow: none; border: none; }
+.price-balance .price-wrap {
+  border-color: var(--red);
+  background: #fdf5f5;
+}
+.price-balance .price-sym  { color: var(--red); }
+.price-balance input { color: var(--red); }
+
 /* ── Room Card ───────────────────────────────── */
 .room-card {
   background: var(--card);
@@ -633,6 +683,17 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
   /* ── Notes ── */
   .notes-group label { color: #555 !important; font-size: 7px; }
   textarea { min-height: 32px !important; font-size: 10px; }
+
+  /* ── Pricing ── */
+  #pricing-card { padding: 6px 10px; }
+  .pricing-row  { gap: 10px; }
+  .price-group label { font-size: 7px; }
+  .price-wrap   { border: 1px solid #ccc !important; border-radius: 2px; background: #fafafa !important; }
+  .price-sym    { font-size: 14px; padding: 4px 2px 4px 8px; color: #555 !important; }
+  .price-wrap input { font-size: 16px; padding: 4px 8px 4px 2px; }
+  .price-balance .price-wrap { border-color: #8b1a1a !important; background: #fdf5f5 !important; }
+  .price-balance .price-sym  { color: #8b1a1a !important; }
+  .price-balance input       { color: #8b1a1a !important; }
 
   /* ── Hide extras ── */
   .btn-row { display: none !important; }

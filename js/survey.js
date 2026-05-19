@@ -29,6 +29,12 @@ const Survey = (() => {
       activeIds.forEach(updateSketchDims);
     };
 
+    // Auto-calculate balance when total or deposit changes
+    ['p-total', 'p-deposit'].forEach(fid => {
+      const el = document.getElementById(fid);
+      if (el) el.addEventListener('input', recalcBalance);
+    });
+
     // Save on any form input
     document.addEventListener('input', scheduleSave);
 
@@ -50,6 +56,13 @@ const Survey = (() => {
     saveTimer = setTimeout(save, 400);
   }
 
+  function recalcBalance() {
+    const total   = parseFloat(document.getElementById('p-total')?.value)   || 0;
+    const deposit = parseFloat(document.getElementById('p-deposit')?.value) || 0;
+    const bal     = document.getElementById('p-balance');
+    if (bal) bal.value = total > 0 ? (total - deposit).toFixed(2) : '';
+  }
+
   function save() {
     try {
       const data = {
@@ -63,6 +76,10 @@ const Survey = (() => {
           surveyor: gv('surveyor'),
           date:     gv('survey-date'),
           notes:    gv('c-notes')
+        },
+        pricing: {
+          total:   gv('p-total'),
+          deposit: gv('p-deposit')
         },
         rooms: activeIds.map(id => ({
           name:   gv(`rname-${id}`),
@@ -95,6 +112,11 @@ const Survey = (() => {
       sv('surveyor',   c.surveyor);
       sv('survey-date', c.date);
       sv('c-notes',    c.notes);
+
+      const p = data.pricing || {};
+      sv('p-total',   p.total);
+      sv('p-deposit', p.deposit);
+      recalcBalance();
 
       (data.rooms || []).forEach(r => {
         const id = addRoom();
@@ -253,21 +275,42 @@ const Survey = (() => {
 
   async function captureSheet() {
     window.scrollTo(0, 0);
-    // Hide interactive controls — keep content visible
-    const noPrint = Array.from(document.querySelectorAll('.no-print'));
-    const saved   = noPrint.map(el => el.style.display);
-    noPrint.forEach(el => el.style.display = 'none');
-    try {
-      return await html2canvas(document.getElementById('app-wrap'), {
-        scale:           2,
-        useCORS:         true,
-        allowTaint:      true,
-        backgroundColor: '#eeebe6',
-        logging:         false
-      });
-    } finally {
-      noPrint.forEach((el, i) => el.style.display = saved[i]);
-    }
+    return await html2canvas(document.getElementById('app-wrap'), {
+      scale:           2,
+      useCORS:         true,
+      allowTaint:      true,
+      backgroundColor: '#ffffff',
+      logging:         false,
+      // onclone runs on a hidden DOM copy — we apply print styling there
+      // so the live page is never touched
+      onclone: (doc) => {
+        // Remove all buttons / toolbars
+        doc.querySelectorAll('.no-print').forEach(el => el.remove());
+        doc.getElementById('toast')?.remove();
+
+        // White page background
+        doc.body.style.background = '#fff';
+        doc.getElementById('app-wrap').style.background = '#fff';
+
+        // Header: white with red underline (matches print CSS)
+        const hdr = doc.querySelector('header');
+        if (hdr) Object.assign(hdr.style, {
+          background: '#fff', boxShadow: 'none',
+          position: 'relative', height: 'auto',
+          borderBottom: '2px solid #8b1a1a', padding: '8px 22px'
+        });
+        const lm = doc.querySelector('.logo-mark');
+        if (lm) Object.assign(lm.style, { background: '#8b1a1a', width: '32px', height: '32px', fontSize: '12px' });
+        const lt = doc.querySelector('.logo-text');
+        if (lt) lt.style.color = '#1a1a1a';
+
+        // Cards: flat white
+        doc.querySelectorAll('.card, .room-card').forEach(el => {
+          el.style.boxShadow = 'none';
+          el.style.border = '1px solid #ddd';
+        });
+      }
+    });
   }
 
   function triggerDownload(canvas) {

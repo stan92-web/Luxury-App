@@ -103,6 +103,34 @@
   <!-- ── Rooms / Wardrobes ── -->
   <div id="rooms-container"></div>
 
+  <!-- ── Pricing ── -->
+  <div class="card" id="pricing-card">
+    <div class="card-title">💰 Pricing</div>
+    <div class="pricing-row">
+      <div class="price-group">
+        <label>Total</label>
+        <div class="price-wrap">
+          <span class="price-sym">£</span>
+          <input type="number" id="p-total" placeholder="0.00" inputmode="decimal" step="0.01" min="0">
+        </div>
+      </div>
+      <div class="price-group">
+        <label>Deposit</label>
+        <div class="price-wrap">
+          <span class="price-sym">£</span>
+          <input type="number" id="p-deposit" placeholder="0.00" inputmode="decimal" step="0.01" min="0">
+        </div>
+      </div>
+      <div class="price-group price-balance">
+        <label>Balance Due</label>
+        <div class="price-wrap">
+          <span class="price-sym">£</span>
+          <input type="number" id="p-balance" placeholder="0.00" readonly tabindex="-1">
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="btn-row no-print">
     <button class="btn btn-red" onclick="Survey.addRoom()">+ Add Wardrobe / Room</button>
     <button class="btn btn-dark" onclick="Survey.clearAll()" style="margin-left:auto">🗑 New Quote</button>
