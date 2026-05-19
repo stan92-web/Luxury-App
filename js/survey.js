@@ -194,6 +194,8 @@ const Survey = (() => {
             <div class="sk-sep"></div>
             <button class="sk-btn" onclick="Sketch.undo(${id})">↩ Undo</button>
             <button class="sk-btn" onclick="Sketch.clear(${id})">🗑 Clear</button>
+            <div class="sk-sep"></div>
+            <button class="sk-btn" onclick="Sketch.openFullscreen(${id})" style="color:#fff;background:var(--red-dark);border-color:var(--red)">⛶ Full Screen</button>
           </div>
           <div class="canvas-wrap" id="canvas-wrap-${id}">
             <canvas id="canvas-${id}" class="room-canvas"></canvas>

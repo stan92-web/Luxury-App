@@ -280,5 +280,230 @@ const Sketch = (() => {
     if (typeof window.onSketchUpdated === 'function') window.onSketchUpdated();
   }
 
-  return { init, resizeCanvas, redraw, setTool, setColour, undo, clear, getShapes, setShapes };
+  /* ══════════════════════════════════════════════
+     FULL-SCREEN SKETCH
+  ══════════════════════════════════════════════ */
+  const fs = {
+    roomId:      null,
+    tool:        'pen',
+    colour:      '#222222',
+    lineWidth:   3,
+    drawing:     false,
+    shapes:      [],
+    history:     [],
+    startX:      0,
+    startY:      0,
+    currentPath: []
+  };
+
+  function openFullscreen(roomId) {
+    const s = states[roomId];
+    if (!s) return;
+
+    fs.roomId      = roomId;
+    fs.tool        = s.tool;
+    fs.colour      = s.colour;
+    fs.lineWidth   = 3;
+    fs.drawing     = false;
+    fs.history     = [];
+    fs.currentPath = [];
+
+    const overlay = document.getElementById('fs-overlay');
+    overlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+
+    // Size canvas to fill the area
+    const area   = document.getElementById('fs-canvas-area');
+    const canvas = document.getElementById('fs-canvas');
+    canvas.width        = area.clientWidth;
+    canvas.height       = area.clientHeight;
+    canvas.style.width  = canvas.width  + 'px';
+    canvas.style.height = canvas.height + 'px';
+
+    // Scale shapes from room canvas coords to fullscreen coords
+    const roomCanvas = document.getElementById(`canvas-${roomId}`);
+    const sx = canvas.width  / roomCanvas.width;
+    const sy = canvas.height / roomCanvas.height;
+    fs.shapes = scaleShapes(s.shapes, sx, sy);
+
+    fsUpdateToolbar();
+    fsRedraw();
+  }
+
+  function closeFullscreen() {
+    if (fs.roomId === null) return;
+
+    const s          = states[fs.roomId];
+    const roomCanvas = document.getElementById(`canvas-${fs.roomId}`);
+    const fsCanvas   = document.getElementById('fs-canvas');
+
+    // Scale shapes back to room canvas coords
+    const sx = roomCanvas.width  / fsCanvas.width;
+    const sy = roomCanvas.height / fsCanvas.height;
+
+    saveHistory(fs.roomId);
+    s.shapes = scaleShapes(fs.shapes, sx, sy);
+    redraw(fs.roomId);
+
+    document.getElementById('fs-overlay').classList.remove('open');
+    document.body.style.overflow = '';
+
+    fs.roomId = null;
+    notifyChange();
+  }
+
+  function scaleShapes(shapes, sx, sy) {
+    return shapes.map(sh => {
+      if (sh.type === 'pen')  return { ...sh, path: sh.path.map(p => ({ x: p.x * sx, y: p.y * sy })) };
+      if (sh.type === 'line') return { ...sh, x1: sh.x1*sx, y1: sh.y1*sy, x2: sh.x2*sx, y2: sh.y2*sy };
+      if (sh.type === 'rect') return { ...sh, x: sh.x*sx, y: sh.y*sy, w: sh.w*sx, h: sh.h*sy };
+      if (sh.type === 'text') return { ...sh, x: sh.x*sx, y: sh.y*sy };
+      return sh;
+    });
+  }
+
+  /* ── FS canvas events ── */
+  function initFsCanvas() {
+    const canvas = document.getElementById('fs-canvas');
+    if (!canvas) return;
+    canvas.addEventListener('mousedown',  e => fsDown(e));
+    canvas.addEventListener('mousemove',  e => fsMove(e));
+    canvas.addEventListener('mouseup',    e => fsUp(e));
+    canvas.addEventListener('mouseleave', e => fsUp(e));
+    canvas.addEventListener('touchstart', e => { e.preventDefault(); fsDown(e.touches[0]); },       { passive: false });
+    canvas.addEventListener('touchmove',  e => { e.preventDefault(); fsMove(e.touches[0]); },       { passive: false });
+    canvas.addEventListener('touchend',   e => { e.preventDefault(); fsUp(e.changedTouches[0]); },  { passive: false });
+  }
+
+  function fsGetPos(e) {
+    const canvas = document.getElementById('fs-canvas');
+    const rect   = canvas.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  }
+
+  function fsDown(e) {
+    const p = fsGetPos(e);
+    if (fs.tool === 'text') { fsShowTextInput(p.x, p.y); return; }
+    fs.drawing = true;
+    fs.startX  = p.x;
+    fs.startY  = p.y;
+    if (fs.tool === 'pen') fs.currentPath = [{ x: p.x, y: p.y }];
+  }
+
+  function fsMove(e) {
+    if (!fs.drawing) return;
+    const p = fsGetPos(e);
+    if (fs.tool === 'pen') fs.currentPath.push({ x: p.x, y: p.y });
+    fsRedraw(p.x, p.y);
+  }
+
+  function fsUp(e) {
+    if (!fs.drawing) return;
+    const p = fsGetPos(e);
+    fs.drawing = false;
+
+    fsSaveHistory();
+    if (fs.tool === 'pen' && fs.currentPath.length > 1) {
+      fs.shapes.push({ type: 'pen', path: fs.currentPath.slice(), colour: fs.colour, lw: fs.lineWidth });
+      fs.currentPath = [];
+    } else if (fs.tool === 'line') {
+      fs.shapes.push({ type: 'line', x1: fs.startX, y1: fs.startY, x2: p.x, y2: p.y, colour: fs.colour, lw: fs.lineWidth });
+    } else if (fs.tool === 'rect') {
+      const w = p.x - fs.startX, h = p.y - fs.startY;
+      if (Math.abs(w) > 4 || Math.abs(h) > 4)
+        fs.shapes.push({ type: 'rect', x: fs.startX, y: fs.startY, w, h, colour: fs.colour, lw: fs.lineWidth });
+    }
+    fsRedraw();
+  }
+
+  function fsShowTextInput(x, y) {
+    const area = document.getElementById('fs-canvas-area');
+    const inp  = document.createElement('input');
+    inp.type   = 'text';
+    inp.placeholder = 'Label / dimension…';
+    inp.style.cssText = `
+      position:absolute; left:${x}px; top:${Math.max(0, y - 16)}px;
+      background:rgba(255,255,255,0.97); color:#111;
+      border:2px solid #c0392b; border-radius:5px;
+      font-size:16px; padding:5px 10px; z-index:10;
+      min-width:100px; max-width:240px; font-family:Arial,sans-serif;
+    `;
+    area.appendChild(inp);
+    inp.focus();
+    function commit() {
+      const text = inp.value.trim();
+      inp.remove();
+      if (!text) return;
+      fsSaveHistory();
+      fs.shapes.push({ type: 'text', x, y, text, colour: fs.colour, size: 16 });
+      fsRedraw();
+    }
+    inp.addEventListener('blur',    commit);
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') inp.remove(); });
+  }
+
+  function fsRedraw(previewX, previewY) {
+    const canvas = document.getElementById('fs-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    fs.shapes.forEach(sh => renderShape(ctx, sh));
+    if (fs.tool === 'pen' && fs.currentPath.length > 1)
+      drawPenPath(ctx, fs.currentPath, fs.colour, fs.lineWidth);
+
+    if (fs.drawing && previewX !== undefined) {
+      ctx.strokeStyle = fs.colour;
+      ctx.lineWidth   = fs.lineWidth;
+      ctx.lineCap     = 'round';
+      ctx.lineJoin    = 'round';
+      if (fs.tool === 'line') {
+        ctx.beginPath(); ctx.moveTo(fs.startX, fs.startY); ctx.lineTo(previewX, previewY); ctx.stroke();
+      } else if (fs.tool === 'rect') {
+        ctx.beginPath(); ctx.strokeRect(fs.startX, fs.startY, previewX - fs.startX, previewY - fs.startY);
+      }
+    }
+  }
+
+  function fsSaveHistory() {
+    fs.history.push(JSON.stringify(fs.shapes));
+    if (fs.history.length > 50) fs.history.shift();
+  }
+
+  function fsSetTool(tool) {
+    fs.tool = tool;
+    ['pen','line','rect','text'].forEach(t => {
+      const btn = document.getElementById(`fs-tool-${t}`);
+      if (btn) btn.classList.toggle('active', t === tool);
+    });
+  }
+
+  function fsSetColour(colour, el) {
+    fs.colour = colour;
+    document.querySelectorAll('#fs-colours .colour-dot').forEach(d => d.classList.remove('active'));
+    if (el) el.classList.add('active');
+  }
+
+  function fsUndo() {
+    if (!fs.history.length) return;
+    fs.shapes = JSON.parse(fs.history.pop());
+    fsRedraw();
+  }
+
+  function fsClear() {
+    fsSaveHistory();
+    fs.shapes = [];
+    fsRedraw();
+  }
+
+  function fsUpdateToolbar() {
+    fsSetTool(fs.tool);
+    fsSetColour(fs.colour);
+  }
+
+  document.addEventListener('DOMContentLoaded', initFsCanvas);
+
+  return { init, resizeCanvas, redraw, setTool, setColour, undo, clear, getShapes, setShapes,
+           openFullscreen, closeFullscreen, fsSetTool, fsSetColour, fsUndo, fsClear };
 })();

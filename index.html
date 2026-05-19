@@ -92,6 +92,32 @@
 
 <div id="toast"></div>
 
+<!-- ── Full-Screen Sketch Overlay ── -->
+<div id="fs-overlay">
+  <div id="fs-bar">
+    <div id="fs-tools">
+      <button class="sk-btn active" id="fs-tool-pen"  onclick="Sketch.fsSetTool('pen')">✏️ Draw</button>
+      <button class="sk-btn"        id="fs-tool-line" onclick="Sketch.fsSetTool('line')">╱ Line</button>
+      <button class="sk-btn"        id="fs-tool-rect" onclick="Sketch.fsSetTool('rect')">▭ Box</button>
+      <button class="sk-btn"        id="fs-tool-text" onclick="Sketch.fsSetTool('text')">T Label</button>
+      <div class="sk-sep"></div>
+      <div class="colour-dots" id="fs-colours">
+        <div class="colour-dot active" style="background:#222222" onclick="Sketch.fsSetColour('#222222',this)" title="Black"></div>
+        <div class="colour-dot"        style="background:#c0392b" onclick="Sketch.fsSetColour('#c0392b',this)" title="Red"></div>
+        <div class="colour-dot"        style="background:#1a6eb5" onclick="Sketch.fsSetColour('#1a6eb5',this)" title="Blue"></div>
+        <div class="colour-dot"        style="background:#27ae60" onclick="Sketch.fsSetColour('#27ae60',this)" title="Green"></div>
+      </div>
+      <div class="sk-sep"></div>
+      <button class="sk-btn" onclick="Sketch.fsUndo()">↩ Undo</button>
+      <button class="sk-btn" onclick="Sketch.fsClear()">🗑 Clear</button>
+    </div>
+    <button class="btn btn-red fs-done-btn" onclick="Sketch.closeFullscreen()">✓ Done</button>
+  </div>
+  <div id="fs-canvas-area">
+    <canvas id="fs-canvas"></canvas>
+  </div>
+</div>
+
 <script src="js/sketch.js"></script>
 <script src="js/survey.js"></script>
 </body>
