@@ -662,9 +662,9 @@ textarea:focus {
     flex: 1 !important; min-height: 0 !important;
     display: flex !important; flex-direction: column !important;
   }
-  /* flex:1 on the canvas itself fills the canvas-wrap in all browsers incl. Safari */
+  /* flex-basis:0% forces Safari to ignore canvas intrinsic aspect ratio */
   #rooms-container .room-card:only-child .room-canvas {
-    flex: 1 !important; height: auto !important;
+    flex: 1 1 0% !important; height: 0 !important;
     min-height: 0 !important; max-height: none !important;
   }
 
