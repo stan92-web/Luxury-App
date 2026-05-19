@@ -123,10 +123,11 @@ const Sketch = (() => {
     saveHistory(id);
 
     if (s.tool === 'pen' && s.currentPath.length > 1) {
-      // Auto-straighten: snap to clean line if stroke is roughly linear
+      // Auto-straighten: snap to H/V/45° if stroke is roughly linear
       if (s.autoStraighten && isRoughlyLinear(s.currentPath)) {
-        const a = s.currentPath[0], b = s.currentPath[s.currentPath.length - 1];
-        s.shapes.push({ type: 'line', x1: a.x, y1: a.y, x2: b.x, y2: b.y, colour: s.colour, lw: s.lineWidth });
+        const a  = s.currentPath[0], b = s.currentPath[s.currentPath.length - 1];
+        const ep = snapEndpoint(a.x, a.y, b.x, b.y);
+        s.shapes.push({ type: 'line', x1: a.x, y1: a.y, x2: ep.x, y2: ep.y, colour: s.colour, lw: s.lineWidth });
       } else {
         s.shapes.push({ type: 'pen', path: s.currentPath.slice(), colour: s.colour, lw: s.lineWidth });
       }
@@ -177,6 +178,28 @@ const Sketch = (() => {
     return len === 0
       ? Math.hypot(p.x - a.x, p.y - a.y)
       : Math.abs(dx * (a.y - p.y) - (a.x - p.x) * dy) / len;
+  }
+
+  // Snap end-point to nearest H/V/45° axis.
+  // H and V each own a 60° zone; 45° diagonals own 30° zones.
+  // Result: most strokes → horizontal or vertical; only clearly diagonal → 45°.
+  function snapEndpoint(x1, y1, x2, y2) {
+    const dx = x2 - x1, dy = y2 - y1;
+    const len = Math.hypot(dx, dy);
+    if (len === 0) return { x: x2, y: y2 };
+    let ang = Math.atan2(dy, dx) * 180 / Math.PI;
+    if (ang < 0) ang += 360;
+    let snapped;
+    if      (ang <  30 || ang >= 330) snapped = 0;
+    else if (ang <  60)               snapped = 45;
+    else if (ang < 120)               snapped = 90;
+    else if (ang < 150)               snapped = 135;
+    else if (ang < 210)               snapped = 180;
+    else if (ang < 240)               snapped = 225;
+    else if (ang < 300)               snapped = 270;
+    else                              snapped = 315;
+    const rad = snapped * Math.PI / 180;
+    return { x: x1 + Math.cos(rad) * len, y: y1 + Math.sin(rad) * len };
   }
 
   /* ── Text input overlay ──────────────────────── */
@@ -468,8 +491,9 @@ const Sketch = (() => {
 
     if (fs.tool === 'pen' && fs.currentPath.length > 1) {
       if (fs.autoStraighten && isRoughlyLinear(fs.currentPath)) {
-        const a = fs.currentPath[0], b = fs.currentPath[fs.currentPath.length - 1];
-        fs.shapes.push({ type: 'line', x1: a.x, y1: a.y, x2: b.x, y2: b.y, colour: fs.colour, lw: fs.lineWidth });
+        const a  = fs.currentPath[0], b = fs.currentPath[fs.currentPath.length - 1];
+        const ep = snapEndpoint(a.x, a.y, b.x, b.y);
+        fs.shapes.push({ type: 'line', x1: a.x, y1: a.y, x2: ep.x, y2: ep.y, colour: fs.colour, lw: fs.lineWidth });
       } else {
         fs.shapes.push({ type: 'pen', path: fs.currentPath.slice(), colour: fs.colour, lw: fs.lineWidth });
       }
