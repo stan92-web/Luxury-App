@@ -72,6 +72,7 @@ const Survey = (() => {
           phone:    gv('c-phone'),
           email:    gv('c-email'),
           address:  gv('c-address'),
+          door:     gv('c-door'),
           source:   gv('c-source'),
           surveyor: gv('surveyor'),
           date:     gv('survey-date'),
@@ -108,6 +109,7 @@ const Survey = (() => {
       sv('c-phone',    c.phone);
       sv('c-email',    c.email);
       sv('c-address',  c.address);
+      sv('c-door',     c.door);
       sv('c-source',   c.source);
       sv('surveyor',   c.surveyor);
       sv('survey-date', c.date);

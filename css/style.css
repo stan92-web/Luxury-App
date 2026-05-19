@@ -14,14 +14,14 @@
   --text:      #1a1a1a;
   --muted:     #7a746e;
   --header:    #1c1c1c;
-  --shadow:    0 2px 16px rgba(0,0,0,0.07);
-  --radius:    12px;
+  --shadow:    0 1px 8px rgba(0,0,0,0.05);
+  --radius:    8px;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  font-family: Arial, sans-serif;
+  font-family: 'Inter', Arial, sans-serif;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
@@ -103,49 +103,68 @@ main { max-width: 860px; margin: 0 auto; padding: 24px 16px 60px; }
 }
 
 /* ── Forms ───────────────────────────────────── */
-.form-grid  { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-grid  { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.form-group { display: flex; flex-direction: column; gap: 4px; }
 .form-group.full { grid-column: 1 / -1; }
 
 label {
   font-size: 10px;
-  letter-spacing: 1px;
+  letter-spacing: 0.8px;
   text-transform: uppercase;
   color: var(--muted);
-  font-weight: bold;
+  font-weight: 600;
 }
 .req { color: var(--red-mid); }
 
-input, select, textarea {
-  background: var(--input-bg);
-  border: 1px solid var(--border);
+input, select {
+  background: transparent;
+  border: none;
+  border-bottom: 1.5px solid var(--border);
+  border-radius: 0;
   color: var(--text);
-  padding: 11px 14px;
-  border-radius: 8px;
+  padding: 9px 0;
   font-size: 16px;
   font-family: inherit;
   width: 100%;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color 0.2s;
   -webkit-appearance: none;
   appearance: none;
 }
-input:focus, select:focus, textarea:focus {
+input:focus, select:focus {
   outline: none;
-  border-color: var(--red);
-  box-shadow: 0 0 0 3px rgba(139,26,26,0.08);
+  border-bottom-color: var(--red);
+  box-shadow: none;
 }
 select {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7'%3E%3Cpath fill='%237a746e' d='M5 7L0 0h10z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 14px center;
-  padding-right: 36px;
+  background-position: right 0 center;
+  padding-right: 20px;
 }
-textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
+textarea {
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: 4px;
+  font-size: 16px;
+  font-family: inherit;
+  width: 100%;
+  transition: border-color 0.2s;
+  resize: vertical;
+  min-height: 70px;
+  line-height: 1.5;
+}
+textarea:focus {
+  outline: none;
+  border-color: var(--red);
+  box-shadow: none;
+}
 
 /* ── Buttons ─────────────────────────────────── */
 .btn {
   padding: 12px 20px;
-  border-radius: 8px;
+  border-radius: 6px;
   border: none;
   cursor: pointer;
   font-size: 13px;
@@ -170,6 +189,7 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
 .btn-sm             { padding: 8px 14px; font-size: 11px; min-height: 36px; }
 .btn-wa             { background: #25d366; color: #fff; border: none; }
 .btn-wa:hover       { background: #1ebe5a; }
+.wa-icon            { width: 18px; height: 18px; flex-shrink: 0; }
 .btn-row            { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 24px; align-items: center; }
 
 /* ── Pricing ─────────────────────────────────── */
@@ -685,16 +705,17 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
   #customer-card .form-grid  { display: contents !important; }
   #customer-card .form-group { display: flex !important; flex-direction: column !important; gap: 1px !important; }
 
-  /* Primary row */
+  /* Primary row — Name · Door No · Address · Date */
   .form-group:has(#c-first)     { grid-row: 1 !important; grid-column: 1 !important; }
-  .form-group:has(#c-last)      { grid-row: 1 !important; grid-column: 2 !important; }
+  .form-group:has(#c-door)      { grid-row: 1 !important; grid-column: 2 !important; }
   .form-group:has(#c-address)   { grid-row: 1 !important; grid-column: 3 !important; }
   .form-group:has(#survey-date) { grid-row: 1 !important; grid-column: 4 !important; }
 
-  /* Secondary row */
-  .form-group:has(#c-phone)  { grid-row: 2 !important; grid-column: 1 !important; }
-  .form-group:has(#surveyor) { grid-row: 2 !important; grid-column: 2 !important; }
-  .form-group:has(#c-source) { grid-row: 2 !important; grid-column: 3 / 5 !important; }
+  /* Secondary row — Last · Phone · Rep · Source */
+  .form-group:has(#c-last)   { grid-row: 2 !important; grid-column: 1 !important; }
+  .form-group:has(#c-phone)  { grid-row: 2 !important; grid-column: 2 !important; }
+  .form-group:has(#surveyor) { grid-row: 2 !important; grid-column: 3 !important; }
+  .form-group:has(#c-source) { grid-row: 2 !important; grid-column: 4 !important; }
 
   /* Hidden */
   .form-group:has(#c-email),
@@ -703,22 +724,24 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
   /* Labels */
   #customer-card label { font-size: 6px !important; text-transform: uppercase !important; letter-spacing: 0.5px !important; font-weight: bold !important; }
   .form-group:has(#c-first) label,
-  .form-group:has(#c-last) label,
+  .form-group:has(#c-door) label,
   .form-group:has(#c-address) label,
   .form-group:has(#survey-date) label { color: #aaa !important; }
+  .form-group:has(#c-last) label,
   .form-group:has(#c-phone) label,
   .form-group:has(#surveyor) label,
   .form-group:has(#c-source) label   { font-size: 5px !important; color: #bbb !important; }
 
   /* Primary inputs — BOLD BIG */
   .form-group:has(#c-first) input,
-  .form-group:has(#c-last) input,
+  .form-group:has(#c-door) input,
   .form-group:has(#c-address) input,
   .form-group:has(#survey-date) input {
     font-size: 16px !important; font-weight: 900 !important; color: #111 !important;
   }
 
   /* Secondary inputs */
+  .form-group:has(#c-last) input,
   .form-group:has(#c-phone) input,
   .form-group:has(#surveyor) input,
   .form-group:has(#c-source) select {
