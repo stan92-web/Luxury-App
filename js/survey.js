@@ -237,8 +237,58 @@ const Survey = (() => {
   }
 
   function print() {
-    save(); // ensure latest state saved
+    save();
     window.print();
+  }
+
+  /* ── WhatsApp ── */
+  const OFFICE_WA = '447308154580';
+
+  function buildMessage() {
+    const name = [gv('c-first'), gv('c-last')].filter(Boolean).join(' ');
+    let m = `*LUXURY HOUSE — Survey*\n`;
+    m += `📅 Date: ${gv('survey-date') || '—'}\n`;
+    if (gv('surveyor')) m += `Surveyor: ${gv('surveyor')}\n`;
+    m += `\n*Customer*\n`;
+    if (name)           m += `Name: ${name}\n`;
+    if (gv('c-phone'))  m += `Phone: ${gv('c-phone')}\n`;
+    if (gv('c-email'))  m += `Email: ${gv('c-email')}\n`;
+    if (gv('c-address')) m += `Address: ${gv('c-address')}\n`;
+    if (gv('c-notes'))  m += `Notes: ${gv('c-notes')}\n`;
+
+    activeIds.forEach((id, i) => {
+      const rname = gv(`rname-${id}`) || `Room ${id}`;
+      m += `\n*Wardrobe ${i + 1}: ${rname}*\n`;
+      const w = gv(`dw-${id}`), h = gv(`dh-${id}`), d = gv(`dd-${id}`);
+      if (w || h || d) m += `Size: W${w || '—'} × H${h || '—'} × D${d || '—'} mm\n`;
+      if (gv(`du-${id}`)) m += `Doors: ${gv(`du-${id}`)}\n`;
+      // Sketch text labels
+      const labels = Sketch.getShapes(id).filter(s => s.type === 'text' && s.text.trim());
+      if (labels.length) m += `Sketch dims: ${labels.map(s => s.text.trim()).join(', ')}\n`;
+      if (gv(`rnotes-${id}`)) m += `Notes: ${gv(`rnotes-${id}`)}\n`;
+    });
+
+    return m.trim();
+  }
+
+  function waPhone(raw) {
+    // Strip everything except digits
+    let n = raw.replace(/\D/g, '');
+    if (n.startsWith('00')) n = n.slice(2);       // 0044... → 44...
+    else if (n.startsWith('0')) n = '44' + n.slice(1); // 07... → 447...
+    return n;
+  }
+
+  function sendToOffice() {
+    const msg = buildMessage();
+    window.open(`https://wa.me/${OFFICE_WA}?text=${encodeURIComponent(msg)}`, '_blank');
+  }
+
+  function sendToCustomer() {
+    const number = waPhone(gv('c-phone'));
+    if (!number) { showToast("Enter customer's phone number first"); return; }
+    const msg = buildMessage();
+    window.open(`https://wa.me/${number}?text=${encodeURIComponent(msg)}`, '_blank');
   }
 
   /* ── Helpers ── */
@@ -264,5 +314,5 @@ const Survey = (() => {
   /* ── Boot ── */
   document.addEventListener('DOMContentLoaded', init);
 
-  return { addRoom, removeRoom, clearAll, print };
+  return { addRoom, removeRoom, clearAll, print, sendToOffice, sendToCustomer };
 })();

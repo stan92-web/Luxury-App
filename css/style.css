@@ -160,6 +160,8 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
 .btn-dark           { background: var(--header); border: 1px solid #333; color: #fff; }
 .btn-danger         { background: #c0392b; color: #fff; }
 .btn-sm             { padding: 8px 14px; font-size: 11px; min-height: 36px; }
+.btn-wa             { background: #25d366; color: #fff; border: none; }
+.btn-wa:hover       { background: #1ebe5a; }
 .btn-row            { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 24px; align-items: center; }
 
 /* ── Room Card ───────────────────────────────── */
