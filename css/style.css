@@ -3,6 +3,104 @@
    Dark theme for app / Clean white for A4 print
 ══════════════════════════════════════════════ */
 
+/* ── Login Screen ────────────────────────────── */
+#auth-screen {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(160deg, #0d0d0d 0%, #1a0404 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+#auth-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  max-width: 340px;
+  padding: 20px;
+}
+.auth-logo-icon {
+  width: 64px; height: 64px;
+  background: var(--red);
+  border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 32px;
+  margin-bottom: 4px;
+}
+.auth-logo-text {
+  font-size: 22px;
+  font-weight: bold;
+  color: #fff;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+.auth-logo-sub {
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.auth-label {
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+#auth-input {
+  background: #2a2a2a;
+  border: 2px solid var(--border);
+  color: #fff;
+  font-size: 28px;
+  font-weight: bold;
+  letter-spacing: 8px;
+  text-align: center;
+  padding: 16px;
+  border-radius: 12px;
+  width: 100%;
+  transition: border-color 0.2s;
+}
+#auth-input:focus {
+  outline: none;
+  border-color: var(--red);
+}
+.auth-btn {
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, var(--red-light), var(--red-dark));
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  font-family: inherit;
+  min-height: 54px;
+  touch-action: manipulation;
+}
+.auth-btn:active { opacity: 0.85; }
+#auth-error {
+  color: var(--red-light);
+  font-size: 13px;
+  opacity: 0;
+  transition: opacity 0.2s;
+  letter-spacing: 1px;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%       { transform: translateX(-10px); }
+  40%       { transform: translateX(10px); }
+  60%       { transform: translateX(-8px); }
+  80%       { transform: translateX(8px); }
+}
+#auth-box.shake { animation: shake 0.4s ease; }
+
 :root {
   --red:        #c0392b;
   --red-dark:   #922b21;

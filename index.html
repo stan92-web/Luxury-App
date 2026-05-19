@@ -8,6 +8,23 @@
 </head>
 <body>
 
+<!-- ── Login Screen ── -->
+<div id="auth-screen">
+  <div id="auth-box">
+    <div class="auth-logo-icon">🏠</div>
+    <div class="auth-logo-text">Luxury House</div>
+    <div class="auth-logo-sub">Survey &amp; Measurement</div>
+    <div class="auth-label">Enter Access Code</div>
+    <input id="auth-input" type="password" inputmode="numeric"
+      placeholder="——————" maxlength="10" autocomplete="off">
+    <button class="auth-btn" onclick="Auth.attempt()">Access App</button>
+    <div id="auth-error">Incorrect code — try again</div>
+  </div>
+</div>
+
+<!-- ── Main App ── -->
+<div id="app-wrap">
+
 <header>
   <div class="logo">
     <div class="logo-icon">🏠</div>
@@ -19,6 +36,7 @@
   <div class="header-right">
     <span id="header-date" class="header-date"></span>
     <button class="btn btn-outline no-print" onclick="Survey.print()">🖨️ Print / PDF</button>
+    <button class="btn btn-dark btn-sm no-print" onclick="Auth.logout()" title="Log out">🔒</button>
   </div>
 </header>
 
@@ -92,6 +110,8 @@
 
 <div id="toast"></div>
 
+</div><!-- end app-wrap -->
+
 <!-- ── Full-Screen Sketch Overlay ── -->
 <div id="fs-overlay">
   <div id="fs-bar">
@@ -120,6 +140,7 @@
   </div>
 </div>
 
+<script src="js/auth.js"></script>
 <script src="js/sketch.js"></script>
 <script src="js/survey.js"></script>
 </body>
