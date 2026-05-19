@@ -590,6 +590,53 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
   body { background: #fff !important; color: #111 !important; min-height: 0 !important; }
   main { padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
 
+  /* ── Single-room: flex chain so canvas fills the full page automatically ──
+     287mm = A4 (297mm) minus 5mm top + 5mm bottom margins.
+     Only fires when exactly one room card exists (:only-child).
+     Multi-room falls back to the fixed 130mm canvas below. */
+  body:has(#rooms-container .room-card:only-child) {
+    height: 287mm !important;
+    display: flex !important; flex-direction: column !important;
+  }
+  body:has(#rooms-container .room-card:only-child) #app-wrap {
+    flex: 1 !important; display: flex !important; flex-direction: column !important;
+    overflow: visible !important;
+  }
+  body:has(#rooms-container .room-card:only-child) main {
+    flex: 1 !important; display: flex !important; flex-direction: column !important;
+  }
+  body:has(#rooms-container .room-card:only-child) #customer-card { flex-shrink: 0 !important; }
+  body:has(#rooms-container .room-card:only-child) #rooms-container {
+    flex: 1 !important; display: flex !important; flex-direction: column !important;
+  }
+  body:has(#rooms-container .room-card:only-child) #pricing-card  { flex-shrink: 0 !important; }
+
+  #rooms-container .room-card:only-child {
+    flex: 1 !important; display: flex !important; flex-direction: column !important;
+    margin: 0 !important;
+  }
+  #rooms-container .room-card:only-child .room-card-header { flex-shrink: 0 !important; }
+  #rooms-container .room-card:only-child .room-card-body {
+    flex: 1 !important; display: flex !important; flex-direction: column !important;
+    padding-bottom: 0 !important;
+  }
+  #rooms-container .room-card:only-child .dims-row    { flex-shrink: 0 !important; }
+  #rooms-container .room-card:only-child .sketch-section {
+    flex: 1 !important; display: flex !important; flex-direction: column !important;
+    min-height: 0 !important; margin-bottom: 0 !important;
+  }
+  #rooms-container .room-card:only-child .sketch-label { flex-shrink: 0 !important; }
+  #rooms-container .room-card:only-child .sketch-dims  { flex-shrink: 0 !important; }
+  #rooms-container .room-card:only-child .canvas-wrap {
+    flex: 1 !important; min-height: 0 !important;
+    display: flex !important; flex-direction: column !important;
+  }
+  /* flex:1 on the canvas itself fills the canvas-wrap in all browsers incl. Safari */
+  #rooms-container .room-card:only-child .room-canvas {
+    flex: 1 !important; height: auto !important;
+    min-height: 0 !important; max-height: none !important;
+  }
+
   /* Global input/select reset — forces out all tablet padding/font rules.
      Specific rules further down override via higher specificity + !important. */
   input, select, textarea {
