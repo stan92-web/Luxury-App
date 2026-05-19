@@ -92,6 +92,41 @@ const Sketch = (() => {
     return best; // null if nothing within radius
   }
 
+  /* ── Eraser hit-testing ──────────────────────── */
+  const ERASE_R = 18; // tap threshold in canvas pixels
+
+  function distToSeg(px, py, x1, y1, x2, y2) {
+    const dx = x2 - x1, dy = y2 - y1;
+    const lenSq = dx * dx + dy * dy;
+    if (lenSq === 0) return Math.hypot(px - x1, py - y1);
+    const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / lenSq));
+    return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
+  }
+
+  function hitTestShape(x, y, sh) {
+    if (sh.type === 'line') return distToSeg(x, y, sh.x1, sh.y1, sh.x2, sh.y2);
+    if (sh.type === 'rect') {
+      const x2 = sh.x + sh.w, y2 = sh.y + sh.h;
+      const inX = x >= Math.min(sh.x, x2) && x <= Math.max(sh.x, x2);
+      const inY = y >= Math.min(sh.y, y2) && y <= Math.max(sh.y, y2);
+      if (inX && inY) return 0;
+      return Math.min(
+        distToSeg(x, y, sh.x, sh.y, x2, sh.y),
+        distToSeg(x, y, x2, sh.y, x2, y2),
+        distToSeg(x, y, sh.x, y2, x2, y2),
+        distToSeg(x, y, sh.x, sh.y, sh.x, y2)
+      );
+    }
+    if (sh.type === 'pen') {
+      let min = Infinity;
+      for (let i = 1; i < sh.path.length; i++)
+        min = Math.min(min, distToSeg(x, y, sh.path[i-1].x, sh.path[i-1].y, sh.path[i].x, sh.path[i].y));
+      return min;
+    }
+    if (sh.type === 'text') return Math.hypot(x - sh.x, y - sh.y);
+    return Infinity;
+  }
+
   /* ── Pointer events (palm rejection) ─────────── */
   function onDown(id, e) {
     const s      = states[id];
@@ -109,8 +144,16 @@ const Sketch = (() => {
       return;
     }
 
-    // Snap start point to nearest existing endpoint
-    const snap = findSnap(p.x, p.y, s.shapes);
+    if (s.tool === 'eraser') {
+      let best = -1, bestD = ERASE_R;
+      s.shapes.forEach((sh, i) => { const d = hitTestShape(p.x, p.y, sh); if (d < bestD) { bestD = d; best = i; } });
+      if (best !== -1) { saveHistory(id); s.shapes.splice(best, 1); redraw(id); notifyChange(); }
+      s.activePointerId = null;
+      return;
+    }
+
+    // Snap start point — line tool only (pen snap disrupts freehand drawing)
+    const snap = s.tool === 'line' ? findSnap(p.x, p.y, s.shapes) : null;
     if (snap) p = snap;
 
     s.drawing      = true;
@@ -136,8 +179,8 @@ const Sketch = (() => {
       s.currentPath.push(p);
     }
 
-    // Find snap candidate for end point — used for preview and visual indicator
-    const snap = findSnap(p.x, p.y, s.shapes);
+    // Snap candidate — line tool only
+    const snap = s.tool === 'line' ? findSnap(p.x, p.y, s.shapes) : null;
     s.snapCandidate = snap;
     const px = snap ? snap.x : p.x;
     const py = snap ? snap.y : p.y;
@@ -151,7 +194,7 @@ const Sketch = (() => {
     if (!s || !s.drawing || e.pointerId !== s.activePointerId) return;
 
     const raw   = getPos(canvas, e);
-    const snap  = findSnap(raw.x, raw.y, s.shapes);
+    const snap  = s.tool === 'line' ? findSnap(raw.x, raw.y, s.shapes) : null;
     const ex    = snap ? snap.x : raw.x;
     const ey    = snap ? snap.y : raw.y;
 
@@ -262,7 +305,7 @@ const Sketch = (() => {
       if (!text) return;
       saveHistory(id);
       const s = states[id];
-      s.shapes.push({ type: 'text', x, y, text, colour: s.colour, size: 13 });
+      s.shapes.push({ type: 'text', x, y, text, colour: s.colour, size: 18 });
       redraw(id);
       notifyChange();
     }
@@ -321,7 +364,7 @@ const Sketch = (() => {
     if      (sh.type === 'pen')  drawPenPath(ctx, sh.path, sh.colour, sh.lw);
     else if (sh.type === 'line') { ctx.beginPath(); ctx.moveTo(sh.x1, sh.y1); ctx.lineTo(sh.x2, sh.y2); ctx.stroke(); }
     else if (sh.type === 'rect') { ctx.beginPath(); ctx.strokeRect(sh.x, sh.y, sh.w, sh.h); }
-    else if (sh.type === 'text') { ctx.font = `${sh.size || 13}px Arial`; ctx.fillText(sh.text, sh.x, sh.y); }
+    else if (sh.type === 'text') { ctx.font = `bold ${sh.size || 18}px Arial`; ctx.fillText(sh.text, sh.x, sh.y); }
   }
 
   function drawPenPath(ctx, path, colour, lw) {
@@ -381,7 +424,7 @@ const Sketch = (() => {
   function setTool(id, tool) {
     const s = states[id];
     if (s) s.tool = tool;
-    ['pen','line','rect','text'].forEach(t => {
+    ['pen','line','rect','text','eraser'].forEach(t => {
       const btn = document.getElementById(`tool-${t}-${id}`);
       if (btn) btn.classList.toggle('active', t === tool);
     });
@@ -530,8 +573,16 @@ const Sketch = (() => {
     let p = fsGetPos(e);
     if (fs.tool === 'text') { fsShowTextInput(p.x, p.y); fs.activePointerId = null; return; }
 
-    // Snap start point
-    const snap = findSnap(p.x, p.y, fs.shapes);
+    if (fs.tool === 'eraser') {
+      let best = -1, bestD = ERASE_R;
+      fs.shapes.forEach((sh, i) => { const d = hitTestShape(p.x, p.y, sh); if (d < bestD) { bestD = d; best = i; } });
+      if (best !== -1) { fsSaveHistory(); fs.shapes.splice(best, 1); fsRedraw(); }
+      fs.activePointerId = null;
+      return;
+    }
+
+    // Snap start point — line tool only
+    const snap = fs.tool === 'line' ? findSnap(p.x, p.y, fs.shapes) : null;
     if (snap) p = snap;
 
     fs.drawing      = true;
@@ -552,7 +603,7 @@ const Sketch = (() => {
     } else if (fs.tool === 'pen') {
       fs.currentPath.push(p);
     }
-    const snap = findSnap(p.x, p.y, fs.shapes);
+    const snap = fs.tool === 'line' ? findSnap(p.x, p.y, fs.shapes) : null;
     fs.snapCandidate = snap;
     fsRedraw(snap ? snap.x : p.x, snap ? snap.y : p.y);
   }
@@ -560,7 +611,7 @@ const Sketch = (() => {
   function fsUp(e) {
     if (!fs.drawing || e.pointerId !== fs.activePointerId) return;
     const raw  = fsGetPos(e);
-    const snap = findSnap(raw.x, raw.y, fs.shapes);
+    const snap = fs.tool === 'line' ? findSnap(raw.x, raw.y, fs.shapes) : null;
     const ex   = snap ? snap.x : raw.x;
     const ey   = snap ? snap.y : raw.y;
 
@@ -621,7 +672,7 @@ const Sketch = (() => {
       inp.remove();
       if (!text) return;
       fsSaveHistory();
-      fs.shapes.push({ type: 'text', x, y, text, colour: fs.colour, size: 16 });
+      fs.shapes.push({ type: 'text', x, y, text, colour: fs.colour, size: 18 });
       fsRedraw();
     }
     inp.addEventListener('blur',    commit);
@@ -661,7 +712,7 @@ const Sketch = (() => {
 
   function fsSetTool(tool) {
     fs.tool = tool;
-    ['pen','line','rect','text'].forEach(t => {
+    ['pen','line','rect','text','eraser'].forEach(t => {
       const btn = document.getElementById(`fs-tool-${t}`);
       if (btn) btn.classList.toggle('active', t === tool);
     });

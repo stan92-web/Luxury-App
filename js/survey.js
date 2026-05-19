@@ -205,10 +205,11 @@ const Survey = (() => {
         <div class="sketch-section">
           <div class="sketch-label">✏️ Sketch / Measurements</div>
           <div class="sketch-toolbar no-print" id="toolbar-${id}">
-            <button class="sk-btn active" id="tool-pen-${id}"  onclick="Sketch.setTool(${id},'pen')">✏️ Draw</button>
-            <button class="sk-btn"        id="tool-line-${id}" onclick="Sketch.setTool(${id},'line')">╱ Line</button>
-            <button class="sk-btn"        id="tool-rect-${id}" onclick="Sketch.setTool(${id},'rect')">▭ Box</button>
-            <button class="sk-btn"        id="tool-text-${id}" onclick="Sketch.setTool(${id},'text')">T Label</button>
+            <button class="sk-btn active" id="tool-pen-${id}"    onclick="Sketch.setTool(${id},'pen')">✏️ Draw</button>
+            <button class="sk-btn"        id="tool-line-${id}"   onclick="Sketch.setTool(${id},'line')">╱ Line</button>
+            <button class="sk-btn"        id="tool-rect-${id}"   onclick="Sketch.setTool(${id},'rect')">▭ Box</button>
+            <button class="sk-btn"        id="tool-text-${id}"   onclick="Sketch.setTool(${id},'text')">T Label</button>
+            <button class="sk-btn"        id="tool-eraser-${id}" onclick="Sketch.setTool(${id},'eraser')">✕ Erase</button>
             <div class="sk-sep"></div>
             <div class="colour-dots" id="colours-${id}">
               <div class="colour-dot active" style="background:#222222" onclick="Sketch.setColour(${id},'#222222',this)" title="Black"></div>
@@ -227,7 +228,6 @@ const Survey = (() => {
           <div class="canvas-wrap" id="canvas-wrap-${id}">
             <canvas id="canvas-${id}" class="room-canvas"></canvas>
           </div>
-          <div class="sketch-dims" id="sketch-dims-${id}" style="display:none"></div>
         </div>
 
         <div class="notes-group">
