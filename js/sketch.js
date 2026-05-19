@@ -144,14 +144,6 @@ const Sketch = (() => {
       return;
     }
 
-    if (s.tool === 'eraser') {
-      let best = -1, bestD = ERASE_R;
-      s.shapes.forEach((sh, i) => { const d = hitTestShape(p.x, p.y, sh); if (d < bestD) { bestD = d; best = i; } });
-      if (best !== -1) { saveHistory(id); s.shapes.splice(best, 1); redraw(id); notifyChange(); }
-      s.activePointerId = null;
-      return;
-    }
-
     // Snap start point — line tool only (pen snap disrupts freehand drawing)
     const snap = s.tool === 'line' ? findSnap(p.x, p.y, s.shapes) : null;
     if (snap) p = snap;
@@ -175,7 +167,7 @@ const Sketch = (() => {
       if (Math.hypot(p.x - s.pendingStart.x, p.y - s.pendingStart.y) < 8) return;
       s.currentPath  = [s.pendingStart, p];
       s.pendingStart = null;
-    } else if (s.tool === 'pen') {
+    } else if (s.tool === 'pen' || s.tool === 'eraser') {
       s.currentPath.push(p);
     }
 
@@ -225,6 +217,12 @@ const Sketch = (() => {
       const w = ex - s.startX, h = ey - s.startY;
       if (Math.abs(w) > 4 || Math.abs(h) > 4)
         s.shapes.push({ type: 'rect', x: s.startX, y: s.startY, w, h, colour: s.colour, lw: s.lineWidth });
+
+    } else if (s.tool === 'eraser' && s.currentPath.length > 0) {
+      // Save eraser stroke as a white pen path — renders on top of everything, visually erasing it
+      const path = s.currentPath.length > 1 ? s.currentPath.slice() : [s.currentPath[0], s.currentPath[0]];
+      s.shapes.push({ type: 'pen', path, colour: '#ffffff', lw: 22 });
+      s.currentPath = [];
     }
 
     redraw(id);
@@ -329,6 +327,9 @@ const Sketch = (() => {
     if (s.tool === 'pen' && s.currentPath.length > 1)
       drawPenPath(ctx, s.currentPath, s.colour, s.lineWidth);
 
+    if (s.tool === 'eraser' && s.drawing && s.currentPath.length > 1)
+      drawPenPath(ctx, s.currentPath, '#ffffff', 22);
+
     if (s.drawing && previewX !== undefined) {
       ctx.strokeStyle = s.colour;
       ctx.lineWidth   = s.lineWidth;
@@ -338,6 +339,12 @@ const Sketch = (() => {
         ctx.beginPath(); ctx.moveTo(s.startX, s.startY); ctx.lineTo(previewX, previewY); ctx.stroke();
       } else if (s.tool === 'rect') {
         ctx.beginPath(); ctx.strokeRect(s.startX, s.startY, previewX - s.startX, previewY - s.startY);
+      } else if (s.tool === 'eraser') {
+        // Dashed circle shows eraser size and position
+        ctx.save();
+        ctx.strokeStyle = '#bbb'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]);
+        ctx.beginPath(); ctx.arc(previewX, previewY, 11, 0, Math.PI * 2); ctx.stroke();
+        ctx.restore();
       }
     }
 
@@ -573,14 +580,6 @@ const Sketch = (() => {
     let p = fsGetPos(e);
     if (fs.tool === 'text') { fsShowTextInput(p.x, p.y); fs.activePointerId = null; return; }
 
-    if (fs.tool === 'eraser') {
-      let best = -1, bestD = ERASE_R;
-      fs.shapes.forEach((sh, i) => { const d = hitTestShape(p.x, p.y, sh); if (d < bestD) { bestD = d; best = i; } });
-      if (best !== -1) { fsSaveHistory(); fs.shapes.splice(best, 1); fsRedraw(); }
-      fs.activePointerId = null;
-      return;
-    }
-
     // Snap start point — line tool only
     const snap = fs.tool === 'line' ? findSnap(p.x, p.y, fs.shapes) : null;
     if (snap) p = snap;
@@ -600,7 +599,7 @@ const Sketch = (() => {
       if (Math.hypot(p.x - fs.pendingStart.x, p.y - fs.pendingStart.y) < 8) return;
       fs.currentPath  = [fs.pendingStart, p];
       fs.pendingStart = null;
-    } else if (fs.tool === 'pen') {
+    } else if (fs.tool === 'pen' || fs.tool === 'eraser') {
       fs.currentPath.push(p);
     }
     const snap = fs.tool === 'line' ? findSnap(p.x, p.y, fs.shapes) : null;
@@ -639,6 +638,11 @@ const Sketch = (() => {
       const w = ex - fs.startX, h = ey - fs.startY;
       if (Math.abs(w) > 4 || Math.abs(h) > 4)
         fs.shapes.push({ type: 'rect', x: fs.startX, y: fs.startY, w, h, colour: fs.colour, lw: fs.lineWidth });
+
+    } else if (fs.tool === 'eraser' && fs.currentPath.length > 0) {
+      const path = fs.currentPath.length > 1 ? fs.currentPath.slice() : [fs.currentPath[0], fs.currentPath[0]];
+      fs.shapes.push({ type: 'pen', path, colour: '#ffffff', lw: 22 });
+      fs.currentPath = [];
     }
     fsRedraw();
   }
@@ -690,6 +694,9 @@ const Sketch = (() => {
     if (fs.tool === 'pen' && fs.currentPath.length > 1)
       drawPenPath(ctx, fs.currentPath, fs.colour, fs.lineWidth);
 
+    if (fs.tool === 'eraser' && fs.drawing && fs.currentPath.length > 1)
+      drawPenPath(ctx, fs.currentPath, '#ffffff', 22);
+
     if (fs.drawing && previewX !== undefined) {
       ctx.strokeStyle = fs.colour;
       ctx.lineWidth   = fs.lineWidth;
@@ -699,6 +706,11 @@ const Sketch = (() => {
         ctx.beginPath(); ctx.moveTo(fs.startX, fs.startY); ctx.lineTo(previewX, previewY); ctx.stroke();
       } else if (fs.tool === 'rect') {
         ctx.beginPath(); ctx.strokeRect(fs.startX, fs.startY, previewX - fs.startX, previewY - fs.startY);
+      } else if (fs.tool === 'eraser') {
+        ctx.save();
+        ctx.strokeStyle = '#bbb'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]);
+        ctx.beginPath(); ctx.arc(previewX, previewY, 11, 0, Math.PI * 2); ctx.stroke();
+        ctx.restore();
       }
     }
 
