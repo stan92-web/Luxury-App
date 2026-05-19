@@ -582,90 +582,77 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
    (see prepareForPrint in survey.js)
 ══════════════════════════════════════════════ */
 @media print {
-  @page { size: A4 portrait; margin: 7mm 9mm; }
+  @page { size: A4 portrait; margin: 5mm 9mm; }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .no-print, #toast, #fs-overlay, #auth-screen { display: none !important; }
 
-  body { background: #fff !important; color: #111 !important; }
-  main { padding: 2px 0 0; max-width: 100%; }
+  /* ── Structural reset — kill all screen spacing ── */
+  body { background: #fff !important; color: #111 !important; min-height: 0 !important; }
+  main { padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
 
-  /* ══ HEADER — tiny strip with LH mark + date ══ */
+  /* Global input/select reset — forces out all tablet padding/font rules.
+     Specific rules further down override via higher specificity + !important. */
+  input, select, textarea {
+    padding: 0 !important; min-height: 0 !important; height: auto !important;
+    font-size: 9px !important; background: transparent !important;
+    border: none !important; box-shadow: none !important;
+  }
+
+  /* ══ HEADER — tiny strip ══ */
   header {
-    background: #fff !important;
+    background: #fff !important; height: auto !important;
     border-bottom: 1.5px solid #8b1a1a !important;
     box-shadow: none !important; position: relative !important;
-    height: auto; padding: 2px 0 3px;
+    padding: 3px 8px !important;
   }
-  .logo      { gap: 5px; }
-  .logo-mark { background: #8b1a1a !important; width: 20px; height: 20px; font-size: 8px; border-radius: 3px; }
-  .logo-text { color: #1a1a1a !important; font-size: 9px; letter-spacing: 2px; }
-  .logo-sub  { color: #999 !important; font-size: 6px; }
-  .header-date { display: block !important; color: #555 !important; font-size: 8px; }
+  .logo      { gap: 5px !important; }
+  .logo-mark { background: #8b1a1a !important; width: 20px !important; height: 20px !important; font-size: 8px !important; border-radius: 3px !important; }
+  .logo-text { color: #1a1a1a !important; font-size: 9px !important; letter-spacing: 2px !important; }
+  .logo-sub  { color: #999 !important; font-size: 6px !important; }
+  .header-date { display: block !important; color: #555 !important; font-size: 8px !important; }
 
-  /* ══ CUSTOMER STRIP — two rows, ~18mm total ══
-     Uses CSS Grid with display:contents on form-grids so every
-     form-group becomes a direct grid child we can position precisely.
-
-     Row 1 (bold): First Name | Last Name | Address | Date
-     Row 2 (slim): Phone | Rep/Designer | Lead Source             */
+  /* ══ CUSTOMER STRIP — Row 1 bold (Name, Address, Date) · Row 2 slim ══ */
   #customer-card {
     display: grid !important;
-    grid-template-columns: auto auto 1fr auto;
-    grid-template-rows: auto auto;
-    column-gap: 16px;
-    row-gap: 4px;
-    padding: 4px 8px 6px;
-    margin-bottom: 3px;
-    background: #fff !important;
-    border: none !important;
+    grid-template-columns: auto auto 1fr auto !important;
+    grid-template-rows: auto auto !important;
+    column-gap: 14px !important; row-gap: 3px !important;
+    padding: 4px 8px 5px !important; margin: 0 0 3px !important;
+    background: #fff !important; border: none !important;
     border-bottom: 1.5px solid #ddd !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
-    page-break-inside: avoid;
+    border-radius: 0 !important; box-shadow: none !important;
   }
   #customer-card .card-title { display: none !important; }
   .sub-heading { display: none !important; }
-  /* Flatten both form-grids so form-groups are direct grid children */
-  #customer-card .form-grid   { display: contents; }
-  #customer-card .form-group  { display: flex; flex-direction: column; gap: 1px; }
+  #customer-card .form-grid  { display: contents !important; }
+  #customer-card .form-group { display: flex !important; flex-direction: column !important; gap: 1px !important; }
 
-  /* ─ Primary row (row 1) ─ */
-  .form-group:has(#c-first)     { grid-row: 1; grid-column: 1; }
-  .form-group:has(#c-last)      { grid-row: 1; grid-column: 2; }
-  .form-group:has(#c-address)   { grid-row: 1; grid-column: 3 !important; } /* override .form-group.full */
-  .form-group:has(#survey-date) { grid-row: 1; grid-column: 4; }
+  /* Primary row */
+  .form-group:has(#c-first)     { grid-row: 1 !important; grid-column: 1 !important; }
+  .form-group:has(#c-last)      { grid-row: 1 !important; grid-column: 2 !important; }
+  .form-group:has(#c-address)   { grid-row: 1 !important; grid-column: 3 !important; }
+  .form-group:has(#survey-date) { grid-row: 1 !important; grid-column: 4 !important; }
 
-  /* ─ Secondary row (row 2) ─ */
-  .form-group:has(#c-phone)  { grid-row: 2; grid-column: 1; }
-  .form-group:has(#surveyor) { grid-row: 2; grid-column: 2; }
-  .form-group:has(#c-source) { grid-row: 2; grid-column: 3 / 5; }
+  /* Secondary row */
+  .form-group:has(#c-phone)  { grid-row: 2 !important; grid-column: 1 !important; }
+  .form-group:has(#surveyor) { grid-row: 2 !important; grid-column: 2 !important; }
+  .form-group:has(#c-source) { grid-row: 2 !important; grid-column: 3 / 5 !important; }
 
-  /* ─ Hidden fields ─ */
+  /* Hidden */
   .form-group:has(#c-email),
   .form-group:has(#c-notes) { display: none !important; }
 
-  /* ─ Labels ─ */
-  #customer-card label {
-    font-size: 6px; text-transform: uppercase;
-    letter-spacing: 0.5px; font-weight: bold;
-  }
+  /* Labels */
+  #customer-card label { font-size: 6px !important; text-transform: uppercase !important; letter-spacing: 0.5px !important; font-weight: bold !important; }
   .form-group:has(#c-first) label,
   .form-group:has(#c-last) label,
   .form-group:has(#c-address) label,
   .form-group:has(#survey-date) label { color: #aaa !important; }
   .form-group:has(#c-phone) label,
   .form-group:has(#surveyor) label,
-  .form-group:has(#c-source) label  { font-size: 5px; color: #bbb !important; }
+  .form-group:has(#c-source) label   { font-size: 5px !important; color: #bbb !important; }
 
-  /* ─ All customer inputs reset ─ */
-  #customer-card input,
-  #customer-card select {
-    border: none !important; background: transparent !important;
-    box-shadow: none !important; padding: 0; border-radius: 0;
-    -webkit-appearance: none; appearance: none;
-  }
-
-  /* ─ Primary inputs — BOLD BIG ─ */
+  /* Primary inputs — BOLD BIG */
   .form-group:has(#c-first) input,
   .form-group:has(#c-last) input,
   .form-group:has(#c-address) input,
@@ -673,73 +660,76 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
     font-size: 16px !important; font-weight: 900 !important; color: #111 !important;
   }
 
-  /* ─ Secondary inputs — slim ─ */
+  /* Secondary inputs */
   .form-group:has(#c-phone) input,
   .form-group:has(#surveyor) input,
   .form-group:has(#c-source) select {
     font-size: 8px !important; color: #555 !important; font-weight: normal !important;
   }
 
-  /* ══ ROOM CARD — wardrobe name + dims + big sketch ══ */
+  /* ══ ROOM CARD ══ */
   .room-card {
     background: #fff !important; border: 1px solid #ddd !important;
-    box-shadow: none !important; border-radius: 2px;
-    margin-bottom: 3px; page-break-inside: avoid; break-inside: avoid;
+    box-shadow: none !important; border-radius: 2px !important;
+    margin: 0 0 3px !important;
+    page-break-inside: avoid; break-inside: avoid;
     page-break-before: avoid; break-before: avoid;
   }
   .room-card-header {
     background: #faf8f6 !important; border-bottom: 1px solid #eee !important;
-    padding: 3px 8px;
+    padding: 3px 8px !important;
   }
-  .room-number     { color: #8b1a1a !important; font-size: 6px; }
+  .room-number { color: #8b1a1a !important; font-size: 6px !important; }
   .room-name-input {
-    font-size: 11px; font-weight: bold; color: #111 !important; padding: 0;
-    background: transparent !important; border: none !important; box-shadow: none !important;
+    font-size: 11px !important; font-weight: bold !important; color: #111 !important;
+    padding: 0 !important; background: transparent !important;
+    border: none !important; box-shadow: none !important; width: 100% !important;
   }
-  .room-card-body { padding: 4px 8px; }
+  .room-card-body { padding: 3px 8px !important; }
 
-  /* Dimensions — compact single row */
-  .dims-row  { gap: 5px; margin-bottom: 4px; flex-wrap: nowrap; }
-  .dim-group { min-width: 0; }
+  /* Dimensions */
+  .dims-row  { gap: 5px !important; margin-bottom: 4px !important; flex-wrap: nowrap !important; }
+  .dim-group { min-width: 0 !important; gap: 2px !important; }
+  .dim-group label { font-size: 6px !important; color: #777 !important; text-align: center !important; }
   .dim-input {
-    font-size: 11px; font-weight: bold; padding: 2px 3px; text-align: center;
-    border: 1px solid #ccc !important; border-radius: 2px;
-    background: #fafafa !important; color: #111 !important; box-shadow: none !important;
+    font-size: 11px !important; font-weight: bold !important; padding: 2px 3px !important;
+    text-align: center !important; border: 1px solid #ccc !important; border-radius: 2px !important;
+    background: #fafafa !important; color: #111 !important; box-shadow: none !important; width: 100% !important;
   }
-  .dim-unit { font-size: 6px; color: #777 !important; }
+  .dim-unit { font-size: 6px !important; color: #777 !important; margin-top: 0 !important; }
 
-  /* Sketch — 150mm, sharp at 300dpi (canvas pre-scaled in JS) */
-  .sketch-section { margin-bottom: 3px; }
-  .sketch-label   { color: #8b1a1a !important; font-size: 6px; margin-bottom: 2px; padding-bottom: 0; border: none; }
+  /* Sketch canvas — 130mm leaves ~150mm for all other content on 287mm page */
+  .sketch-section { margin-bottom: 2px !important; }
+  .sketch-label   { color: #8b1a1a !important; font-size: 6px !important; margin-bottom: 2px !important; padding-bottom: 0 !important; border: none !important; }
   .sketch-toolbar { display: none !important; }
-  .canvas-wrap    { border: 1.5px solid #999 !important; box-shadow: none !important; border-radius: 2px; }
+  .canvas-wrap    { border: 1.5px solid #999 !important; box-shadow: none !important; border-radius: 2px !important; overflow: hidden !important; }
   .room-canvas    {
     display: block !important; width: 100% !important;
-    min-height: 0 !important; height: 150mm !important; max-height: 150mm !important;
+    min-height: 0 !important; height: 130mm !important; max-height: 130mm !important;
   }
 
-  /* Dimension badges below sketch */
-  .sketch-dims       { background: #f7f4f0 !important; border: 1px solid #ddd !important; border-radius: 2px; padding: 2px 6px; gap: 4px; margin-top: 2px; }
-  .sketch-dims-title { font-size: 6px; }
-  .dim-badge         { background: #fff !important; border: 1px solid #8b1a1a !important; border-radius: 3px; padding: 1px 6px; font-size: 9px; font-weight: bold; color: #8b1a1a !important; }
+  /* Sketch dimension badges */
+  .sketch-dims       { background: #f7f4f0 !important; border: 1px solid #ddd !important; border-radius: 2px !important; padding: 2px 6px !important; gap: 4px !important; margin-top: 2px !important; }
+  .sketch-dims-title { font-size: 6px !important; }
+  .dim-badge         { background: #fff !important; border: 1px solid #8b1a1a !important; border-radius: 3px !important; padding: 1px 6px !important; font-size: 9px !important; font-weight: bold !important; color: #8b1a1a !important; }
 
-  /* Notes textarea — hidden (measurements go on sketch) */
+  /* Notes — hidden */
   .notes-group { display: none !important; }
 
-  /* ══ PRICING FOOTER — bottom strip ══ */
+  /* ══ PRICING FOOTER ══ */
   #pricing-card {
     background: #fff !important; border: none !important;
     border-top: 1.5px solid #ddd !important; border-radius: 0 !important;
-    box-shadow: none !important; padding: 4px 8px; margin-bottom: 0;
+    box-shadow: none !important; padding: 4px 8px !important; margin: 0 !important;
     page-break-inside: avoid; break-inside: avoid;
     page-break-before: avoid; break-before: avoid;
   }
   #pricing-card .card-title { display: none !important; }
-  .pricing-row       { gap: 10px; flex-wrap: nowrap; }
-  .price-group label { font-size: 7px; color: #888 !important; }
-  .price-wrap        { border: 1px solid #ccc !important; border-radius: 2px; background: #fafafa !important; }
-  .price-sym         { font-size: 14px; padding: 2px 2px 2px 8px; color: #555 !important; }
-  .price-wrap input  { font-size: 16px; padding: 2px 8px 2px 2px; font-weight: bold; }
+  .pricing-row       { gap: 10px !important; flex-wrap: nowrap !important; }
+  .price-group label { font-size: 7px !important; color: #888 !important; }
+  .price-wrap        { border: 1px solid #ccc !important; border-radius: 2px !important; background: #fafafa !important; }
+  .price-sym         { font-size: 14px !important; padding: 2px 2px 2px 8px !important; color: #555 !important; }
+  .price-wrap input  { font-size: 16px !important; padding: 2px 8px 2px 2px !important; font-weight: bold !important; }
   .price-balance .price-wrap { border-color: #8b1a1a !important; background: #fdf5f5 !important; }
   .price-balance .price-sym  { color: #8b1a1a !important; }
   .price-balance input       { color: #8b1a1a !important; }
