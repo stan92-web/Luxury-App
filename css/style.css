@@ -684,7 +684,8 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
   .room-card {
     background: #fff !important; border: 1px solid #ddd !important;
     box-shadow: none !important; border-radius: 2px;
-    margin-bottom: 3px; page-break-inside: avoid;
+    margin-bottom: 3px; page-break-inside: avoid; break-inside: avoid;
+    page-break-before: avoid; break-before: avoid;
   }
   .room-card-header {
     background: #faf8f6 !important; border-bottom: 1px solid #eee !important;
@@ -707,14 +708,14 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
   }
   .dim-unit { font-size: 6px; color: #777 !important; }
 
-  /* Sketch — 210mm, sharp at 300dpi (canvas pre-scaled in JS) */
+  /* Sketch — 150mm, sharp at 300dpi (canvas pre-scaled in JS) */
   .sketch-section { margin-bottom: 3px; }
   .sketch-label   { color: #8b1a1a !important; font-size: 6px; margin-bottom: 2px; padding-bottom: 0; border: none; }
   .sketch-toolbar { display: none !important; }
   .canvas-wrap    { border: 1.5px solid #999 !important; box-shadow: none !important; border-radius: 2px; }
   .room-canvas    {
     display: block !important; width: 100% !important;
-    min-height: 0 !important; height: 210mm !important; max-height: 210mm !important;
+    min-height: 0 !important; height: 150mm !important; max-height: 150mm !important;
   }
 
   /* Dimension badges below sketch */
@@ -730,7 +731,8 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
     background: #fff !important; border: none !important;
     border-top: 1.5px solid #ddd !important; border-radius: 0 !important;
     box-shadow: none !important; padding: 4px 8px; margin-bottom: 0;
-    page-break-inside: avoid;
+    page-break-inside: avoid; break-inside: avoid;
+    page-break-before: avoid; break-before: avoid;
   }
   #pricing-card .card-title { display: none !important; }
   .pricing-row       { gap: 10px; flex-wrap: nowrap; }
