@@ -24,7 +24,10 @@ const Survey = (() => {
     }
 
     // Register sketch change callback
-    window.onSketchUpdated = scheduleSave;
+    window.onSketchUpdated = () => {
+      scheduleSave();
+      activeIds.forEach(updateSketchDims);
+    };
 
     // Save on any form input
     document.addEventListener('input', scheduleSave);
@@ -102,7 +105,7 @@ const Survey = (() => {
         sv(`du-${id}`,    r.doors);
         sv(`rnotes-${id}`, r.notes);
         // Defer shape load until canvas is sized
-        requestAnimationFrame(() => Sketch.setShapes(id, r.shapes));
+        requestAnimationFrame(() => { Sketch.setShapes(id, r.shapes); updateSketchDims(id); });
       });
 
       return (data.rooms && data.rooms.length > 0);
@@ -197,11 +200,12 @@ const Survey = (() => {
             <button class="sk-btn" onclick="Sketch.undo(${id})">↩ Undo</button>
             <button class="sk-btn" onclick="Sketch.clear(${id})">🗑 Clear</button>
             <div class="sk-sep"></div>
-            <button class="sk-btn" onclick="Sketch.openFullscreen(${id})" style="color:#fff;background:var(--red-dark);border-color:var(--red)">⛶ Full Screen</button>
+            <button class="sk-btn sk-fullscreen-btn" onclick="Sketch.openFullscreen(${id})">⛶ Full Screen</button>
           </div>
           <div class="canvas-wrap" id="canvas-wrap-${id}">
             <canvas id="canvas-${id}" class="room-canvas"></canvas>
           </div>
+          <div class="sketch-dims" id="sketch-dims-${id}" style="display:none"></div>
         </div>
 
         <div class="notes-group">
@@ -212,6 +216,17 @@ const Survey = (() => {
 
       </div>
     `;
+  }
+
+  /* ── Sketch dimension badges ── */
+  function updateSketchDims(id) {
+    const el = document.getElementById(`sketch-dims-${id}`);
+    if (!el) return;
+    const labels = Sketch.getShapes(id).filter(s => s.type === 'text' && s.text.trim());
+    if (labels.length === 0) { el.style.display = 'none'; return; }
+    el.style.display = 'flex';
+    el.innerHTML = '<span class="sketch-dims-title">📐 From sketch</span>'
+      + labels.map(s => `<span class="dim-badge">${s.text.trim()}</span>`).join('');
   }
 
   /* ── Actions ── */

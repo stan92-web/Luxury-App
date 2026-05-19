@@ -260,7 +260,39 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
 }
 .sk-btn.active  { border-color: var(--red); color: var(--red); background: #fdf5f5; }
 .sk-btn:active  { opacity: 0.7; }
-.sk-sep         { width: 1px; height: 26px; background: var(--border); margin: 0 2px; flex-shrink: 0; }
+.sk-sep           { width: 1px; height: 26px; background: var(--border); margin: 0 2px; flex-shrink: 0; }
+.sk-fullscreen-btn { background: var(--red) !important; color: #fff !important; border-color: var(--red) !important; }
+
+/* ── Sketch dimension badges ─────────────────── */
+.sketch-dims {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 10px 14px;
+  background: #f7f4f0;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+.sketch-dims-title {
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  width: 100%;
+  margin-bottom: 2px;
+}
+.dim-badge {
+  background: #fff;
+  border: 1.5px solid var(--red);
+  border-radius: 6px;
+  padding: 5px 14px;
+  font-size: 15px;
+  font-weight: bold;
+  color: var(--red);
+  letter-spacing: 0.5px;
+}
 
 .colour-dots  { display: flex; gap: 7px; align-items: center; }
 .colour-dot   {
@@ -480,56 +512,126 @@ textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
 }
 
 /* ══════════════════════════════════════════════
-   PRINT — Clean A4 white sheet
+   PRINT — Compact A4 — customer + 1 room per page
 ══════════════════════════════════════════════ */
 @media print {
-  @page { size: A4 portrait; margin: 10mm 12mm; }
+  @page { size: A4 portrait; margin: 8mm 10mm; }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .no-print { display: none !important; }
+  .no-print, #toast, #fs-overlay, #auth-screen { display: none !important; }
 
-  body { background: #fff !important; color: #111 !important; font-size: 11px; }
+  body { background: #fff !important; color: #111 !important; font-size: 10px; }
 
+  /* ── Header ── */
   header {
     background: #fff !important;
     border-bottom: 2px solid #8b1a1a !important;
     box-shadow: none !important;
     position: relative !important;
-    height: auto; padding: 8px 0 6px;
+    height: auto;
+    padding: 5px 0 4px;
   }
-  .logo-mark  { background: #8b1a1a !important; font-size: 12px; width: 32px; height: 32px; border-radius: 6px; }
-  .logo-text  { color: #1a1a1a !important; }
-  .logo-sub   { color: #777 !important; }
-  .header-date { display: block !important; color: #555 !important; }
+  .logo-mark   { background: #8b1a1a !important; font-size: 11px; width: 28px; height: 28px; border-radius: 5px; }
+  .logo-text   { color: #1a1a1a !important; font-size: 12px; }
+  .logo-sub    { color: #777 !important; font-size: 8px; }
+  .logo        { gap: 8px; }
+  .header-date { display: block !important; color: #555 !important; font-size: 10px; }
 
-  main { padding: 6px 0 0; max-width: 100%; }
+  /* ── Layout ── */
+  main { padding: 5px 0 0; max-width: 100%; }
 
-  .card, .room-card {
+  /* ── Customer card ── */
+  .card {
     background: #fff !important;
     border: 1px solid #ddd !important;
     box-shadow: none !important;
     border-radius: 3px;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
+    padding: 8px 10px;
     page-break-inside: avoid;
   }
-  .card-title     { color: #8b1a1a !important; border-color: #f5d0d0 !important; font-size: 9px; }
-  .sub-heading    { color: #8b1a1a !important; font-size: 8px; }
+  .card-title    { color: #8b1a1a !important; border-color: #f5d0d0 !important; font-size: 8px; margin-bottom: 6px; padding-bottom: 4px; }
+  .sub-heading   { color: #8b1a1a !important; font-size: 7px; margin-bottom: 5px; padding-bottom: 3px; }
   .sub-heading.muted { color: #777 !important; }
-  .room-card-header { background: #faf8f6 !important; border-bottom: 1px solid #eee !important; padding: 7px 12px; }
-  .room-number    { color: #8b1a1a !important; }
-  .room-name-input { color: #111 !important; border-bottom-color: #ccc !important; background: transparent !important; border-top: none !important; border-left: none !important; border-right: none !important; box-shadow: none !important; font-size: 13px; }
-  .room-card-body { padding: 8px 12px; }
+  .form-grid     { grid-template-columns: 1fr 1fr 1fr; gap: 6px 10px; }
+  .form-group.full { grid-column: 1 / -1; }
 
-  label           { color: #555 !important; font-size: 8px; }
-  .req            { color: #8b1a1a !important; }
-  input, select, textarea { background: #fafafa !important; border: 1px solid #ccc !important; color: #111 !important; font-size: 10px; padding: 5px 7px; border-radius: 2px; box-shadow: none !important; }
+  label          { color: #555 !important; font-size: 7px; }
+  .req           { color: #8b1a1a !important; }
+  input, select, textarea {
+    background: #fafafa !important;
+    border: 1px solid #ccc !important;
+    color: #111 !important;
+    font-size: 10px;
+    padding: 3px 6px;
+    border-radius: 2px;
+    box-shadow: none !important;
+  }
 
-  .dims-row       { gap: 6px; margin-bottom: 10px; }
-  .dim-input      { font-size: 14px; padding: 5px; font-weight: bold; }
-  .dim-unit       { color: #555 !important; font-size: 8px; }
+  /* ── Room card ── */
+  .room-card {
+    background: #fff !important;
+    border: 1px solid #ddd !important;
+    box-shadow: none !important;
+    border-radius: 3px;
+    margin-bottom: 6px;
+    page-break-inside: avoid;
+  }
+  .room-card-header {
+    background: #faf8f6 !important;
+    border-bottom: 1px solid #eee !important;
+    padding: 5px 10px;
+  }
+  .room-number     { color: #8b1a1a !important; font-size: 8px; }
+  .room-name-input {
+    color: #111 !important;
+    border-bottom: 1px solid #ccc !important;
+    background: transparent !important;
+    border-top: none !important;
+    border-left: none !important;
+    border-right: none !important;
+    box-shadow: none !important;
+    font-size: 12px;
+    padding: 1px 0;
+  }
+  .room-card-body  { padding: 6px 10px; }
 
-  .sketch-label   { color: #8b1a1a !important; font-size: 8px; }
+  /* ── Dimensions row ── */
+  .dims-row  { gap: 6px; margin-bottom: 6px; }
+  .dim-group { min-width: 50px; }
+  .dim-input { font-size: 13px; padding: 4px; font-weight: bold; border: 1px solid #ccc !important; border-radius: 2px; }
+  .dim-unit  { color: #555 !important; font-size: 7px; }
+
+  /* ── Sketch area ── */
+  .sketch-section { margin-bottom: 6px; }
+  .sketch-label   { color: #8b1a1a !important; font-size: 7px; margin-bottom: 4px; }
   .sketch-toolbar { display: none !important; }
-  .canvas-wrap    { border: 1px solid #ccc !important; box-shadow: none !important; }
-  .notes-group label { color: #555 !important; font-size: 8px; }
-  .btn-row        { display: none !important; }
+  .canvas-wrap    { border: 1px solid #bbb !important; box-shadow: none !important; border-radius: 2px; }
+  .room-canvas    { min-height: 0 !important; height: 105mm !important; max-height: 105mm !important; width: 100% !important; }
+
+  /* ── Dimension badges ── */
+  .sketch-dims {
+    background: #f7f4f0 !important;
+    border: 1px solid #ddd !important;
+    border-radius: 3px;
+    padding: 5px 8px;
+    gap: 5px;
+    margin-top: 5px;
+  }
+  .sketch-dims-title { font-size: 7px; margin-bottom: 1px; }
+  .dim-badge {
+    background: #fff !important;
+    border: 1.5px solid #8b1a1a !important;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: bold;
+    color: #8b1a1a !important;
+  }
+
+  /* ── Notes ── */
+  .notes-group label { color: #555 !important; font-size: 7px; }
+  textarea { min-height: 32px !important; font-size: 10px; }
+
+  /* ── Hide extras ── */
+  .btn-row { display: none !important; }
 }
