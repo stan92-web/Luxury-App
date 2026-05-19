@@ -192,6 +192,8 @@ const Survey = (() => {
               <div class="colour-dot"        style="background:#27ae60" onclick="Sketch.setColour(${id},'#27ae60',this)" title="Green"></div>
             </div>
             <div class="sk-sep"></div>
+            <button class="sk-btn active" id="tool-straighten-${id}" onclick="Sketch.toggleStraighten(${id},this)" title="Snap hand-drawn lines to straight">⟋ Straighten</button>
+            <div class="sk-sep"></div>
             <button class="sk-btn" onclick="Sketch.undo(${id})">↩ Undo</button>
             <button class="sk-btn" onclick="Sketch.clear(${id})">🗑 Clear</button>
             <div class="sk-sep"></div>

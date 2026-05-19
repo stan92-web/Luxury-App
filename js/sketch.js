@@ -1,133 +1,188 @@
 /* ══════════════════════════════════════════════
    sketch.js — Canvas drawing engine
-   One independent state object per canvas.
-   No dependencies on other modules.
+   - Pointer Events API (palm rejection)
+   - One active pointer per canvas (no accidental marks)
+   - Auto-straighten: pen strokes snap to clean lines
+   - Full-screen sketch overlay
 ══════════════════════════════════════════════ */
 
 const Sketch = (() => {
   const states = {};
 
-  /* ── Init ── */
+  /* ── Init ────────────────────────────────────── */
   function init(id) {
     const canvas = document.getElementById(`canvas-${id}`);
     if (!canvas) return;
 
     states[id] = {
-      tool:       'pen',
-      colour:     '#222222',
-      lineWidth:  2.5,
-      drawing:    false,
-      shapes:     [],
-      history:    [],
-      startX:     0,
-      startY:     0,
-      currentPath: []
+      tool:             'pen',
+      colour:           '#222222',
+      lineWidth:        2.5,
+      autoStraighten:   true,
+      drawing:          false,
+      activePointerId:  null,
+      pendingStart:     null,
+      shapes:           [],
+      history:          [],
+      startX:           0,
+      startY:           0,
+      currentPath:      []
     };
 
-    canvas.addEventListener('mousedown',  e => onDown(id, e));
-    canvas.addEventListener('mousemove',  e => onMove(id, e));
-    canvas.addEventListener('mouseup',    e => onUp(id, e));
-    canvas.addEventListener('mouseleave', e => onUp(id, e));
+    canvas.style.touchAction = 'none';
 
-    canvas.addEventListener('touchstart', e => { e.preventDefault(); onDown(id, e.touches[0]); },        { passive: false });
-    canvas.addEventListener('touchmove',  e => { e.preventDefault(); onMove(id, e.touches[0]); },        { passive: false });
-    canvas.addEventListener('touchend',   e => { e.preventDefault(); onUp(id, e.changedTouches[0]); },   { passive: false });
+    canvas.addEventListener('pointerdown',   e => { e.preventDefault(); onDown(id, e); });
+    canvas.addEventListener('pointermove',   e => { e.preventDefault(); onMove(id, e); });
+    canvas.addEventListener('pointerup',     e => { e.preventDefault(); onUp(id, e); });
+    canvas.addEventListener('pointercancel', e => onCancel(id, e));
 
     resizeCanvas(id);
   }
 
-  /* ── Canvas sizing ── */
+  /* ── Canvas sizing ───────────────────────────── */
   function resizeCanvas(id) {
     const canvas = document.getElementById(`canvas-${id}`);
     const wrap   = document.getElementById(`canvas-wrap-${id}`);
     if (!canvas || !wrap) return;
-
     const w = wrap.clientWidth;
     const h = Math.round(w * 0.5);
-
     canvas.width        = w;
     canvas.height       = h;
     canvas.style.width  = w + 'px';
     canvas.style.height = h + 'px';
-
     redraw(id);
   }
 
-  /* ── Coordinate helper ── */
-  function getPos(id, e) {
-    const canvas = document.getElementById(`canvas-${id}`);
-    const rect   = canvas.getBoundingClientRect();
-    const sx     = canvas.width  / rect.width;
-    const sy     = canvas.height / rect.height;
+  /* ── Coordinate helper ───────────────────────── */
+  function getPos(canvas, e) {
+    const rect = canvas.getBoundingClientRect();
+    const sx   = canvas.width  / rect.width;
+    const sy   = canvas.height / rect.height;
     return {
       x: (e.clientX - rect.left) * sx,
       y: (e.clientY - rect.top)  * sy
     };
   }
 
-  /* ── Pointer events ── */
+  /* ── Pointer events (palm rejection) ─────────── */
   function onDown(id, e) {
-    const s = states[id];
-    if (!s) return;
-    const p = getPos(id, e);
+    const s      = states[id];
+    const canvas = document.getElementById(`canvas-${id}`);
+    if (!s || !canvas) return;
+
+    // Only one active pointer per canvas — ignores palm / second finger
+    if (s.activePointerId !== null) return;
+
+    s.activePointerId = e.pointerId;
+    canvas.setPointerCapture(e.pointerId);
+
+    const p = getPos(canvas, e);
 
     if (s.tool === 'text') {
       showTextInput(id, p.x, p.y);
+      s.activePointerId = null;
       return;
     }
 
-    s.drawing = true;
-    s.startX  = p.x;
-    s.startY  = p.y;
-
-    if (s.tool === 'pen') {
-      s.currentPath = [{ x: p.x, y: p.y }];
-    }
+    s.drawing      = true;
+    s.startX       = p.x;
+    s.startY       = p.y;
+    s.pendingStart = { x: p.x, y: p.y };
+    s.currentPath  = [];
   }
 
   function onMove(id, e) {
-    const s = states[id];
-    if (!s || !s.drawing) return;
-    const p = getPos(id, e);
+    const s      = states[id];
+    const canvas = document.getElementById(`canvas-${id}`);
+    if (!s || !s.drawing || e.pointerId !== s.activePointerId) return;
 
-    if (s.tool === 'pen') {
-      s.currentPath.push({ x: p.x, y: p.y });
+    const p = getPos(canvas, e);
+
+    // Minimum 8px movement before stroke begins — stops accidental taps registering
+    if (s.pendingStart) {
+      if (Math.hypot(p.x - s.pendingStart.x, p.y - s.pendingStart.y) < 8) return;
+      s.currentPath  = [s.pendingStart, p];
+      s.pendingStart = null;
+    } else if (s.tool === 'pen') {
+      s.currentPath.push(p);
     }
+
     redraw(id, p.x, p.y);
   }
 
   function onUp(id, e) {
-    const s = states[id];
-    if (!s || !s.drawing) return;
-    const p = getPos(id, e);
-    s.drawing = false;
+    const s      = states[id];
+    const canvas = document.getElementById(`canvas-${id}`);
+    if (!s || !s.drawing || e.pointerId !== s.activePointerId) return;
+
+    const p = getPos(canvas, e);
+    s.drawing         = false;
+    s.activePointerId = null;
+    s.pendingStart    = null;
 
     saveHistory(id);
 
     if (s.tool === 'pen' && s.currentPath.length > 1) {
-      s.shapes.push({ type: 'pen', path: s.currentPath.slice(), colour: s.colour, lw: s.lineWidth });
+      // Auto-straighten: snap to clean line if stroke is roughly linear
+      if (s.autoStraighten && isRoughlyLinear(s.currentPath)) {
+        const a = s.currentPath[0], b = s.currentPath[s.currentPath.length - 1];
+        s.shapes.push({ type: 'line', x1: a.x, y1: a.y, x2: b.x, y2: b.y, colour: s.colour, lw: s.lineWidth });
+      } else {
+        s.shapes.push({ type: 'pen', path: s.currentPath.slice(), colour: s.colour, lw: s.lineWidth });
+      }
       s.currentPath = [];
 
     } else if (s.tool === 'line') {
       s.shapes.push({ type: 'line', x1: s.startX, y1: s.startY, x2: p.x, y2: p.y, colour: s.colour, lw: s.lineWidth });
 
     } else if (s.tool === 'rect') {
-      const w = p.x - s.startX;
-      const h = p.y - s.startY;
-      if (Math.abs(w) > 4 || Math.abs(h) > 4) {
+      const w = p.x - s.startX, h = p.y - s.startY;
+      if (Math.abs(w) > 4 || Math.abs(h) > 4)
         s.shapes.push({ type: 'rect', x: s.startX, y: s.startY, w, h, colour: s.colour, lw: s.lineWidth });
-      }
     }
 
     redraw(id);
     notifyChange();
   }
 
-  /* ── Text input overlay ── */
+  function onCancel(id, e) {
+    const s = states[id];
+    if (!s || e.pointerId !== s.activePointerId) return;
+    s.drawing         = false;
+    s.activePointerId = null;
+    s.pendingStart    = null;
+    s.currentPath     = [];
+    redraw(id);
+  }
+
+  /* ── Auto-straighten helpers ─────────────────── */
+  function isRoughlyLinear(path) {
+    if (path.length < 3) return true;
+    const a   = path[0];
+    const b   = path[path.length - 1];
+    const len = Math.hypot(b.x - a.x, b.y - a.y);
+    if (len < 25) return false; // too short — keep as freehand dot/curve
+
+    let maxDev = 0;
+    for (let i = 1; i < path.length - 1; i++) {
+      maxDev = Math.max(maxDev, ptLineDist(path[i], a, b));
+    }
+    // Snap if deviation is less than 15% of stroke length or 18px (whichever is larger)
+    return maxDev < Math.max(18, len * 0.15);
+  }
+
+  function ptLineDist(p, a, b) {
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const len = Math.hypot(dx, dy);
+    return len === 0
+      ? Math.hypot(p.x - a.x, p.y - a.y)
+      : Math.abs(dx * (a.y - p.y) - (a.x - p.x) * dy) / len;
+  }
+
+  /* ── Text input overlay ──────────────────────── */
   function showTextInput(id, x, y) {
     const wrap = document.getElementById(`canvas-wrap-${id}`);
     if (!wrap) return;
-
     const inp       = document.createElement('input');
     inp.type        = 'text';
     inp.placeholder = 'Label / dimension…';
@@ -135,13 +190,11 @@ const Sketch = (() => {
       position:absolute; left:${x}px; top:${Math.max(0, y - 14)}px;
       background:rgba(255,255,255,0.97); color:#111;
       border:1.5px solid #c0392b; border-radius:4px;
-      font-size:13px; padding:3px 8px; z-index:10;
-      min-width:90px; max-width:200px;
-      font-family:Arial,sans-serif;
+      font-size:14px; padding:4px 8px; z-index:10;
+      min-width:90px; max-width:200px; font-family:Arial,sans-serif;
     `;
     wrap.appendChild(inp);
     inp.focus();
-
     function commit() {
       const text = inp.value.trim();
       inp.remove();
@@ -152,15 +205,11 @@ const Sketch = (() => {
       redraw(id);
       notifyChange();
     }
-
     inp.addEventListener('blur',    commit);
-    inp.addEventListener('keydown', e => {
-      if (e.key === 'Enter')  commit();
-      if (e.key === 'Escape') inp.remove();
-    });
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') inp.remove(); });
   }
 
-  /* ── Redraw ── */
+  /* ── Redraw ──────────────────────────────────── */
   function redraw(id, previewX, previewY) {
     const canvas = document.getElementById(`canvas-${id}`);
     if (!canvas) return;
@@ -169,14 +218,12 @@ const Sketch = (() => {
 
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-
     if (!s) return;
 
     s.shapes.forEach(sh => renderShape(ctx, sh));
 
-    if (s.tool === 'pen' && s.currentPath.length > 1) {
+    if (s.tool === 'pen' && s.currentPath.length > 1)
       drawPenPath(ctx, s.currentPath, s.colour, s.lineWidth);
-    }
 
     if (s.drawing && previewX !== undefined) {
       ctx.strokeStyle = s.colour;
@@ -184,13 +231,9 @@ const Sketch = (() => {
       ctx.lineCap     = 'round';
       ctx.lineJoin    = 'round';
       if (s.tool === 'line') {
-        ctx.beginPath();
-        ctx.moveTo(s.startX, s.startY);
-        ctx.lineTo(previewX, previewY);
-        ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(s.startX, s.startY); ctx.lineTo(previewX, previewY); ctx.stroke();
       } else if (s.tool === 'rect') {
-        ctx.beginPath();
-        ctx.strokeRect(s.startX, s.startY, previewX - s.startX, previewY - s.startY);
+        ctx.beginPath(); ctx.strokeRect(s.startX, s.startY, previewX - s.startX, previewY - s.startY);
       }
     }
   }
@@ -201,8 +244,7 @@ const Sketch = (() => {
     ctx.lineWidth   = sh.lw || 2.5;
     ctx.lineCap     = 'round';
     ctx.lineJoin    = 'round';
-
-    if      (sh.type === 'pen')  { drawPenPath(ctx, sh.path, sh.colour, sh.lw); }
+    if      (sh.type === 'pen')  drawPenPath(ctx, sh.path, sh.colour, sh.lw);
     else if (sh.type === 'line') { ctx.beginPath(); ctx.moveTo(sh.x1, sh.y1); ctx.lineTo(sh.x2, sh.y2); ctx.stroke(); }
     else if (sh.type === 'rect') { ctx.beginPath(); ctx.strokeRect(sh.x, sh.y, sh.w, sh.h); }
     else if (sh.type === 'text') { ctx.font = `${sh.size || 13}px Arial`; ctx.fillText(sh.text, sh.x, sh.y); }
@@ -220,7 +262,7 @@ const Sketch = (() => {
     ctx.stroke();
   }
 
-  /* ── History ── */
+  /* ── History ─────────────────────────────────── */
   function saveHistory(id) {
     const s = states[id];
     if (!s) return;
@@ -228,7 +270,7 @@ const Sketch = (() => {
     if (s.history.length > 50) s.history.shift();
   }
 
-  /* ── Public controls ── */
+  /* ── Public controls ─────────────────────────── */
   function undo(id) {
     const s = states[id];
     if (!s || !s.history.length) return;
@@ -249,7 +291,7 @@ const Sketch = (() => {
   function setTool(id, tool) {
     const s = states[id];
     if (s) s.tool = tool;
-    ['pen', 'line', 'rect', 'text'].forEach(t => {
+    ['pen','line','rect','text'].forEach(t => {
       const btn = document.getElementById(`tool-${t}-${id}`);
       if (btn) btn.classList.toggle('active', t === tool);
     });
@@ -263,10 +305,15 @@ const Sketch = (() => {
     if (el) el.classList.add('active');
   }
 
-  /* ── Data access ── */
-  function getShapes(id) {
-    return states[id] ? states[id].shapes : [];
+  function toggleStraighten(id, btn) {
+    const s = states[id];
+    if (!s) return;
+    s.autoStraighten = !s.autoStraighten;
+    if (btn) btn.classList.toggle('active', s.autoStraighten);
   }
+
+  /* ── Data access ─────────────────────────────── */
+  function getShapes(id) { return states[id] ? states[id].shapes : []; }
 
   function setShapes(id, shapes) {
     const s = states[id];
@@ -275,7 +322,7 @@ const Sketch = (() => {
     redraw(id);
   }
 
-  /* ── Notify survey module of changes (loose coupling) ── */
+  /* ── Notify survey module ────────────────────── */
   function notifyChange() {
     if (typeof window.onSketchUpdated === 'function') window.onSketchUpdated();
   }
@@ -284,35 +331,39 @@ const Sketch = (() => {
      FULL-SCREEN SKETCH
   ══════════════════════════════════════════════ */
   const fs = {
-    roomId:      null,
-    tool:        'pen',
-    colour:      '#222222',
-    lineWidth:   3,
-    drawing:     false,
-    shapes:      [],
-    history:     [],
-    startX:      0,
-    startY:      0,
-    currentPath: []
+    roomId:           null,
+    tool:             'pen',
+    colour:           '#222222',
+    lineWidth:        3,
+    autoStraighten:   true,
+    drawing:          false,
+    activePointerId:  null,
+    pendingStart:     null,
+    shapes:           [],
+    history:          [],
+    startX:           0,
+    startY:           0,
+    currentPath:      []
   };
 
   function openFullscreen(roomId) {
     const s = states[roomId];
     if (!s) return;
 
-    fs.roomId      = roomId;
-    fs.tool        = s.tool;
-    fs.colour      = s.colour;
-    fs.lineWidth   = 3;
-    fs.drawing     = false;
-    fs.history     = [];
-    fs.currentPath = [];
+    fs.roomId         = roomId;
+    fs.tool           = s.tool;
+    fs.colour         = s.colour;
+    fs.autoStraighten = s.autoStraighten;
+    fs.lineWidth      = 3;
+    fs.drawing        = false;
+    fs.activePointerId = null;
+    fs.pendingStart   = null;
+    fs.history        = [];
+    fs.currentPath    = [];
 
-    const overlay = document.getElementById('fs-overlay');
-    overlay.classList.add('open');
+    document.getElementById('fs-overlay').classList.add('open');
     document.body.style.overflow = 'hidden';
 
-    // Size canvas to fill the area
     const area   = document.getElementById('fs-canvas-area');
     const canvas = document.getElementById('fs-canvas');
     canvas.width        = area.clientWidth;
@@ -320,7 +371,6 @@ const Sketch = (() => {
     canvas.style.width  = canvas.width  + 'px';
     canvas.style.height = canvas.height + 'px';
 
-    // Scale shapes from room canvas coords to fullscreen coords
     const roomCanvas = document.getElementById(`canvas-${roomId}`);
     const sx = canvas.width  / roomCanvas.width;
     const sy = canvas.height / roomCanvas.height;
@@ -337,12 +387,12 @@ const Sketch = (() => {
     const roomCanvas = document.getElementById(`canvas-${fs.roomId}`);
     const fsCanvas   = document.getElementById('fs-canvas');
 
-    // Scale shapes back to room canvas coords
     const sx = roomCanvas.width  / fsCanvas.width;
     const sy = roomCanvas.height / fsCanvas.height;
 
     saveHistory(fs.roomId);
-    s.shapes = scaleShapes(fs.shapes, sx, sy);
+    s.shapes           = scaleShapes(fs.shapes, sx, sy);
+    s.autoStraighten   = fs.autoStraighten;
     redraw(fs.roomId);
 
     document.getElementById('fs-overlay').classList.remove('open');
@@ -354,7 +404,7 @@ const Sketch = (() => {
 
   function scaleShapes(shapes, sx, sy) {
     return shapes.map(sh => {
-      if (sh.type === 'pen')  return { ...sh, path: sh.path.map(p => ({ x: p.x * sx, y: p.y * sy })) };
+      if (sh.type === 'pen')  return { ...sh, path: sh.path.map(p => ({ x: p.x*sx, y: p.y*sy })) };
       if (sh.type === 'line') return { ...sh, x1: sh.x1*sx, y1: sh.y1*sy, x2: sh.x2*sx, y2: sh.y2*sy };
       if (sh.type === 'rect') return { ...sh, x: sh.x*sx, y: sh.y*sy, w: sh.w*sx, h: sh.h*sy };
       if (sh.type === 'text') return { ...sh, x: sh.x*sx, y: sh.y*sy };
@@ -362,17 +412,15 @@ const Sketch = (() => {
     });
   }
 
-  /* ── FS canvas events ── */
+  /* ── FS pointer events ───────────────────────── */
   function initFsCanvas() {
     const canvas = document.getElementById('fs-canvas');
     if (!canvas) return;
-    canvas.addEventListener('mousedown',  e => fsDown(e));
-    canvas.addEventListener('mousemove',  e => fsMove(e));
-    canvas.addEventListener('mouseup',    e => fsUp(e));
-    canvas.addEventListener('mouseleave', e => fsUp(e));
-    canvas.addEventListener('touchstart', e => { e.preventDefault(); fsDown(e.touches[0]); },       { passive: false });
-    canvas.addEventListener('touchmove',  e => { e.preventDefault(); fsMove(e.touches[0]); },       { passive: false });
-    canvas.addEventListener('touchend',   e => { e.preventDefault(); fsUp(e.changedTouches[0]); },  { passive: false });
+    canvas.style.touchAction = 'none';
+    canvas.addEventListener('pointerdown',   e => { e.preventDefault(); fsDown(e); });
+    canvas.addEventListener('pointermove',   e => { e.preventDefault(); fsMove(e); });
+    canvas.addEventListener('pointerup',     e => { e.preventDefault(); fsUp(e); });
+    canvas.addEventListener('pointercancel', e => fsCancelDraw(e));
   }
 
   function fsGetPos(e) {
@@ -382,29 +430,49 @@ const Sketch = (() => {
   }
 
   function fsDown(e) {
+    if (fs.activePointerId !== null) return;
+    const canvas = document.getElementById('fs-canvas');
+    fs.activePointerId = e.pointerId;
+    canvas.setPointerCapture(e.pointerId);
+
     const p = fsGetPos(e);
-    if (fs.tool === 'text') { fsShowTextInput(p.x, p.y); return; }
-    fs.drawing = true;
-    fs.startX  = p.x;
-    fs.startY  = p.y;
-    if (fs.tool === 'pen') fs.currentPath = [{ x: p.x, y: p.y }];
+    if (fs.tool === 'text') { fsShowTextInput(p.x, p.y); fs.activePointerId = null; return; }
+    fs.drawing      = true;
+    fs.startX       = p.x;
+    fs.startY       = p.y;
+    fs.pendingStart = { x: p.x, y: p.y };
+    fs.currentPath  = [];
   }
 
   function fsMove(e) {
-    if (!fs.drawing) return;
+    if (!fs.drawing || e.pointerId !== fs.activePointerId) return;
     const p = fsGetPos(e);
-    if (fs.tool === 'pen') fs.currentPath.push({ x: p.x, y: p.y });
+    if (fs.pendingStart) {
+      if (Math.hypot(p.x - fs.pendingStart.x, p.y - fs.pendingStart.y) < 8) return;
+      fs.currentPath  = [fs.pendingStart, p];
+      fs.pendingStart = null;
+    } else if (fs.tool === 'pen') {
+      fs.currentPath.push(p);
+    }
     fsRedraw(p.x, p.y);
   }
 
   function fsUp(e) {
-    if (!fs.drawing) return;
+    if (!fs.drawing || e.pointerId !== fs.activePointerId) return;
     const p = fsGetPos(e);
-    fs.drawing = false;
+    fs.drawing         = false;
+    fs.activePointerId = null;
+    fs.pendingStart    = null;
 
     fsSaveHistory();
+
     if (fs.tool === 'pen' && fs.currentPath.length > 1) {
-      fs.shapes.push({ type: 'pen', path: fs.currentPath.slice(), colour: fs.colour, lw: fs.lineWidth });
+      if (fs.autoStraighten && isRoughlyLinear(fs.currentPath)) {
+        const a = fs.currentPath[0], b = fs.currentPath[fs.currentPath.length - 1];
+        fs.shapes.push({ type: 'line', x1: a.x, y1: a.y, x2: b.x, y2: b.y, colour: fs.colour, lw: fs.lineWidth });
+      } else {
+        fs.shapes.push({ type: 'pen', path: fs.currentPath.slice(), colour: fs.colour, lw: fs.lineWidth });
+      }
       fs.currentPath = [];
     } else if (fs.tool === 'line') {
       fs.shapes.push({ type: 'line', x1: fs.startX, y1: fs.startY, x2: p.x, y2: p.y, colour: fs.colour, lw: fs.lineWidth });
@@ -413,6 +481,15 @@ const Sketch = (() => {
       if (Math.abs(w) > 4 || Math.abs(h) > 4)
         fs.shapes.push({ type: 'rect', x: fs.startX, y: fs.startY, w, h, colour: fs.colour, lw: fs.lineWidth });
     }
+    fsRedraw();
+  }
+
+  function fsCancelDraw(e) {
+    if (e.pointerId !== fs.activePointerId) return;
+    fs.drawing         = false;
+    fs.activePointerId = null;
+    fs.pendingStart    = null;
+    fs.currentPath     = [];
     fsRedraw();
   }
 
@@ -485,25 +562,26 @@ const Sketch = (() => {
     if (el) el.classList.add('active');
   }
 
-  function fsUndo() {
-    if (!fs.history.length) return;
-    fs.shapes = JSON.parse(fs.history.pop());
-    fsRedraw();
-  }
+  function fsUndo()  { if (!fs.history.length) return; fs.shapes = JSON.parse(fs.history.pop()); fsRedraw(); }
+  function fsClear() { fsSaveHistory(); fs.shapes = []; fsRedraw(); }
 
-  function fsClear() {
-    fsSaveHistory();
-    fs.shapes = [];
-    fsRedraw();
+  function fsToggleStraighten(btn) {
+    fs.autoStraighten = !fs.autoStraighten;
+    if (btn) btn.classList.toggle('active', fs.autoStraighten);
   }
 
   function fsUpdateToolbar() {
     fsSetTool(fs.tool);
     fsSetColour(fs.colour);
+    const btn = document.getElementById('fs-straighten');
+    if (btn) btn.classList.toggle('active', fs.autoStraighten);
   }
 
   document.addEventListener('DOMContentLoaded', initFsCanvas);
 
-  return { init, resizeCanvas, redraw, setTool, setColour, undo, clear, getShapes, setShapes,
-           openFullscreen, closeFullscreen, fsSetTool, fsSetColour, fsUndo, fsClear };
+  return {
+    init, resizeCanvas, redraw, setTool, setColour, toggleStraighten, undo, clear, getShapes, setShapes,
+    openFullscreen, closeFullscreen,
+    fsSetTool, fsSetColour, fsUndo, fsClear, fsToggleStraighten
+  };
 })();
