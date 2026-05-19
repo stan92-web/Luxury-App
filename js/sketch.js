@@ -2,12 +2,14 @@
    sketch.js — Canvas drawing engine
    - Pointer Events API (palm rejection)
    - One active pointer per canvas (no accidental marks)
-   - Auto-straighten: pen strokes snap to clean lines
+   - Auto-straighten: pen strokes snap to H/V/45° axes
+   - Endpoint snap: lines join automatically when drawn near an endpoint
    - Full-screen sketch overlay
 ══════════════════════════════════════════════ */
 
 const Sketch = (() => {
-  const states = {};
+  const states  = {};
+  const SNAP_R  = 20; // snap radius in canvas pixels
 
   /* ── Init ────────────────────────────────────── */
   function init(id) {
@@ -15,22 +17,22 @@ const Sketch = (() => {
     if (!canvas) return;
 
     states[id] = {
-      tool:             'pen',
-      colour:           '#222222',
-      lineWidth:        2.5,
-      autoStraighten:   true,
-      drawing:          false,
-      activePointerId:  null,
-      pendingStart:     null,
-      shapes:           [],
-      history:          [],
-      startX:           0,
-      startY:           0,
-      currentPath:      []
+      tool:            'pen',
+      colour:          '#222222',
+      lineWidth:       2.5,
+      autoStraighten:  true,
+      drawing:         false,
+      activePointerId: null,
+      pendingStart:    null,
+      snapCandidate:   null,
+      shapes:          [],
+      history:         [],
+      startX:          0,
+      startY:          0,
+      currentPath:     []
     };
 
     canvas.style.touchAction = 'none';
-
     canvas.addEventListener('pointerdown',   e => { e.preventDefault(); onDown(id, e); });
     canvas.addEventListener('pointermove',   e => { e.preventDefault(); onMove(id, e); });
     canvas.addEventListener('pointerup',     e => { e.preventDefault(); onUp(id, e); });
@@ -58,25 +60,48 @@ const Sketch = (() => {
     const rect = canvas.getBoundingClientRect();
     const sx   = canvas.width  / rect.width;
     const sy   = canvas.height / rect.height;
-    return {
-      x: (e.clientX - rect.left) * sx,
-      y: (e.clientY - rect.top)  * sy
-    };
+    return { x: (e.clientX - rect.left) * sx, y: (e.clientY - rect.top) * sy };
+  }
+
+  /* ── Endpoint snap helpers ───────────────────── */
+  function getSnapPoints(shapes) {
+    const pts = [];
+    for (const sh of shapes) {
+      if (sh.type === 'line') {
+        pts.push({ x: sh.x1, y: sh.y1 }, { x: sh.x2, y: sh.y2 });
+      } else if (sh.type === 'rect') {
+        pts.push(
+          { x: sh.x,        y: sh.y },
+          { x: sh.x + sh.w, y: sh.y },
+          { x: sh.x,        y: sh.y + sh.h },
+          { x: sh.x + sh.w, y: sh.y + sh.h }
+        );
+      } else if (sh.type === 'pen' && sh.path.length) {
+        pts.push(sh.path[0], sh.path[sh.path.length - 1]);
+      }
+    }
+    return pts;
+  }
+
+  function findSnap(x, y, shapes) {
+    let best = null, bestD = SNAP_R;
+    for (const p of getSnapPoints(shapes)) {
+      const d = Math.hypot(x - p.x, y - p.y);
+      if (d < bestD) { bestD = d; best = p; }
+    }
+    return best; // null if nothing within radius
   }
 
   /* ── Pointer events (palm rejection) ─────────── */
   function onDown(id, e) {
     const s      = states[id];
     const canvas = document.getElementById(`canvas-${id}`);
-    if (!s || !canvas) return;
-
-    // Only one active pointer per canvas — ignores palm / second finger
-    if (s.activePointerId !== null) return;
+    if (!s || !canvas || s.activePointerId !== null) return;
 
     s.activePointerId = e.pointerId;
     canvas.setPointerCapture(e.pointerId);
 
-    const p = getPos(canvas, e);
+    let p = getPos(canvas, e);
 
     if (s.tool === 'text') {
       showTextInput(id, p.x, p.y);
@@ -84,11 +109,16 @@ const Sketch = (() => {
       return;
     }
 
+    // Snap start point to nearest existing endpoint
+    const snap = findSnap(p.x, p.y, s.shapes);
+    if (snap) p = snap;
+
     s.drawing      = true;
     s.startX       = p.x;
     s.startY       = p.y;
     s.pendingStart = { x: p.x, y: p.y };
     s.currentPath  = [];
+    s.snapCandidate = null;
   }
 
   function onMove(id, e) {
@@ -98,7 +128,6 @@ const Sketch = (() => {
 
     const p = getPos(canvas, e);
 
-    // Minimum 8px movement before stroke begins — stops accidental taps registering
     if (s.pendingStart) {
       if (Math.hypot(p.x - s.pendingStart.x, p.y - s.pendingStart.y) < 8) return;
       s.currentPath  = [s.pendingStart, p];
@@ -107,7 +136,13 @@ const Sketch = (() => {
       s.currentPath.push(p);
     }
 
-    redraw(id, p.x, p.y);
+    // Find snap candidate for end point — used for preview and visual indicator
+    const snap = findSnap(p.x, p.y, s.shapes);
+    s.snapCandidate = snap;
+    const px = snap ? snap.x : p.x;
+    const py = snap ? snap.y : p.y;
+
+    redraw(id, px, py);
   }
 
   function onUp(id, e) {
@@ -115,29 +150,36 @@ const Sketch = (() => {
     const canvas = document.getElementById(`canvas-${id}`);
     if (!s || !s.drawing || e.pointerId !== s.activePointerId) return;
 
-    const p = getPos(canvas, e);
+    const raw   = getPos(canvas, e);
+    const snap  = findSnap(raw.x, raw.y, s.shapes);
+    const ex    = snap ? snap.x : raw.x;
+    const ey    = snap ? snap.y : raw.y;
+
     s.drawing         = false;
     s.activePointerId = null;
     s.pendingStart    = null;
+    s.snapCandidate   = null;
 
     saveHistory(id);
 
     if (s.tool === 'pen' && s.currentPath.length > 1) {
-      // Auto-straighten: snap to H/V/45° if stroke is roughly linear
       if (s.autoStraighten && isRoughlyLinear(s.currentPath)) {
-        const a  = s.currentPath[0], b = s.currentPath[s.currentPath.length - 1];
-        const ep = snapEndpoint(a.x, a.y, b.x, b.y);
-        s.shapes.push({ type: 'line', x1: a.x, y1: a.y, x2: ep.x, y2: ep.y, colour: s.colour, lw: s.lineWidth });
+        const a  = s.currentPath[0];
+        // Endpoint snap takes priority over angle snap
+        let x2, y2;
+        if (snap) { x2 = snap.x; y2 = snap.y; }
+        else      { const ep = snapEndpoint(a.x, a.y, raw.x, raw.y); x2 = ep.x; y2 = ep.y; }
+        s.shapes.push({ type: 'line', x1: a.x, y1: a.y, x2, y2, colour: s.colour, lw: s.lineWidth });
       } else {
         s.shapes.push({ type: 'pen', path: s.currentPath.slice(), colour: s.colour, lw: s.lineWidth });
       }
       s.currentPath = [];
 
     } else if (s.tool === 'line') {
-      s.shapes.push({ type: 'line', x1: s.startX, y1: s.startY, x2: p.x, y2: p.y, colour: s.colour, lw: s.lineWidth });
+      s.shapes.push({ type: 'line', x1: s.startX, y1: s.startY, x2: ex, y2: ey, colour: s.colour, lw: s.lineWidth });
 
     } else if (s.tool === 'rect') {
-      const w = p.x - s.startX, h = p.y - s.startY;
+      const w = ex - s.startX, h = ey - s.startY;
       if (Math.abs(w) > 4 || Math.abs(h) > 4)
         s.shapes.push({ type: 'rect', x: s.startX, y: s.startY, w, h, colour: s.colour, lw: s.lineWidth });
     }
@@ -152,6 +194,7 @@ const Sketch = (() => {
     s.drawing         = false;
     s.activePointerId = null;
     s.pendingStart    = null;
+    s.snapCandidate   = null;
     s.currentPath     = [];
     redraw(id);
   }
@@ -159,16 +202,12 @@ const Sketch = (() => {
   /* ── Auto-straighten helpers ─────────────────── */
   function isRoughlyLinear(path) {
     if (path.length < 3) return true;
-    const a   = path[0];
-    const b   = path[path.length - 1];
+    const a   = path[0], b = path[path.length - 1];
     const len = Math.hypot(b.x - a.x, b.y - a.y);
-    if (len < 25) return false; // too short — keep as freehand dot/curve
-
+    if (len < 25) return false;
     let maxDev = 0;
-    for (let i = 1; i < path.length - 1; i++) {
+    for (let i = 1; i < path.length - 1; i++)
       maxDev = Math.max(maxDev, ptLineDist(path[i], a, b));
-    }
-    // Snap if deviation is less than 15% of stroke length or 18px (whichever is larger)
     return maxDev < Math.max(18, len * 0.15);
   }
 
@@ -182,7 +221,6 @@ const Sketch = (() => {
 
   // Snap end-point to nearest H/V/45° axis.
   // H and V each own a 60° zone; 45° diagonals own 30° zones.
-  // Result: most strokes → horizontal or vertical; only clearly diagonal → 45°.
   function snapEndpoint(x1, y1, x2, y2) {
     const dx = x2 - x1, dy = y2 - y1;
     const len = Math.hypot(dx, dy);
@@ -259,6 +297,19 @@ const Sketch = (() => {
         ctx.beginPath(); ctx.strokeRect(s.startX, s.startY, previewX - s.startX, previewY - s.startY);
       }
     }
+
+    // Snap indicator — blue ring at snap target
+    if (s.snapCandidate) drawSnapIndicator(ctx, s.snapCandidate);
+  }
+
+  function drawSnapIndicator(ctx, p) {
+    ctx.save();
+    ctx.strokeStyle = '#1a6eb5';
+    ctx.fillStyle   = '#1a6eb5';
+    ctx.lineWidth   = 2;
+    ctx.beginPath(); ctx.arc(p.x, p.y, 9, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
   }
 
   function renderShape(ctx, sh) {
@@ -354,35 +405,37 @@ const Sketch = (() => {
      FULL-SCREEN SKETCH
   ══════════════════════════════════════════════ */
   const fs = {
-    roomId:           null,
-    tool:             'pen',
-    colour:           '#222222',
-    lineWidth:        3,
-    autoStraighten:   true,
-    drawing:          false,
-    activePointerId:  null,
-    pendingStart:     null,
-    shapes:           [],
-    history:          [],
-    startX:           0,
-    startY:           0,
-    currentPath:      []
+    roomId:          null,
+    tool:            'pen',
+    colour:          '#222222',
+    lineWidth:       3,
+    autoStraighten:  true,
+    drawing:         false,
+    activePointerId: null,
+    pendingStart:    null,
+    snapCandidate:   null,
+    shapes:          [],
+    history:         [],
+    startX:          0,
+    startY:          0,
+    currentPath:     []
   };
 
   function openFullscreen(roomId) {
     const s = states[roomId];
     if (!s) return;
 
-    fs.roomId         = roomId;
-    fs.tool           = s.tool;
-    fs.colour         = s.colour;
-    fs.autoStraighten = s.autoStraighten;
-    fs.lineWidth      = 3;
-    fs.drawing        = false;
+    fs.roomId          = roomId;
+    fs.tool            = s.tool;
+    fs.colour          = s.colour;
+    fs.autoStraighten  = s.autoStraighten;
+    fs.lineWidth       = 3;
+    fs.drawing         = false;
     fs.activePointerId = null;
-    fs.pendingStart   = null;
-    fs.history        = [];
-    fs.currentPath    = [];
+    fs.pendingStart    = null;
+    fs.snapCandidate   = null;
+    fs.history         = [];
+    fs.currentPath     = [];
 
     document.getElementById('fs-overlay').classList.add('open');
     document.body.style.overflow = 'hidden';
@@ -414,8 +467,8 @@ const Sketch = (() => {
     const sy = roomCanvas.height / fsCanvas.height;
 
     saveHistory(fs.roomId);
-    s.shapes           = scaleShapes(fs.shapes, sx, sy);
-    s.autoStraighten   = fs.autoStraighten;
+    s.shapes         = scaleShapes(fs.shapes, sx, sy);
+    s.autoStraighten = fs.autoStraighten;
     redraw(fs.roomId);
 
     document.getElementById('fs-overlay').classList.remove('open');
@@ -458,13 +511,19 @@ const Sketch = (() => {
     fs.activePointerId = e.pointerId;
     canvas.setPointerCapture(e.pointerId);
 
-    const p = fsGetPos(e);
+    let p = fsGetPos(e);
     if (fs.tool === 'text') { fsShowTextInput(p.x, p.y); fs.activePointerId = null; return; }
+
+    // Snap start point
+    const snap = findSnap(p.x, p.y, fs.shapes);
+    if (snap) p = snap;
+
     fs.drawing      = true;
     fs.startX       = p.x;
     fs.startY       = p.y;
     fs.pendingStart = { x: p.x, y: p.y };
     fs.currentPath  = [];
+    fs.snapCandidate = null;
   }
 
   function fsMove(e) {
@@ -477,31 +536,40 @@ const Sketch = (() => {
     } else if (fs.tool === 'pen') {
       fs.currentPath.push(p);
     }
-    fsRedraw(p.x, p.y);
+    const snap = findSnap(p.x, p.y, fs.shapes);
+    fs.snapCandidate = snap;
+    fsRedraw(snap ? snap.x : p.x, snap ? snap.y : p.y);
   }
 
   function fsUp(e) {
     if (!fs.drawing || e.pointerId !== fs.activePointerId) return;
-    const p = fsGetPos(e);
+    const raw  = fsGetPos(e);
+    const snap = findSnap(raw.x, raw.y, fs.shapes);
+    const ex   = snap ? snap.x : raw.x;
+    const ey   = snap ? snap.y : raw.y;
+
     fs.drawing         = false;
     fs.activePointerId = null;
     fs.pendingStart    = null;
+    fs.snapCandidate   = null;
 
     fsSaveHistory();
 
     if (fs.tool === 'pen' && fs.currentPath.length > 1) {
       if (fs.autoStraighten && isRoughlyLinear(fs.currentPath)) {
-        const a  = fs.currentPath[0], b = fs.currentPath[fs.currentPath.length - 1];
-        const ep = snapEndpoint(a.x, a.y, b.x, b.y);
-        fs.shapes.push({ type: 'line', x1: a.x, y1: a.y, x2: ep.x, y2: ep.y, colour: fs.colour, lw: fs.lineWidth });
+        const a = fs.currentPath[0];
+        let x2, y2;
+        if (snap) { x2 = snap.x; y2 = snap.y; }
+        else      { const ep = snapEndpoint(a.x, a.y, raw.x, raw.y); x2 = ep.x; y2 = ep.y; }
+        fs.shapes.push({ type: 'line', x1: a.x, y1: a.y, x2, y2, colour: fs.colour, lw: fs.lineWidth });
       } else {
         fs.shapes.push({ type: 'pen', path: fs.currentPath.slice(), colour: fs.colour, lw: fs.lineWidth });
       }
       fs.currentPath = [];
     } else if (fs.tool === 'line') {
-      fs.shapes.push({ type: 'line', x1: fs.startX, y1: fs.startY, x2: p.x, y2: p.y, colour: fs.colour, lw: fs.lineWidth });
+      fs.shapes.push({ type: 'line', x1: fs.startX, y1: fs.startY, x2: ex, y2: ey, colour: fs.colour, lw: fs.lineWidth });
     } else if (fs.tool === 'rect') {
-      const w = p.x - fs.startX, h = p.y - fs.startY;
+      const w = ex - fs.startX, h = ey - fs.startY;
       if (Math.abs(w) > 4 || Math.abs(h) > 4)
         fs.shapes.push({ type: 'rect', x: fs.startX, y: fs.startY, w, h, colour: fs.colour, lw: fs.lineWidth });
     }
@@ -513,6 +581,7 @@ const Sketch = (() => {
     fs.drawing         = false;
     fs.activePointerId = null;
     fs.pendingStart    = null;
+    fs.snapCandidate   = null;
     fs.currentPath     = [];
     fsRedraw();
   }
@@ -565,6 +634,8 @@ const Sketch = (() => {
         ctx.beginPath(); ctx.strokeRect(fs.startX, fs.startY, previewX - fs.startX, previewY - fs.startY);
       }
     }
+
+    if (fs.snapCandidate) drawSnapIndicator(ctx, fs.snapCandidate);
   }
 
   function fsSaveHistory() {
