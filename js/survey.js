@@ -1,7 +1,7 @@
 /* ══════════════════════════════════════════════
-   survey.js — Field survey form logic
-   Manages rooms, auto-save, load, print.
-   Depends on: Sketch (sketch.js)
+   survey.js — Quote / Order form logic
+   Manages rooms, auto-save, load, print, share.
+   Depends on: Sketch (sketch.js), html2canvas
 ══════════════════════════════════════════════ */
 
 const Survey = (() => {
@@ -140,7 +140,7 @@ const Survey = (() => {
     const i = activeIds.indexOf(id);
     if (i !== -1) activeIds.splice(i, 1);
     save();
-    showToast('Room removed');
+    showToast('Wardrobe removed');
   }
 
   /* ── Room HTML template ── */
@@ -231,7 +231,7 @@ const Survey = (() => {
 
   /* ── Actions ── */
   function clearAll() {
-    if (!confirm('Start a new survey? This will clear all current data.')) return;
+    if (!confirm('Start a new quote / order? This will clear all current data.')) return;
     localStorage.removeItem('lh_survey_v1');
     location.reload();
   }
@@ -241,54 +241,85 @@ const Survey = (() => {
     window.print();
   }
 
-  /* ── WhatsApp ── */
+  /* ── WhatsApp — image of the full sheet ── */
   const OFFICE_WA = '447308154580';
 
-  function buildMessage() {
-    const name = [gv('c-first'), gv('c-last')].filter(Boolean).join(' ');
-    let m = `*LUXURY HOUSE — Survey*\n`;
-    m += `📅 Date: ${gv('survey-date') || '—'}\n`;
-    if (gv('surveyor')) m += `Surveyor: ${gv('surveyor')}\n`;
-    m += `\n*Customer*\n`;
-    if (name)           m += `Name: ${name}\n`;
-    if (gv('c-phone'))  m += `Phone: ${gv('c-phone')}\n`;
-    if (gv('c-email'))  m += `Email: ${gv('c-email')}\n`;
-    if (gv('c-address')) m += `Address: ${gv('c-address')}\n`;
-    if (gv('c-notes'))  m += `Notes: ${gv('c-notes')}\n`;
-
-    activeIds.forEach((id, i) => {
-      const rname = gv(`rname-${id}`) || `Room ${id}`;
-      m += `\n*Wardrobe ${i + 1}: ${rname}*\n`;
-      const w = gv(`dw-${id}`), h = gv(`dh-${id}`), d = gv(`dd-${id}`);
-      if (w || h || d) m += `Size: W${w || '—'} × H${h || '—'} × D${d || '—'} mm\n`;
-      if (gv(`du-${id}`)) m += `Doors: ${gv(`du-${id}`)}\n`;
-      // Sketch text labels
-      const labels = Sketch.getShapes(id).filter(s => s.type === 'text' && s.text.trim());
-      if (labels.length) m += `Sketch dims: ${labels.map(s => s.text.trim()).join(', ')}\n`;
-      if (gv(`rnotes-${id}`)) m += `Notes: ${gv(`rnotes-${id}`)}\n`;
-    });
-
-    return m.trim();
-  }
-
   function waPhone(raw) {
-    // Strip everything except digits
     let n = raw.replace(/\D/g, '');
-    if (n.startsWith('00')) n = n.slice(2);       // 0044... → 44...
-    else if (n.startsWith('0')) n = '44' + n.slice(1); // 07... → 447...
+    if (n.startsWith('00')) n = n.slice(2);
+    else if (n.startsWith('0')) n = '44' + n.slice(1);
     return n;
   }
 
+  async function captureSheet() {
+    window.scrollTo(0, 0);
+    // Hide interactive controls — keep content visible
+    const noPrint = Array.from(document.querySelectorAll('.no-print'));
+    const saved   = noPrint.map(el => el.style.display);
+    noPrint.forEach(el => el.style.display = 'none');
+    try {
+      return await html2canvas(document.getElementById('app-wrap'), {
+        scale:           2,
+        useCORS:         true,
+        allowTaint:      true,
+        backgroundColor: '#eeebe6',
+        logging:         false
+      });
+    } finally {
+      noPrint.forEach((el, i) => el.style.display = saved[i]);
+    }
+  }
+
+  function triggerDownload(canvas) {
+    const a    = document.createElement('a');
+    a.download = 'luxury-house-quote.jpg';
+    a.href     = canvas.toDataURL('image/jpeg', 0.92);
+    a.click();
+  }
+
+  async function shareSheet(waNumber) {
+    if (typeof html2canvas === 'undefined') {
+      showToast('Image library not ready — check connection');
+      return;
+    }
+    save();
+    showToast('Preparing sheet…');
+
+    let canvas;
+    try {
+      canvas = await captureSheet();
+    } catch (_) {
+      showToast('Could not capture sheet');
+      return;
+    }
+
+    canvas.toBlob(async blob => {
+      const file = new File([blob], 'luxury-house-quote.jpg', { type: 'image/jpeg' });
+
+      // On iPad / iPhone the native share sheet includes WhatsApp
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: 'Luxury House — Quote / Order' });
+          return;
+        } catch (err) {
+          if (err.name === 'AbortError') return; // user cancelled
+        }
+      }
+
+      // Desktop fallback: download the image, open the WhatsApp chat
+      triggerDownload(canvas);
+      if (waNumber) window.open(`https://wa.me/${waNumber}`, '_blank');
+    }, 'image/jpeg', 0.92);
+  }
+
   function sendToOffice() {
-    const msg = buildMessage();
-    window.open(`https://wa.me/${OFFICE_WA}?text=${encodeURIComponent(msg)}`, '_blank');
+    shareSheet(OFFICE_WA);
   }
 
   function sendToCustomer() {
     const number = waPhone(gv('c-phone'));
     if (!number) { showToast("Enter customer's phone number first"); return; }
-    const msg = buildMessage();
-    window.open(`https://wa.me/${number}?text=${encodeURIComponent(msg)}`, '_blank');
+    shareSheet(number);
   }
 
   /* ── Helpers ── */
@@ -305,7 +336,7 @@ const Survey = (() => {
   function showToast(msg) {
     const t = document.getElementById('toast');
     if (!t) return;
-    t.textContent  = msg;
+    t.textContent   = msg;
     t.style.display = 'block';
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => t.style.display = 'none', 2500);

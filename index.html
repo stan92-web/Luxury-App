@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-  <title>Luxury House — Survey Sheet</title>
+  <title>Luxury House — Quote / Order</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -13,7 +13,7 @@
   <div id="auth-box">
     <div class="auth-logo-mark">LH</div>
     <div class="auth-logo-text">Luxury House</div>
-    <div class="auth-logo-sub">Survey &amp; Measurement</div>
+    <div class="auth-logo-sub">Quote &amp; Order</div>
     <div class="auth-label">Enter Access Code</div>
     <input id="auth-input" type="password" inputmode="numeric"
       placeholder="——————" maxlength="10" autocomplete="off">
@@ -30,13 +30,13 @@
     <div class="logo-mark">LH</div>
     <div>
       <div class="logo-text">Luxury House</div>
-      <div class="logo-sub">Survey &amp; Measurement</div>
+      <div class="logo-sub">Quote &amp; Order</div>
     </div>
   </div>
   <div class="header-right">
     <span id="header-date" class="header-date"></span>
-    <button class="btn btn-wa btn-sm no-print" onclick="Survey.sendToOffice()" title="Send survey to office WhatsApp">📲 Office</button>
-    <button class="btn btn-wa btn-sm no-print" onclick="Survey.sendToCustomer()" title="Send survey to customer WhatsApp">📲 Customer</button>
+    <button class="btn btn-wa btn-sm no-print" onclick="Survey.sendToOffice()" title="Send sheet to office WhatsApp">📲 Office</button>
+    <button class="btn btn-wa btn-sm no-print" onclick="Survey.sendToCustomer()" title="Send sheet to customer WhatsApp">📲 Customer</button>
     <button class="btn btn-outline no-print" onclick="Survey.print()">🖨️ Print / PDF</button>
     <button class="btn btn-dark btn-sm no-print" onclick="Auth.logout()" title="Log out">🔒</button>
   </div>
@@ -86,11 +86,11 @@
         </select>
       </div>
       <div class="form-group">
-        <label>Surveyor / Rep</label>
+        <label>Rep / Designer</label>
         <input type="text" id="surveyor" placeholder="Your name">
       </div>
       <div class="form-group">
-        <label>Survey Date</label>
+        <label>Quote Date</label>
         <input type="date" id="survey-date">
       </div>
       <div class="form-group">
@@ -105,7 +105,7 @@
 
   <div class="btn-row no-print">
     <button class="btn btn-red" onclick="Survey.addRoom()">+ Add Wardrobe / Room</button>
-    <button class="btn btn-dark" onclick="Survey.clearAll()" style="margin-left:auto">🗑 New Survey</button>
+    <button class="btn btn-dark" onclick="Survey.clearAll()" style="margin-left:auto">🗑 New Quote</button>
   </div>
 
 </main>
@@ -142,6 +142,7 @@
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/sketch.js"></script>
 <script src="js/survey.js"></script>
