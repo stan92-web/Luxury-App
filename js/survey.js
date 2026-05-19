@@ -271,13 +271,18 @@ const Survey = (() => {
   function scaleCanvasForPrint(id) {
     const canvas = document.getElementById(`canvas-${id}`);
     if (!canvas || canvas._printScaled) return;
+    const rect = canvas.getBoundingClientRect();
     canvas._origW = canvas.width;
     canvas._origH = canvas.height;
+    canvas._origStyleW = canvas.style.width;
+    canvas._origStyleH = canvas.style.height;
     canvas._printScaled = true;
     const scaleX = PRINT_W_PX / canvas.width;
     const scaleY = PRINT_H_PX / canvas.height;
     canvas.width  = PRINT_W_PX;
     canvas.height = PRINT_H_PX;
+    canvas.style.width  = rect.width  + 'px';
+    canvas.style.height = rect.height + 'px';
     Sketch.redrawScaled(id, scaleX, scaleY);
   }
 
@@ -286,8 +291,12 @@ const Survey = (() => {
     if (!canvas || !canvas._printScaled) return;
     canvas.width  = canvas._origW;
     canvas.height = canvas._origH;
+    canvas.style.width  = canvas._origStyleW;
+    canvas.style.height = canvas._origStyleH;
     delete canvas._origW;
     delete canvas._origH;
+    delete canvas._origStyleW;
+    delete canvas._origStyleH;
     delete canvas._printScaled;
     Sketch.redraw(id);
   }
