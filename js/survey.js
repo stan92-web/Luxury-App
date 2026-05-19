@@ -263,6 +263,44 @@ const Survey = (() => {
     window.print();
   }
 
+  /* ── High-res canvas for print / share ── */
+  // Target: 190 × 175 mm at 300 dpi
+  const PRINT_W_PX = Math.round(190 / 25.4 * 300); // 2244
+  const PRINT_H_PX = Math.round(175 / 25.4 * 300); // 2067
+
+  function scaleCanvasForPrint(id) {
+    const canvas = document.getElementById(`canvas-${id}`);
+    if (!canvas || canvas._printScaled) return;
+    canvas._origW = canvas.width;
+    canvas._origH = canvas.height;
+    canvas._printScaled = true;
+    const scaleX = PRINT_W_PX / canvas.width;
+    const scaleY = PRINT_H_PX / canvas.height;
+    canvas.width  = PRINT_W_PX;
+    canvas.height = PRINT_H_PX;
+    Sketch.redrawScaled(id, scaleX, scaleY);
+  }
+
+  function restoreCanvas(id) {
+    const canvas = document.getElementById(`canvas-${id}`);
+    if (!canvas || !canvas._printScaled) return;
+    canvas.width  = canvas._origW;
+    canvas.height = canvas._origH;
+    delete canvas._origW;
+    delete canvas._origH;
+    delete canvas._printScaled;
+    Sketch.redraw(id);
+  }
+
+  function prepareForPrint() {
+    save();
+    activeIds.forEach(scaleCanvasForPrint);
+  }
+
+  function restoreAfterPrint() {
+    activeIds.forEach(restoreCanvas);
+  }
+
   /* ── WhatsApp — image of the full sheet ── */
   const OFFICE_WA = '447308154580';
 
@@ -275,6 +313,9 @@ const Survey = (() => {
 
   async function captureSheet() {
     window.scrollTo(0, 0);
+    // Scale canvases to high-res so the WhatsApp image is sharp
+    activeIds.forEach(scaleCanvasForPrint);
+    await new Promise(r => requestAnimationFrame(r));
     return await html2canvas(document.getElementById('app-wrap'), {
       scale:           2,
       useCORS:         true,
@@ -311,6 +352,7 @@ const Survey = (() => {
         });
       }
     });
+    activeIds.forEach(restoreCanvas);
   }
 
   function triggerDownload(canvas) {
@@ -386,7 +428,19 @@ const Survey = (() => {
   }
 
   /* ── Boot ── */
-  document.addEventListener('DOMContentLoaded', init);
+  document.addEventListener('DOMContentLoaded', () => {
+    init();
+    // High-res canvas before print, restore after
+    window.onbeforeprint = prepareForPrint;
+    window.onafterprint  = restoreAfterPrint;
+    // iOS Safari fallback
+    if (window.matchMedia) {
+      const mq = window.matchMedia('print');
+      const handler = e => { if (e.matches) prepareForPrint(); else restoreAfterPrint(); };
+      if (mq.addEventListener) mq.addEventListener('change', handler);
+      else mq.addListener(handler); // older Safari
+    }
+  });
 
   return { addRoom, removeRoom, clearAll, print, sendToOffice, sendToCustomer };
 })();

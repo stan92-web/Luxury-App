@@ -47,7 +47,7 @@ const Sketch = (() => {
     const wrap   = document.getElementById(`canvas-wrap-${id}`);
     if (!canvas || !wrap) return;
     const w = wrap.clientWidth;
-    const h = Math.round(w * 0.5);
+    const h = Math.round(w * 0.7);
     canvas.width        = w;
     canvas.height       = h;
     canvas.style.width  = w + 'px';
@@ -351,6 +351,22 @@ const Sketch = (() => {
     s.shapes = JSON.parse(s.history.pop());
     redraw(id);
     notifyChange();
+  }
+
+  // Redraw shapes scaled to a high-res canvas (used for print / export).
+  // Caller must have already set canvas.width/height to the target pixel size.
+  function redrawScaled(id, scaleX, scaleY) {
+    const canvas = document.getElementById(`canvas-${id}`);
+    if (!canvas) return;
+    const s = states[id];
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (!s) return;
+    ctx.save();
+    ctx.scale(scaleX, scaleY);
+    s.shapes.forEach(sh => renderShape(ctx, sh));
+    ctx.restore();
   }
 
   function clear(id) {
@@ -675,7 +691,7 @@ const Sketch = (() => {
   document.addEventListener('DOMContentLoaded', initFsCanvas);
 
   return {
-    init, resizeCanvas, redraw, setTool, setColour, toggleStraighten, undo, clear, getShapes, setShapes,
+    init, resizeCanvas, redraw, redrawScaled, setTool, setColour, toggleStraighten, undo, clear, getShapes, setShapes,
     openFullscreen, closeFullscreen,
     fsSetTool, fsSetColour, fsUndo, fsClear, fsToggleStraighten
   };
