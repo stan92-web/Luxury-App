@@ -37,7 +37,9 @@ const Sketch = (() => {
       currentPath:     [],
       selectedIdx:     -1,
       resizeHandle:    null,
-      resizePivot:     null
+      resizePivot:     null,
+      moving:          false,
+      moveShapeStart:  null
     };
 
     canvas.style.touchAction = 'none';
@@ -184,6 +186,41 @@ const Sketch = (() => {
       return;
     }
 
+    // ── Select tool: tap to select, drag handles to resize/move endpoints, drag body to move ──
+    if (s.tool === 'select') {
+      if (s.selectedIdx >= 0 && s.selectedIdx < s.shapes.length) {
+        const handle = hitShapeHandle(p.x, p.y, s.shapes[s.selectedIdx]);
+        if (handle) {
+          const sh       = s.shapes[s.selectedIdx];
+          s.drawing      = true;
+          s.resizeHandle = handle;
+          s.resizePivot  = sh.type === 'rect' ? resizePivotFor(handle, sh) : null;
+          return;
+        }
+        if (hitShapeBody(p.x, p.y, s.shapes[s.selectedIdx])) {
+          saveHistory(id);
+          s.drawing        = true;
+          s.moving         = true;
+          s.startX         = p.x;
+          s.startY         = p.y;
+          s.moveShapeStart = JSON.parse(JSON.stringify(s.shapes[s.selectedIdx]));
+          return;
+        }
+      }
+      for (let i = s.shapes.length - 1; i >= 0; i--) {
+        if (hitShapeHandle(p.x, p.y, s.shapes[i]) || hitShapeBody(p.x, p.y, s.shapes[i])) {
+          s.selectedIdx     = i;
+          s.activePointerId = null;
+          redraw(id);
+          return;
+        }
+      }
+      s.selectedIdx     = -1;
+      s.activePointerId = null;
+      redraw(id);
+      return;
+    }
+
     // ── Rect tool: selection + resize/drag ──
     if (s.tool === 'rect') {
       // Check handle on already-selected shape
@@ -242,6 +279,17 @@ const Sketch = (() => {
       return;
     }
 
+    // ── Select tool body-drag: move shape ──
+    if (s.moving && s.selectedIdx >= 0 && s.selectedIdx < s.shapes.length) {
+      const dx = p.x - s.startX, dy = p.y - s.startY;
+      const orig = s.moveShapeStart, sh = s.shapes[s.selectedIdx];
+      if (sh.type === 'rect') { sh.x = orig.x + dx; sh.y = orig.y + dy; }
+      else if (sh.type === 'line') { sh.x1 = orig.x1+dx; sh.y1 = orig.y1+dy; sh.x2 = orig.x2+dx; sh.y2 = orig.y2+dy; }
+      else if (sh.type === 'pen')  { sh.path = orig.path.map(pt => ({ x: pt.x+dx, y: pt.y+dy })); }
+      redraw(id);
+      return;
+    }
+
     if (s.pendingStart) {
       if (Math.hypot(p.x - s.pendingStart.x, p.y - s.pendingStart.y) < 8) return;
       s.currentPath  = [s.pendingStart, p];
@@ -279,7 +327,16 @@ const Sketch = (() => {
       return;
     }
 
+    if (s.moving) {
+      s.moving        = false;
+      s.moveShapeStart = null;
+      redraw(id);
+      notifyChange();
+      return;
+    }
+
     saveHistory(id);
+    if (s.tool === 'select') { redraw(id); return; }
 
     if (s.tool === 'pen' && s.currentPath.length > 1) {
       if (s.autoStraighten && isRoughlyLinear(s.currentPath)) {
@@ -323,6 +380,8 @@ const Sketch = (() => {
     s.currentPath     = [];
     s.resizeHandle    = null;
     s.resizePivot     = null;
+    s.moving          = false;
+    s.moveShapeStart  = null;
     redraw(id);
   }
 
@@ -562,9 +621,9 @@ const Sketch = (() => {
     const s = states[id];
     if (s) {
       s.tool = tool;
-      if (tool !== 'rect') s.selectedIdx = -1;
+      if (tool !== 'rect' && tool !== 'select') s.selectedIdx = -1;
     }
-    ['pen','line','rect','text','eraser'].forEach(t => {
+    ['select','pen','line','rect','text','eraser'].forEach(t => {
       const btn = document.getElementById(`tool-${t}-${id}`);
       if (btn) btn.classList.toggle('active', t === tool);
     });
@@ -631,8 +690,10 @@ const Sketch = (() => {
     if (!canvas) return;
     const s = states[id];
     saveHistory(id);
+    const before = s.shapes.length;
     s.shapes.push(...buildTemplate(name, canvas.width, canvas.height));
-    s.selectedIdx = -1;
+    s.selectedIdx = before; // select the outer carcass (first inserted shape)
+    setTool(id, 'select');  // auto-switch to select so rep can immediately resize
     redraw(id);
     notifyChange();
   }
@@ -641,8 +702,10 @@ const Sketch = (() => {
     const canvas = document.getElementById('fs-canvas');
     if (!canvas) return;
     fsSaveHistory();
+    const before = fs.shapes.length;
     fs.shapes.push(...buildTemplate(name, canvas.width, canvas.height));
-    fs.selectedIdx = -1;
+    fs.selectedIdx = before;
+    fsSetTool('select');
     fsRedraw();
   }
 
@@ -671,7 +734,9 @@ const Sketch = (() => {
     currentPath:     [],
     selectedIdx:     -1,
     resizeHandle:    null,
-    resizePivot:     null
+    resizePivot:     null,
+    moving:          false,
+    moveShapeStart:  null
   };
 
   function openFullscreen(roomId) {
@@ -771,6 +836,40 @@ const Sketch = (() => {
     let p = fsGetPos(e);
     if (fs.tool === 'text') { fsShowTextInput(p.x, p.y); fs.activePointerId = null; return; }
 
+    if (fs.tool === 'select') {
+      if (fs.selectedIdx >= 0 && fs.selectedIdx < fs.shapes.length) {
+        const handle = hitShapeHandle(p.x, p.y, fs.shapes[fs.selectedIdx]);
+        if (handle) {
+          const sh        = fs.shapes[fs.selectedIdx];
+          fs.drawing      = true;
+          fs.resizeHandle = handle;
+          fs.resizePivot  = sh.type === 'rect' ? resizePivotFor(handle, sh) : null;
+          return;
+        }
+        if (hitShapeBody(p.x, p.y, fs.shapes[fs.selectedIdx])) {
+          fsSaveHistory();
+          fs.drawing        = true;
+          fs.moving         = true;
+          fs.startX         = p.x;
+          fs.startY         = p.y;
+          fs.moveShapeStart = JSON.parse(JSON.stringify(fs.shapes[fs.selectedIdx]));
+          return;
+        }
+      }
+      for (let i = fs.shapes.length - 1; i >= 0; i--) {
+        if (hitShapeHandle(p.x, p.y, fs.shapes[i]) || hitShapeBody(p.x, p.y, fs.shapes[i])) {
+          fs.selectedIdx     = i;
+          fs.activePointerId = null;
+          fsRedraw();
+          return;
+        }
+      }
+      fs.selectedIdx     = -1;
+      fs.activePointerId = null;
+      fsRedraw();
+      return;
+    }
+
     if (fs.tool === 'rect') {
       if (fs.selectedIdx >= 0 && fs.selectedIdx < fs.shapes.length) {
         const handle = hitShapeHandle(p.x, p.y, fs.shapes[fs.selectedIdx]);
@@ -822,6 +921,16 @@ const Sketch = (() => {
       return;
     }
 
+    if (fs.moving && fs.selectedIdx >= 0 && fs.selectedIdx < fs.shapes.length) {
+      const dx = p.x - fs.startX, dy = p.y - fs.startY;
+      const orig = fs.moveShapeStart, sh = fs.shapes[fs.selectedIdx];
+      if (sh.type === 'rect') { sh.x = orig.x + dx; sh.y = orig.y + dy; }
+      else if (sh.type === 'line') { sh.x1 = orig.x1+dx; sh.y1 = orig.y1+dy; sh.x2 = orig.x2+dx; sh.y2 = orig.y2+dy; }
+      else if (sh.type === 'pen')  { sh.path = orig.path.map(pt => ({ x: pt.x+dx, y: pt.y+dy })); }
+      fsRedraw();
+      return;
+    }
+
     if (fs.pendingStart) {
       if (Math.hypot(p.x - fs.pendingStart.x, p.y - fs.pendingStart.y) < 8) return;
       fs.currentPath  = [fs.pendingStart, p];
@@ -854,7 +963,15 @@ const Sketch = (() => {
       return;
     }
 
+    if (fs.moving) {
+      fs.moving        = false;
+      fs.moveShapeStart = null;
+      fsRedraw();
+      return;
+    }
+
     fsSaveHistory();
+    if (fs.tool === 'select') { fsRedraw(); return; }
 
     if (fs.tool === 'pen' && fs.currentPath.length > 1) {
       if (fs.autoStraighten && isRoughlyLinear(fs.currentPath)) {
@@ -892,6 +1009,8 @@ const Sketch = (() => {
     fs.currentPath     = [];
     fs.resizeHandle    = null;
     fs.resizePivot     = null;
+    fs.moving          = false;
+    fs.moveShapeStart  = null;
     fsRedraw();
   }
 
@@ -975,8 +1094,8 @@ const Sketch = (() => {
 
   function fsSetTool(tool) {
     fs.tool = tool;
-    if (tool !== 'rect') fs.selectedIdx = -1;
-    ['pen','line','rect','text','eraser'].forEach(t => {
+    if (tool !== 'rect' && tool !== 'select') fs.selectedIdx = -1;
+    ['select','pen','line','rect','text','eraser'].forEach(t => {
       const btn = document.getElementById(`fs-tool-${t}`);
       if (btn) btn.classList.toggle('active', t === tool);
     });

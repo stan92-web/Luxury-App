@@ -244,6 +244,7 @@ const Survey = (() => {
         <div class="sketch-section">
           <div class="sketch-label">✏️ Sketch / Measurements</div>
           <div class="sketch-toolbar no-print" id="toolbar-${id}">
+            <button class="sk-btn"        id="tool-select-${id}" onclick="Sketch.setTool(${id},'select')">☞ Select</button>
             <button class="sk-btn active" id="tool-pen-${id}"    onclick="Sketch.setTool(${id},'pen')">✏️ Draw</button>
             <button class="sk-btn"        id="tool-line-${id}"   onclick="Sketch.setTool(${id},'line')">╱ Line</button>
             <button class="sk-btn"        id="tool-rect-${id}"   onclick="Sketch.setTool(${id},'rect')">▭ Box</button>
