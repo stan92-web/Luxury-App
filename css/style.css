@@ -759,6 +759,7 @@ textarea:focus {
 .status-quote     { background: #f0f4ff; color: #1a6eb5; }
 .status-order     { background: #e8f5e9; color: #2e7d32; }
 .status-installed { background: #f3e5f5; color: #6a1b9a; }
+.order-no-data    { font-size: 10px; color: #c0392b; margin-left: 6px; }
 
 /* CSS:PRINT ⚠ DO NOT MODIFY — single-page layout locked */
 @media print {

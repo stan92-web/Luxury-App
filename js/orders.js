@@ -60,6 +60,18 @@ const Orders = (() => {
     const doorNo  = data.customer?.door    || '';
     const address = data.customer?.address || '';
 
+    // Google Sheets has a 50,000 char cell limit.
+    // If fullData is too large (detailed sketches), strip shapes so the
+    // order info saves reliably. The sketch stays on this device in localStorage.
+    let fullData = raw;
+    if (fullData.length > 44000) {
+      try {
+        const obj = JSON.parse(fullData);
+        (obj.rooms || []).forEach(r => { r.shapes = []; });
+        fullData = JSON.stringify(obj);
+      } catch (_) { fullData = ''; }
+    }
+
     const payload = {
       orderId,
       property: [doorNo, address].filter(Boolean).join(' '),
@@ -75,7 +87,7 @@ const Orders = (() => {
       total:    data.pricing?.total       || '',
       deposit:  data.pricing?.deposit     || '',
       balance:  data.pricing?.balance     || '',
-      fullData: raw
+      fullData
     };
 
     Survey.toast('Saving…');
@@ -199,16 +211,19 @@ const Orders = (() => {
       const sc = o['Status'] === 'Order' ? 'status-order'
                : o['Status'] === 'Installed' ? 'status-installed'
                : 'status-quote';
-      const total = o['Total £'] ? `£${o['Total £']}` : '—';
-      const date  = fmtDate(o['Saved At']);
-      const addr  = [o['Door No'], o['Address']].filter(Boolean).join(' ');
+      const total    = o['Total £'] ? `£${o['Total £']}` : '—';
+      const date     = fmtDate(o['Saved At']);
+      const addr     = [o['Door No'], o['Address']].filter(Boolean).join(' ');
+      const hasData  = !!(o['Full Data']);
+      const rowStyle = hasData ? '' : 'opacity:0.6';
+      const noData   = hasData ? '' : '<span class="order-no-data">⚠ resave to enable loading</span>';
       return `
-        <div class="order-row" onclick="Orders.loadOrder('${(o['Order ID']||'').replace(/'/g,"\\'")}')">
+        <div class="order-row" style="${rowStyle}" onclick="Orders.loadOrder('${(o['Order ID']||'').replace(/'/g,"\\'")}')">
           <div class="order-id-badge">${o['Order ID'] || '—'}</div>
           <div class="order-main">
             <div class="order-customer">${o['Customer'] || '—'}</div>
             <div class="order-addr">${addr || '—'}</div>
-            <div class="order-rooms">${o['Rooms'] || ''}</div>
+            <div class="order-rooms">${o['Rooms'] || ''}${noData}</div>
           </div>
           <div class="order-side">
             <div class="order-price">${total}</div>
@@ -245,17 +260,21 @@ const Orders = (() => {
       .filter(o => o['Order ID'] === orderId)
       .sort((a, b) => Number(b['Version'] || 0) - Number(a['Version'] || 0));
 
-    if (!versions.length) { Survey.toast('Order data not found'); return; }
+    if (!versions.length) { Survey.toast('Order not found'); return; }
+
+    const fullData = versions[0]['Full Data'];
+    if (!fullData) {
+      Survey.toast('This order was saved with an older version — resave it from the form to enable loading');
+      return;
+    }
 
     try {
-      const data = versions[0]['Full Data'];
-      if (!data) throw new Error('No data');
-      localStorage.setItem('lh_survey_v1',      data);
-      localStorage.setItem('lh_order_id',        orderId);
-      localStorage.setItem('lh_order_version',   String(versions[0]['Version'] || 1));
+      localStorage.setItem('lh_survey_v1',    fullData);
+      localStorage.setItem('lh_order_id',     orderId);
+      localStorage.setItem('lh_order_version', String(versions[0]['Version'] || 1));
       location.reload();
     } catch (_) {
-      Survey.toast('Could not load order — data may be missing');
+      Survey.toast('Could not restore order — please try again');
     }
   }
 

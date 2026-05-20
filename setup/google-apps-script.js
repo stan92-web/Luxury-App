@@ -63,7 +63,7 @@ function doPost(e) {
 
     var data = JSON.parse(e.postData.contents);
 
-    sheet.appendRow([
+    var rowBase = [
       data.orderId   || '',
       data.property  || '',
       data.savedAt   || new Date().toISOString(),
@@ -77,9 +77,17 @@ function doPost(e) {
       data.rooms     || '',
       data.total     || '',
       data.deposit   || '',
-      data.balance   || '',
-      data.fullData  || ''
-    ]);
+      data.balance   || ''
+    ];
+
+    // Google Sheets cell limit is 50,000 chars — always save the row,
+    // even if fullData is too large (row saves without it rather than failing).
+    try {
+      sheet.appendRow(rowBase.concat([data.fullData || '']));
+    } catch (rowErr) {
+      Logger.log('fullData too large (' + (data.fullData || '').length + ' chars) — saving row without it');
+      sheet.appendRow(rowBase.concat(['']));
+    }
 
     var driveStatus = 'no image in payload';
 
