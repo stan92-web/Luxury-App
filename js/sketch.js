@@ -375,7 +375,7 @@ const Sketch = (() => {
         else      { const ep = snapEndpoint(a.x, a.y, raw.x, raw.y); x2 = ep.x; y2 = ep.y; }
         s.shapes.push({ type: 'line', x1: a.x, y1: a.y, x2, y2, colour: s.colour, lw: s.lineWidth });
       } else {
-        s.shapes.push({ type: 'pen', path: s.currentPath.slice(), colour: s.colour, lw: s.lineWidth });
+        s.shapes.push({ type: 'pen', path: smoothPath(s.currentPath.slice()), colour: s.colour, lw: s.lineWidth });
       }
       s.currentPath = [];
 
@@ -419,11 +419,30 @@ const Sketch = (() => {
     if (path.length < 3) return true;
     const a   = path[0], b = path[path.length - 1];
     const len = Math.hypot(b.x - a.x, b.y - a.y);
-    if (len < 25) return false;
+    // 120px minimum — keeps short handwriting strokes as freehand curves
+    if (len < 120) return false;
     let maxDev = 0;
     for (let i = 1; i < path.length - 1; i++)
       maxDev = Math.max(maxDev, ptLineDist(path[i], a, b));
-    return maxDev < Math.max(18, len * 0.15);
+    return maxDev < Math.max(10, len * 0.07);
+  }
+
+  // Two-pass weighted average — smooths out finger jitter without losing shape
+  function smoothPath(path) {
+    if (path.length < 4) return path;
+    let p = path.slice();
+    for (let pass = 0; pass < 2; pass++) {
+      const s = [p[0]];
+      for (let i = 1; i < p.length - 1; i++) {
+        s.push({
+          x: (p[i - 1].x + p[i].x * 2 + p[i + 1].x) / 4,
+          y: (p[i - 1].y + p[i].y * 2 + p[i + 1].y) / 4
+        });
+      }
+      s.push(p[p.length - 1]);
+      p = s;
+    }
+    return p;
   }
 
   function ptLineDist(p, a, b) {
@@ -1019,7 +1038,7 @@ const Sketch = (() => {
         else      { const ep = snapEndpoint(a.x, a.y, raw.x, raw.y); x2 = ep.x; y2 = ep.y; }
         fs.shapes.push({ type: 'line', x1: a.x, y1: a.y, x2, y2, colour: fs.colour, lw: fs.lineWidth });
       } else {
-        fs.shapes.push({ type: 'pen', path: fs.currentPath.slice(), colour: fs.colour, lw: fs.lineWidth });
+        fs.shapes.push({ type: 'pen', path: smoothPath(fs.currentPath.slice()), colour: fs.colour, lw: fs.lineWidth });
       }
       fs.currentPath = [];
     } else if (fs.tool === 'line') {
