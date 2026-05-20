@@ -168,6 +168,11 @@ const Sketch = (() => {
       const onRight  = Math.abs(x - x2) <= t && y >= y1 - t && y <= y2 + t;
       return onTop || onBottom || onLeft || onRight;
     }
+    if (sh.type === 'text') {
+      const size = sh.size || 28;
+      const tw   = sh.text.length * size * 0.58;
+      return x >= sh.x - 6 && x <= sh.x + tw + 6 && y >= sh.y - size - 6 && y <= sh.y + size * 0.35 + 6;
+    }
     return false;
   }
 
@@ -315,6 +320,7 @@ const Sketch = (() => {
       if (sh.type === 'rect') { sh.x = orig.x + dx; sh.y = orig.y + dy; }
       else if (sh.type === 'line') { sh.x1 = orig.x1+dx; sh.y1 = orig.y1+dy; sh.x2 = orig.x2+dx; sh.y2 = orig.y2+dy; }
       else if (sh.type === 'pen')  { sh.path = orig.path.map(pt => ({ x: pt.x+dx, y: pt.y+dy })); }
+      else if (sh.type === 'text') { sh.x = orig.x + dx; sh.y = orig.y + dy; }
       redraw(id);
       return;
     }
@@ -483,8 +489,8 @@ const Sketch = (() => {
       position:absolute; left:${Math.min(x, wrap.clientWidth - 220)}px; top:${Math.max(0, y - 18)}px;
       background:rgba(255,255,255,0.98); color:#1a1a1a;
       border:2px solid #8b1a1a; border-radius:6px;
-      font-size:22px; padding:5px 10px; z-index:10;
-      min-width:160px; max-width:260px;
+      font-size:26px; padding:5px 10px; z-index:10;
+      min-width:160px; max-width:280px;
       font-family:'Caveat',cursive; font-weight:700;
       box-shadow:0 3px 12px rgba(0,0,0,0.15);
     `;
@@ -496,7 +502,7 @@ const Sketch = (() => {
       if (!text) return;
       saveHistory(id);
       const s = states[id];
-      s.shapes.push({ type: 'text', x, y, text, colour: s.colour, size: 22 });
+      s.shapes.push({ type: 'text', x, y, text, colour: s.colour, size: 28 });
       redraw(id);
       notifyChange();
     }
@@ -534,6 +540,24 @@ const Sketch = (() => {
         ctx.fillStyle   = '#1a6eb5'; ctx.fill();
         ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
       }
+    } else if (sh.type === 'text') {
+      const size = sh.size || 28;
+      const tw   = sh.text.length * size * 0.58;
+      const th   = size * 1.35;
+      ctx.strokeStyle = '#1a6eb5';
+      ctx.lineWidth   = 1.5;
+      ctx.setLineDash([5, 3]);
+      ctx.strokeRect(sh.x - 5, sh.y - size - 5, tw + 10, th + 5);
+      ctx.setLineDash([]);
+      // Drag handle dot at top-centre
+      const mx = sh.x + tw / 2;
+      ctx.beginPath(); ctx.arc(mx, sh.y - size - 16, 8, 0, Math.PI * 2);
+      ctx.fillStyle = '#1a6eb5'; ctx.fill();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+      // ✥ crosshair icon inside dot
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(mx - 4, sh.y - size - 16); ctx.lineTo(mx + 4, sh.y - size - 16); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(mx, sh.y - size - 20);     ctx.lineTo(mx, sh.y - size - 12);     ctx.stroke();
     }
     ctx.restore();
   }
@@ -600,7 +624,17 @@ const Sketch = (() => {
     if      (sh.type === 'pen')  drawPenPath(ctx, sh.path, sh.colour, sh.lw);
     else if (sh.type === 'line') { ctx.beginPath(); ctx.moveTo(sh.x1, sh.y1); ctx.lineTo(sh.x2, sh.y2); ctx.stroke(); }
     else if (sh.type === 'rect') { ctx.beginPath(); ctx.strokeRect(sh.x, sh.y, sh.w, sh.h); }
-    else if (sh.type === 'text') { ctx.font = `700 ${sh.size || 22}px 'Caveat', cursive`; ctx.fillText(sh.text, sh.x, sh.y); }
+    else if (sh.type === 'text') {
+      ctx.font         = `700 ${sh.size || 28}px 'Caveat', cursive`;
+      ctx.textBaseline = 'alphabetic';
+      ctx.shadowColor  = 'rgba(0,0,0,0.12)';
+      ctx.shadowBlur   = 2;
+      ctx.shadowOffsetX = 0.5;
+      ctx.shadowOffsetY = 0.5;
+      ctx.fillText(sh.text, sh.x, sh.y);
+      ctx.shadowColor  = 'transparent';
+      ctx.shadowBlur   = 0;
+    }
   }
 
   function drawPenPath(ctx, path, colour, lw) {
@@ -986,6 +1020,7 @@ const Sketch = (() => {
       if (sh.type === 'rect') { sh.x = orig.x + dx; sh.y = orig.y + dy; }
       else if (sh.type === 'line') { sh.x1 = orig.x1+dx; sh.y1 = orig.y1+dy; sh.x2 = orig.x2+dx; sh.y2 = orig.y2+dy; }
       else if (sh.type === 'pen')  { sh.path = orig.path.map(pt => ({ x: pt.x+dx, y: pt.y+dy })); }
+      else if (sh.type === 'text') { sh.x = orig.x + dx; sh.y = orig.y + dy; }
       fsRedraw();
       return;
     }
@@ -1084,8 +1119,8 @@ const Sketch = (() => {
       position:absolute; left:${Math.min(x, (canvas ? canvas.clientWidth : 800) - 300)}px; top:${Math.max(0, y - 20)}px;
       background:rgba(255,255,255,0.98); color:#1a1a1a;
       border:2px solid #8b1a1a; border-radius:6px;
-      font-size:28px; padding:6px 14px; z-index:10;
-      min-width:200px; max-width:400px;
+      font-size:34px; padding:6px 14px; z-index:10;
+      min-width:200px; max-width:440px;
       font-family:'Caveat',cursive; font-weight:700;
       box-shadow:0 4px 16px rgba(0,0,0,0.2);
     `;
@@ -1096,7 +1131,7 @@ const Sketch = (() => {
       inp.remove();
       if (!text) return;
       fsSaveHistory();
-      fs.shapes.push({ type: 'text', x, y, text, colour: fs.colour, size: 28 });
+      fs.shapes.push({ type: 'text', x, y, text, colour: fs.colour, size: 36 });
       fsRedraw();
     }
     inp.addEventListener('blur',    commit);
