@@ -92,9 +92,11 @@ function doGet(e) {
       return obj;
     });
 
+    var json = JSON.stringify({ orders: orders });
+    var cb   = e && e.parameter && e.parameter.callback;
     return ContentService
-      .createTextOutput(JSON.stringify({ orders: orders }))
-      .setMimeType(ContentService.MimeType.JSON);
+      .createTextOutput(cb ? cb + '(' + json + ')' : json)
+      .setMimeType(cb ? ContentService.MimeType.JAVASCRIPT : ContentService.MimeType.JSON);
 
   } catch (err) {
     return ContentService

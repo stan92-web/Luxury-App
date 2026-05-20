@@ -88,17 +88,27 @@ const Orders = (() => {
     }
   }
 
-  /* ── Load orders from Sheets ─────────────── */
-  async function fetchOrders() {
-    if (!AppData.SHEETS_URL) return [];
-    try {
-      const r = await fetch(AppData.SHEETS_URL);
-      const d = await r.json();
-      return Array.isArray(d.orders) ? d.orders : [];
-    } catch (err) {
-      console.error('fetchOrders failed:', err);
-      return null; // null = fetch error, [] = genuinely empty
-    }
+  /* ── Load orders from Sheets (JSONP — bypasses CORS) ── */
+  function fetchOrders() {
+    if (!AppData.SHEETS_URL) return Promise.resolve([]);
+    return new Promise(resolve => {
+      const cbName = 'lhCb' + Date.now();
+      const script = document.createElement('script');
+
+      const cleanup = () => {
+        delete window[cbName];
+        if (script.parentNode) script.parentNode.removeChild(script);
+      };
+
+      window[cbName] = data => {
+        cleanup();
+        resolve(Array.isArray(data.orders) ? data.orders : null);
+      };
+
+      script.onerror = () => { cleanup(); resolve(null); };
+      script.src = AppData.SHEETS_URL + '?callback=' + cbName;
+      document.head.appendChild(script);
+    });
   }
 
   /* ── Orders panel ────────────────────────── */
