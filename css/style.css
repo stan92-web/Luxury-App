@@ -621,10 +621,10 @@ textarea:focus {
   body { background: #fff !important; color: #111 !important; min-height: 0 !important; }
   main { padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
 
-  /* ── Single-room: JS sets canvas height to 205mm via inline !important.
+  /* ── Single-room: JS sets canvas height to 175mm via inline !important.
      This rule is a CSS fallback only — the JS in prepareForPrint() wins. */
   body.single-room .room-canvas {
-    height: 205mm !important;
+    height: 175mm !important;
     max-height: none !important;
     min-height: 0 !important;
   }

@@ -316,7 +316,7 @@ const Survey = (() => {
     // Inline !important beats every stylesheet rule — guaranteed 1-page for single room
     if (activeIds.length === 1) {
       const c = document.getElementById(`canvas-${activeIds[0]}`);
-      if (c) c.style.setProperty('height', '205mm', 'important');
+      if (c) c.style.setProperty('height', '175mm', 'important');
     }
   }
 
