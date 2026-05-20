@@ -298,6 +298,8 @@ const Survey = (() => {
   function clearAll() {
     if (!confirm('Start a new quote / order? This will clear all current data.')) return;
     localStorage.removeItem('lh_survey_v1');
+    localStorage.removeItem('lh_order_id');
+    localStorage.removeItem('lh_order_version');
     location.reload();
   }
 
@@ -370,8 +372,6 @@ const Survey = (() => {
   }
 
   /* ── WhatsApp — image of the full sheet ── */
-  const OFFICE_WA = '447308154580';
-
   function waPhone(raw) {
     let n = raw.replace(/\D/g, '');
     if (n.startsWith('00')) n = n.slice(2);
@@ -466,7 +466,7 @@ const Survey = (() => {
   }
 
   function sendToOffice() {
-    shareSheet(OFFICE_WA);
+    shareSheet(AppData.OFFICE_WA);
   }
 
   function sendToCustomer() {
@@ -523,5 +523,9 @@ const Survey = (() => {
     }
   });
 
-  return { addRoom, removeRoom, clearAll, print, sendToOffice, sendToCustomer, setDoorType };
+  return {
+    addRoom, removeRoom, clearAll, print, sendToOffice, sendToCustomer, setDoorType,
+    toast: showToast,          // used by orders.js
+    captureSheet               // used by orders.js (email)
+  };
 })();

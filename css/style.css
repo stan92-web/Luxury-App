@@ -192,6 +192,12 @@ textarea:focus {
 .btn-sm             { padding: 8px 14px; font-size: 11px; min-height: 36px; }
 .btn-wa             { background: #25d366; color: #fff; border: none; }
 .btn-wa:hover       { background: #1ebe5a; }
+.btn-save           { background: #1a6eb5; color: #fff; border: none; }
+.btn-save:hover     { background: #155a96; }
+.btn-email          { background: #8b1a1a; color: #fff; border: none; }
+.btn-email:hover    { background: #6e1414; }
+.btn-orders         { background: #3d3d3d; color: #fff; border: none; }
+.btn-orders:hover   { background: #555; }
 .wa-icon            { width: 18px; height: 18px; flex-shrink: 0; }
 .btn-row            { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 24px; align-items: center; }
 
@@ -668,10 +674,68 @@ textarea:focus {
    Canvas is pre-scaled to 300 dpi before printing
    (see prepareForPrint in survey.js)
 ══════════════════════════════════════════════ */
+
+/* ── Orders panel ────────────────────────────── */
+#orders-overlay {
+  display: none; position: fixed; inset: 0; z-index: 200;
+  background: var(--bg); flex-direction: column;
+}
+#orders-overlay.open { display: flex; }
+#orders-bar {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  background: var(--header); padding: 12px 18px;
+  border-bottom: 2px solid var(--red);
+}
+#orders-bar-left { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0; }
+.orders-title { font-size: 15px; font-weight: 700; color: #fff; white-space: nowrap; }
+#orders-search-input {
+  flex: 1; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 8px; color: #fff; padding: 8px 14px; font-size: 14px; font-family: inherit;
+  min-width: 0;
+}
+#orders-search-input::placeholder { color: rgba(255,255,255,0.45); }
+#orders-search-input:focus { outline: none; border-color: rgba(255,255,255,0.5); }
+#orders-filters { display: flex; gap: 6px; }
+.ofilter-btn {
+  background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+  color: #ccc; padding: 7px 14px; border-radius: 20px; font-size: 12px;
+  font-weight: 600; cursor: pointer; font-family: inherit; transition: background 0.15s;
+}
+.ofilter-btn.active { background: var(--red); color: #fff; border-color: var(--red); }
+#orders-bar-right { display: flex; gap: 8px; }
+#orders-list { flex: 1; overflow-y: auto; padding: 16px 18px; }
+.orders-loading { color: var(--muted); padding: 40px; text-align: center; font-size: 15px; }
+.orders-empty   { color: var(--muted); padding: 40px; text-align: center; font-size: 15px; line-height: 2; }
+.orders-empty code { background: var(--card); padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+.order-row {
+  display: flex; align-items: center; gap: 16px;
+  background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+  padding: 14px 18px; margin-bottom: 10px; cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.order-row:hover { border-color: var(--red); box-shadow: 0 2px 10px rgba(139,26,26,0.1); }
+.order-id-badge {
+  font-size: 11px; font-weight: 700; color: #fff; background: var(--header);
+  padding: 4px 9px; border-radius: 6px; white-space: nowrap; letter-spacing: 0.5px;
+}
+.order-main  { flex: 1; min-width: 0; }
+.order-customer { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+.order-addr  { font-size: 13px; color: var(--muted); margin-bottom: 2px;
+               white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.order-rooms { font-size: 11px; color: var(--muted); }
+.order-side  { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+.order-price { font-size: 18px; font-weight: 800; color: var(--red); }
+.order-date  { font-size: 11px; color: var(--muted); }
+.order-rep   { font-size: 11px; color: var(--muted); }
+.order-status { font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+.status-quote     { background: #f0f4ff; color: #1a6eb5; }
+.status-order     { background: #e8f5e9; color: #2e7d32; }
+.status-installed { background: #f3e5f5; color: #6a1b9a; }
+
 @media print {
   @page { size: A4 portrait; margin: 5mm 9mm; }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .no-print, #toast, #fs-overlay, #auth-screen { display: none !important; }
+  .no-print, #toast, #fs-overlay, #orders-overlay, #auth-screen { display: none !important; }
   .door-style-row { margin-bottom: 4px !important; gap: 6px !important; }
   .door-style-row .ds-label { padding-bottom: 2px !important; }
 
