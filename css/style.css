@@ -349,10 +349,9 @@ textarea:focus {
   padding-bottom: 6px;
 }
 .ds-label-gap { margin-left: 8px; }
-.door-style-row select {
+.door-style-row input[type="text"] {
   flex: 1;
-  min-width: 160px;
-  max-width: 380px;
+  min-width: 140px;
   font-size: 15px;
   font-weight: 600;
 }
@@ -670,6 +669,8 @@ textarea:focus {
   @page { size: A4 portrait; margin: 5mm 9mm; }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .no-print, #toast, #fs-overlay, #auth-screen { display: none !important; }
+  .door-style-row { margin-bottom: 4px !important; gap: 6px !important; }
+  .door-style-row .ds-label { padding-bottom: 2px !important; }
 
   /* ── Structural reset — kill all screen spacing ── */
   html { min-height: 0 !important; }

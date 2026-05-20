@@ -221,7 +221,7 @@ const Survey = (() => {
 
         <input type="hidden" id="dtype-${id}" value="hinged">
 
-        <div class="door-type-row">
+        <div class="door-type-row no-print">
           <span class="ds-label">Door Type</span>
           <div class="door-type-btns">
             <button class="dtype-btn active" id="dtype-hinged-${id}"  onclick="Survey.setDoorType(${id},'hinged')">Hinged</button>
@@ -231,83 +231,14 @@ const Survey = (() => {
 
         <div class="door-style-row" id="ds-hinged-${id}">
           <span class="ds-label">Style</span>
-          <select id="dstyle-${id}">
-            <option value="">— Select door style —</option>
-            <optgroup label="Glacier">
-              <option>Glacier — High Gloss White</option>
-              <option>Glacier — High Gloss Cashmere</option>
-              <option>Glacier — High Gloss Light Grey &amp; Graphite</option>
-              <option>Glacier — Super Matt Fir Green</option>
-              <option>Glacier — Super Matt Light Grey</option>
-              <option>Glacier — Super Matt Black</option>
-              <option>Glacier — Super Matt Graphite</option>
-              <option>Glacier — Super Matt Stone Grey &amp; Cashmere</option>
-            </optgroup>
-            <optgroup label="Turnberry">
-              <option>Turnberry — Ultra Matt Cashmere</option>
-            </optgroup>
-            <optgroup label="Bamburgh">
-              <option>Bamburgh — Ultra Matt White</option>
-            </optgroup>
-            <optgroup label="Hampton">
-              <option>Hampton — Ultra Matt Graphite</option>
-              <option>Hampton — Ultra Matt Mussel</option>
-            </optgroup>
-            <optgroup label="Matfen">
-              <option>Matfen — Parisian Blue Oak</option>
-              <option>Matfen — Dust Grey Oak &amp; Light Grey Oak</option>
-              <option>Matfen — Light Grey Oak &amp; Graphite Oak</option>
-            </optgroup>
-            <optgroup label="Alnwick">
-              <option>Alnwick — Ultra Matt White Grey</option>
-            </optgroup>
-            <optgroup label="Portree">
-              <option>Portree — Ultra Matt Indigo</option>
-              <option>Portree — White Oak</option>
-            </optgroup>
-            <optgroup label="Glendale">
-              <option>Glendale — Ultra Matt Pale Cream</option>
-            </optgroup>
-            <optgroup label="Arko">
-              <option>Arko — Light Casella Oak &amp; Reed Green Oak</option>
-            </optgroup>
-            <optgroup label="Rialto">
-              <option>Rialto — Ultra Matt Dust Grey</option>
-              <option>Rialto — Ultra Matt Cashmere</option>
-            </optgroup>
-            <optgroup label="Monaco">
-              <option>Monaco — Light Concrete</option>
-            </optgroup>
-            <optgroup label="Scoop">
-              <option>Scoop — Ultra Matt Light Grey</option>
-            </optgroup>
-          </select>
+          <input type="text" id="dstyle-${id}" placeholder="e.g. Glacier High Gloss White" autocomplete="off">
         </div>
 
-        <div class="door-style-row door-sliding-row" id="ds-sliding-${id}" style="display:none">
+        <div class="door-style-row" id="ds-sliding-${id}" style="display:none">
           <span class="ds-label">Collection</span>
-          <select id="dslide-${id}">
-            <option value="">— Select collection —</option>
-            <option>Heritage</option>
-            <option>Florence</option>
-            <option>Napoli</option>
-            <option>Torino</option>
-            <option>Tuscany</option>
-            <option>Venice</option>
-          </select>
+          <input type="text" id="dslide-${id}" placeholder="e.g. Venice" autocomplete="off">
           <span class="ds-label ds-label-gap">Frame</span>
-          <select id="dframe-${id}">
-            <option value="">— Select frame —</option>
-            <option>Polished Silver</option>
-            <option>Satin Silver</option>
-            <option>Bronze</option>
-            <option>Satin Bronze</option>
-            <option>Black</option>
-            <option>White</option>
-            <option>Graphite</option>
-            <option>Satin Graphite</option>
-            <option>Satin Gold</option>
-          </select>
+          <input type="text" id="dframe-${id}" placeholder="e.g. Polished Silver" autocomplete="off">
         </div>
 
         <div class="sketch-section">
