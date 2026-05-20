@@ -21,7 +21,7 @@ const AppData = (() => {
      4. Deploy → New deployment → Web App
         Execute as: Me | Access: Anyone
      5. Copy the Web App URL and paste below        */
-  const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzI_60TvaI9xamZVFp58HF0aDRAq_fHKKTm_48OE7gixl4x8qqJRpZJnKSnn_XAnOVZ/exec';
+  const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbyc5_Kv45HI9RvZzZ_N8Xd15THrB4hKgzBbvwrmPxd3Du-VpMqxrcX-MNM9Lwe1kgzm/exec';
 
   /* ── EmailJS ──────────────────────────────────
      1. Register free at emailjs.com
