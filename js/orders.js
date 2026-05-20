@@ -79,7 +79,18 @@ const Orders = (() => {
     };
 
     Survey.toast('Saving…');
-    const ok = await saveToSheets(payload);
+
+    // Capture a compressed image of the quote for Google Drive archiving
+    try {
+      const canvas = await Survey.captureSheet();
+      const thumb  = document.createElement('canvas');
+      thumb.width  = Math.round(canvas.width  / 2);
+      thumb.height = Math.round(canvas.height / 2);
+      thumb.getContext('2d').drawImage(canvas, 0, 0, thumb.width, thumb.height);
+      payload.imageData = thumb.toDataURL('image/jpeg', 0.4);
+    } catch (_) { /* Drive image optional — don't block save */ }
+
+    await saveToSheets(payload);
 
     if (!AppData.SHEETS_URL) {
       Survey.toast('Add your Google Sheets URL to js/data.js first');

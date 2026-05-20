@@ -389,27 +389,19 @@ const Survey = (() => {
 
   async function captureSheet() {
     window.scrollTo(0, 0);
-    // Scale canvases to high-res so the WhatsApp image is sharp
     activeIds.forEach(scaleCanvasForPrint);
     await new Promise(r => requestAnimationFrame(r));
-    return await html2canvas(document.getElementById('app-wrap'), {
+    const result = await html2canvas(document.getElementById('app-wrap'), {
       scale:           2,
       useCORS:         true,
       allowTaint:      true,
       backgroundColor: '#ffffff',
       logging:         false,
-      // onclone runs on a hidden DOM copy — we apply print styling there
-      // so the live page is never touched
       onclone: (doc) => {
-        // Remove all buttons / toolbars
         doc.querySelectorAll('.no-print').forEach(el => el.remove());
         doc.getElementById('toast')?.remove();
-
-        // White page background
         doc.body.style.background = '#fff';
         doc.getElementById('app-wrap').style.background = '#fff';
-
-        // Header: white with red underline (matches print CSS)
         const hdr = doc.querySelector('header');
         if (hdr) Object.assign(hdr.style, {
           background: '#fff', boxShadow: 'none',
@@ -420,15 +412,14 @@ const Survey = (() => {
         if (lm) Object.assign(lm.style, { background: '#8b1a1a', width: '32px', height: '32px', fontSize: '12px' });
         const lt = doc.querySelector('.logo-text');
         if (lt) lt.style.color = '#1a1a1a';
-
-        // Cards: flat white
         doc.querySelectorAll('.card, .room-card').forEach(el => {
           el.style.boxShadow = 'none';
           el.style.border = '1px solid #ddd';
         });
       }
     });
-    activeIds.forEach(restoreCanvas);
+    activeIds.forEach(restoreCanvas); // always restore — was unreachable after return
+    return result;
   }
 
   function triggerDownload(canvas) {
