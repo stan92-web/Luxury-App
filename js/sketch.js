@@ -7,16 +7,43 @@
    - Rect corner-drag resize + line endpoint drag
    - Select any rect or line, then ✕ Del to remove
    - Full-screen sketch overlay
+
+   TABLE OF CONTENTS — grep the LABEL to jump straight there
+   ──────────────────────────────────────────────
+   SKETCH:CONSTANTS   SNAP_R, HANDLE_R, HANDLE_HIT, EDGE_HIT
+   SKETCH:INIT        init(), resizeCanvas()
+   SKETCH:COORDS      getPos()
+   SKETCH:SNAP        getSnapPoints(), findSnap() — endpoint snap
+   SKETCH:SELECTION   hitShapeHandle(), hitShapeBody(), getCornerHandles(), resizePivotFor()
+   SKETCH:DISTANCE    distToSeg()
+   SKETCH:POINTER     onDown(), onMove(), onUp(), onCancel() — per-canvas pointer events
+   SKETCH:STRAIGHTEN  isRoughlyLinear(), ptLineDist(), snapEndpoint()
+   SKETCH:TEXTINPUT   showTextInput() overlay
+   SKETCH:HANDLES     drawSelectionHandles()
+   SKETCH:REDRAW      redraw(), drawSnapIndicator(), renderShape(), drawPenPath()
+   SKETCH:HISTORY     saveHistory()
+   SKETCH:CONTROLS    undo(), redrawScaled(), clear(), deleteSelected(), setTool(), setColour(), toggleStraighten()
+   SKETCH:DATA        getShapes(), setShapes()
+   SKETCH:TEMPLATES   buildTemplate() 4-door, insertTemplate(), fsTpl()
+   SKETCH:NOTIFY      notifyChange()
+   SKETCH:FULLSCREEN  fs state, openFullscreen(), closeFullscreen(), scaleShapes()
+   SKETCH:FSPOINTER   initFsCanvas(), fsGetPos(), fsDown(), fsMove(), fsUp(), fsCancelDraw()
+   SKETCH:FSTEXT      fsShowTextInput()
+   SKETCH:FSREDRAW    fsRedraw(), fsSaveHistory()
+   SKETCH:FSCONTROLS  fsDeleteSelected(), fsSetTool(), fsSetColour(), fsUndo(), fsClear(), fsToggleStraighten(), fsUpdateToolbar()
+   SKETCH:BOOT        DOMContentLoaded → initFsCanvas
+   SKETCH:EXPORTS     return { ... }
 ══════════════════════════════════════════════ */
 
 const Sketch = (() => {
   const states  = {};
+  /* SKETCH:CONSTANTS */
   const SNAP_R     = 20;
   const HANDLE_R   = 8;   // visual radius of handles
   const HANDLE_HIT = 28;  // hit detection radius (touch-friendly)
   const EDGE_HIT   = 16;  // proximity for line/rect edge selection
 
-  /* ── Init ────────────────────────────────────── */
+  /* SKETCH:INIT ─────────────────────────────────── */
   function init(id) {
     const canvas = document.getElementById(`canvas-${id}`);
     if (!canvas) return;
@@ -66,7 +93,7 @@ const Sketch = (() => {
     redraw(id);
   }
 
-  /* ── Coordinate helper ───────────────────────── */
+  /* SKETCH:COORDS ───────────────────────────────── */
   function getPos(canvas, e) {
     const rect = canvas.getBoundingClientRect();
     const sx   = canvas.width  / rect.width;
@@ -74,7 +101,7 @@ const Sketch = (() => {
     return { x: (e.clientX - rect.left) * sx, y: (e.clientY - rect.top) * sy };
   }
 
-  /* ── Endpoint snap ───────────────────────────── */
+  /* SKETCH:SNAP ─────────────────────────────────── */
   function getSnapPoints(shapes) {
     const pts = [];
     for (const sh of shapes) {
@@ -103,7 +130,7 @@ const Sketch = (() => {
     return best;
   }
 
-  /* ── Selection helpers ───────────────────────── */
+  /* SKETCH:SELECTION ────────────────────────────── */
   // Returns handle name ('tl'/'tr'/'bl'/'br' for rects, 'ep1'/'ep2' for lines)
   function hitShapeHandle(x, y, sh) {
     if (sh.type === 'rect') {
@@ -160,7 +187,7 @@ const Sketch = (() => {
     return                      { x: sh.x, y: sh.y };
   }
 
-  /* ── Distance helpers ────────────────────────── */
+  /* SKETCH:DISTANCE ─────────────────────────────── */
   function distToSeg(px, py, x1, y1, x2, y2) {
     const dx = x2 - x1, dy = y2 - y1;
     const lenSq = dx * dx + dy * dy;
@@ -169,7 +196,7 @@ const Sketch = (() => {
     return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
   }
 
-  /* ── Pointer events ──────────────────────────── */
+  /* SKETCH:POINTER ──────────────────────────────── */
   function onDown(id, e) {
     const s      = states[id];
     const canvas = document.getElementById(`canvas-${id}`);
@@ -385,7 +412,7 @@ const Sketch = (() => {
     redraw(id);
   }
 
-  /* ── Auto-straighten helpers ─────────────────── */
+  /* SKETCH:STRAIGHTEN ───────────────────────────── */
   function isRoughlyLinear(path) {
     if (path.length < 3) return true;
     const a   = path[0], b = path[path.length - 1];
@@ -424,7 +451,7 @@ const Sketch = (() => {
     return { x: x1 + Math.cos(rad) * len, y: y1 + Math.sin(rad) * len };
   }
 
-  /* ── Text input overlay ──────────────────────── */
+  /* SKETCH:TEXTINPUT ────────────────────────────── */
   function showTextInput(id, x, y) {
     const wrap = document.getElementById(`canvas-wrap-${id}`);
     if (!wrap) return;
@@ -454,7 +481,7 @@ const Sketch = (() => {
     inp.addEventListener('keydown', e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') inp.remove(); });
   }
 
-  /* ── Draw selection handles ──────────────────── */
+  /* SKETCH:HANDLES ──────────────────────────────── */
   function drawSelectionHandles(ctx, sh) {
     ctx.save();
     if (sh.type === 'rect') {
@@ -488,7 +515,7 @@ const Sketch = (() => {
     ctx.restore();
   }
 
-  /* ── Redraw ──────────────────────────────────── */
+  /* SKETCH:REDRAW ───────────────────────────────── */
   function redraw(id, previewX, previewY) {
     const canvas = document.getElementById(`canvas-${id}`);
     if (!canvas) return;
@@ -565,7 +592,7 @@ const Sketch = (() => {
     ctx.stroke();
   }
 
-  /* ── History ─────────────────────────────────── */
+  /* SKETCH:HISTORY ──────────────────────────────── */
   function saveHistory(id) {
     const s = states[id];
     if (!s) return;
@@ -573,7 +600,7 @@ const Sketch = (() => {
     if (s.history.length > 50) s.history.shift();
   }
 
-  /* ── Public controls ─────────────────────────── */
+  /* SKETCH:CONTROLS ─────────────────────────────── */
   function undo(id) {
     const s = states[id];
     if (!s || !s.history.length) return;
@@ -644,7 +671,7 @@ const Sketch = (() => {
     if (btn) btn.classList.toggle('active', s.autoStraighten);
   }
 
-  /* ── Data access ─────────────────────────────── */
+  /* SKETCH:DATA ─────────────────────────────────── */
   function getShapes(id) { return states[id] ? states[id].shapes : []; }
 
   function setShapes(id, shapes) {
@@ -655,7 +682,7 @@ const Sketch = (() => {
     redraw(id);
   }
 
-  /* ── Templates ───────────────────────────────── */
+  /* SKETCH:TEMPLATES ────────────────────────────── */
   function buildTemplate(name, W, H) {
     const shapes = [];
     if (name !== '4door') return shapes;
@@ -709,14 +736,12 @@ const Sketch = (() => {
     fsRedraw();
   }
 
-  /* ── Notify survey module ────────────────────── */
+  /* SKETCH:NOTIFY ───────────────────────────────── */
   function notifyChange() {
     if (typeof window.onSketchUpdated === 'function') window.onSketchUpdated();
   }
 
-  /* ══════════════════════════════════════════════
-     FULL-SCREEN SKETCH
-  ══════════════════════════════════════════════ */
+  /* SKETCH:FULLSCREEN ───────────────────────────── */
   const fs = {
     roomId:          null,
     tool:            'pen',
@@ -810,7 +835,7 @@ const Sketch = (() => {
     });
   }
 
-  /* ── FS pointer events ───────────────────────── */
+  /* SKETCH:FSPOINTER ────────────────────────────── */
   function initFsCanvas() {
     const canvas = document.getElementById('fs-canvas');
     if (!canvas) return;
@@ -1014,6 +1039,7 @@ const Sketch = (() => {
     fsRedraw();
   }
 
+  /* SKETCH:FSTEXT ───────────────────────────────── */
   function fsShowTextInput(x, y) {
     const area = document.getElementById('fs-canvas-area');
     const inp  = document.createElement('input');
@@ -1040,6 +1066,7 @@ const Sketch = (() => {
     inp.addEventListener('keydown', e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') inp.remove(); });
   }
 
+  /* SKETCH:FSREDRAW ─────────────────────────────── */
   function fsRedraw(previewX, previewY) {
     const canvas = document.getElementById('fs-canvas');
     if (!canvas) return;
@@ -1084,6 +1111,7 @@ const Sketch = (() => {
     if (fs.history.length > 50) fs.history.shift();
   }
 
+  /* SKETCH:FSCONTROLS ───────────────────────────── */
   function fsDeleteSelected() {
     if (fs.selectedIdx < 0 || fs.selectedIdx >= fs.shapes.length) return;
     fsSaveHistory();
@@ -1132,8 +1160,10 @@ const Sketch = (() => {
     if (btn) btn.classList.toggle('active', fs.autoStraighten);
   }
 
+  /* SKETCH:BOOT */
   document.addEventListener('DOMContentLoaded', initFsCanvas);
 
+  /* SKETCH:EXPORTS */
   return {
     init, resizeCanvas, redraw, redrawScaled, setTool, setColour, toggleStraighten, undo, clear, deleteSelected, getShapes, setShapes,
     insertTemplate, fsTpl,

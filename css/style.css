@@ -1,8 +1,34 @@
 /* ══════════════════════════════════════════════
    LUXURY HOUSE — Survey Sheet
    Light, clean, premium — easy to use on iPad
+
+   TABLE OF CONTENTS — grep the LABEL to jump straight there
+   ──────────────────────────────────────────────
+   CSS:VARS        :root — CSS custom properties (colours, radius, shadow)
+   CSS:BASE        * reset, body, input/select/textarea
+   CSS:HEADER      header, logo-mark, logo-text, header-right, header-date
+   CSS:LAYOUT      app-wrap, main
+   CSS:CARDS       .card, .card-title, .sub-heading
+   CSS:FORMS       form-grid, form-group, label, input, select, customer-req-grid
+   CSS:BUTTONS     .btn variants — btn-red, btn-dark, btn-wa, btn-save, btn-email, btn-orders
+   CSS:PRICING     pricing-row, price-group, price-wrap, price-balance
+   CSS:ROOMCARD    room-card, room-card-header, room-header-left, room-number, room-name-input
+   CSS:DIMS        dims-row, dim-group, dim-input, dim-unit
+   CSS:DOORTYPES   door-type-row, door-type-btns, dtype-btn, door-style-row, ds-label
+   CSS:SKETCH      sketch-section, sketch-label, sketch-toolbar, sk-btn, colour-dot
+   CSS:SKETCHDIMS  sketch-dims, sketch-dims-title, dim-badge
+   CSS:CANVAS      canvas-wrap, room-canvas
+   CSS:NOTES       notes-group
+   CSS:TOAST       #toast
+   CSS:AUTH        #auth-screen, #auth-box, auth-logo-mark, auth-btn, auth-error
+   CSS:MOBILE      @media (max-width: 600px)
+   CSS:TABLET      @media (min-width: 601px) iPad / tablet layout
+   CSS:FULLSCREEN  #fs-overlay, #fs-bar, #fs-tools, fs-canvas-area, sk-del-btn
+   CSS:ORDERS      #orders-overlay, #orders-bar, order-row, order-status badges
+   CSS:PRINT       @media print ⚠ DO NOT MODIFY — single-page layout locked
 ══════════════════════════════════════════════ */
 
+/* CSS:VARS */
 :root {
   --red:       #8b1a1a;
   --red-mid:   #c0392b;
@@ -18,6 +44,7 @@
   --radius:    8px;
 }
 
+/* CSS:BASE */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
@@ -35,7 +62,7 @@ input, select, textarea {
   user-select: text;
 }
 
-/* ── Header ─────────────────────────────────── */
+/* CSS:HEADER */
 header {
   background: var(--header);
   padding: 0 22px;
@@ -65,10 +92,10 @@ header {
 .header-right  { display: flex; align-items: center; gap: 10px; }
 .header-date   { font-size: 12px; color: #888; }
 
-/* ── Layout ─────────────────────────────────── */
+/* CSS:LAYOUT */
 main { max-width: 860px; margin: 0 auto; padding: 24px 16px 60px; }
 
-/* ── Cards ──────────────────────────────────── */
+/* CSS:CARDS */
 .card {
   background: var(--card);
   border: 1px solid var(--border);
@@ -102,7 +129,7 @@ main { max-width: 860px; margin: 0 auto; padding: 24px 16px 60px; }
   border-bottom-color: var(--border);
 }
 
-/* ── Forms ───────────────────────────────────── */
+/* CSS:FORMS */
 .form-grid  { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 /* Required customer fields: Name | Phone | Door (narrow) then Address full-width */
 .customer-req-grid { grid-template-columns: 1fr 1fr 90px; }
@@ -164,7 +191,7 @@ textarea:focus {
   box-shadow: none;
 }
 
-/* ── Buttons ─────────────────────────────────── */
+/* CSS:BUTTONS */
 .btn {
   padding: 12px 20px;
   border-radius: 6px;
@@ -201,7 +228,7 @@ textarea:focus {
 .wa-icon            { width: 18px; height: 18px; flex-shrink: 0; }
 .btn-row            { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 24px; align-items: center; }
 
-/* ── Pricing ─────────────────────────────────── */
+/* CSS:PRICING */
 .pricing-row {
   display: flex;
   gap: 16px;
@@ -251,7 +278,7 @@ textarea:focus {
 .price-balance .price-sym  { color: var(--red); }
 .price-balance input { color: var(--red); }
 
-/* ── Room Card ───────────────────────────────── */
+/* CSS:ROOMCARD */
 .room-card {
   background: var(--card);
   border: 1px solid var(--border);
@@ -287,7 +314,7 @@ textarea:focus {
 .room-name-input::placeholder { color: #bbb; font-weight: normal; }
 .room-card-body { padding: 20px; }
 
-/* ── Dimensions ──────────────────────────────── */
+/* CSS:DIMS */
 .dims-row {
   display: flex;
   gap: 10px;
@@ -314,7 +341,7 @@ textarea:focus {
 .dim-input:focus { outline: none; border-color: var(--red); box-shadow: 0 0 0 3px rgba(139,26,26,0.08); }
 .dim-unit        { font-size: 10px; color: var(--muted); text-align: center; letter-spacing: 1px; margin-top: 3px; }
 
-/* ── Door Type / Style rows ──────────────────── */
+/* CSS:DOORTYPES */
 .door-type-row {
   display: flex;
   align-items: center;
@@ -365,7 +392,7 @@ textarea:focus {
   font-weight: 600;
 }
 
-/* ── Sketch ──────────────────────────────────── */
+/* CSS:SKETCH */
 .sketch-section { margin-bottom: 18px; }
 .sketch-label {
   font-size: 9px;
@@ -405,7 +432,7 @@ textarea:focus {
 .sk-tpl-btn        { background: #2c5f2e !important; color: #fff !important; border-color: #2c5f2e !important; }
 .sk-del-btn        { background: #c0392b !important; color: #fff !important; border-color: #c0392b !important; }
 
-/* ── Sketch dimension badges ─────────────────── */
+/* CSS:SKETCHDIMS */
 .sketch-dims {
   display: flex;
   flex-wrap: wrap;
@@ -447,6 +474,7 @@ textarea:focus {
 }
 .colour-dot.active { border-color: #333; transform: scale(1.25); }
 
+/* CSS:CANVAS */
 .canvas-wrap {
   background: #fff;
   border-radius: 8px;
@@ -465,11 +493,11 @@ textarea:focus {
   -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
 }
 
-/* ── Notes ───────────────────────────────────── */
+/* CSS:NOTES */
 .notes-group         { display: flex; flex-direction: column; gap: 5px; }
 .notes-group label   { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); font-weight: bold; }
 
-/* ── Toast ───────────────────────────────────── */
+/* CSS:TOAST */
 #toast {
   position: fixed;
   bottom: 24px;
@@ -486,7 +514,7 @@ textarea:focus {
   box-shadow: 0 6px 24px rgba(0,0,0,0.2);
 }
 
-/* ── Login Screen ────────────────────────────── */
+/* CSS:AUTH */
 #auth-screen {
   position: fixed;
   inset: 0;
@@ -584,7 +612,7 @@ textarea:focus {
 }
 #auth-box.shake { animation: shake 0.4s ease; }
 
-/* ── Mobile ──────────────────────────────────── */
+/* CSS:MOBILE */
 @media (max-width: 600px) {
   .form-grid      { grid-template-columns: 1fr; }
   header          { padding: 0 14px; }
@@ -594,7 +622,7 @@ textarea:focus {
   .dim-input      { font-size: 20px; }
 }
 
-/* ── iPad / Tablet ───────────────────────────── */
+/* CSS:TABLET */
 @media (min-width: 768px) {
   main            { padding: 28px 24px 70px; }
   .card           { padding: 26px; }
@@ -609,7 +637,7 @@ textarea:focus {
   .btn-sm         { font-size: 12px; padding: 10px 16px; min-height: 42px; }
 }
 
-/* ── Full-Screen Sketch ──────────────────────── */
+/* CSS:FULLSCREEN */
 #fs-overlay {
   position: fixed;
   inset: 0;
@@ -675,7 +703,7 @@ textarea:focus {
    (see prepareForPrint in survey.js)
 ══════════════════════════════════════════════ */
 
-/* ── Orders panel ────────────────────────────── */
+/* CSS:ORDERS */
 #orders-overlay {
   display: none; position: fixed; inset: 0; z-index: 200;
   background: var(--bg); flex-direction: column;
@@ -732,6 +760,7 @@ textarea:focus {
 .status-order     { background: #e8f5e9; color: #2e7d32; }
 .status-installed { background: #f3e5f5; color: #6a1b9a; }
 
+/* CSS:PRINT ⚠ DO NOT MODIFY — single-page layout locked */
 @media print {
   @page { size: A4 portrait; margin: 5mm 9mm; }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }

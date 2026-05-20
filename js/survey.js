@@ -2,6 +2,24 @@
    survey.js — Quote / Order form logic
    Manages rooms, auto-save, load, print, share.
    Depends on: Sketch (sketch.js), html2canvas
+
+   TABLE OF CONTENTS — grep the LABEL to jump straight there
+   ──────────────────────────────────────────────
+   SURVEY:INIT        Init — date, event listeners, load-or-create room
+   SURVEY:AUTOSAVE    Auto-save — scheduleSave, recalcBalance, save → localStorage
+   SURVEY:LOAD        Load — restore customer / rooms / shapes from localStorage
+   SURVEY:ROOMS       Rooms — addRoom, removeRoom, updateSingleRoomClass
+   SURVEY:TEMPLATE    Room HTML template — buildRoomHTML
+   SURVEY:SKETCHDIMS  Sketch dimension badges — updateSketchDims
+   SURVEY:ACTIONS     Actions — clearAll, print (sets PDF filename from address)
+   SURVEY:PRINTENGINE Print engine — scaleCanvasForPrint, restoreCanvas,
+                        prepareForPrint, restoreAfterPrint  ⚠ DO NOT MODIFY
+   SURVEY:CAPTURE     Image capture — waPhone, captureSheet, triggerDownload, shareSheet
+   SURVEY:SEND        Send flows — sendToOffice, captureAndDownload, sendToCustomer
+   SURVEY:DOORTYPE    Door type toggle — setDoorType (hinged / sliding rows)
+   SURVEY:HELPERS     Helpers — gv, sv, showToast
+   SURVEY:BOOT        Boot — DOMContentLoaded, print event wiring
+   SURVEY:EXPORTS     Exports — public API returned to window.Survey
 ══════════════════════════════════════════════ */
 
 const Survey = (() => {
