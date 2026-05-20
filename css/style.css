@@ -621,54 +621,12 @@ textarea:focus {
   body { background: #fff !important; color: #111 !important; min-height: 0 !important; }
   main { padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
 
-  /* ── Single-room: flex chain so canvas fills the full page automatically ──
-     287mm = A4 (297mm) minus 5mm top + 5mm bottom margins.
-     Class 'single-room' is added to body by JS when exactly one room exists.
-     Multi-room falls back to the fixed 130mm canvas below. */
-  body.single-room {
-    height: 287mm !important;
-    display: flex !important; flex-direction: column !important;
-  }
-  body.single-room #app-wrap {
-    flex: 1 !important; display: flex !important; flex-direction: column !important;
-    overflow: visible !important;
-  }
-  body.single-room main {
-    flex: 1 !important; display: flex !important; flex-direction: column !important;
-  }
-  body.single-room #customer-card { flex-shrink: 0 !important; }
-  body.single-room #rooms-container {
-    flex: 1 !important; display: flex !important; flex-direction: column !important;
-  }
-  body.single-room #pricing-card  { flex-shrink: 0 !important; }
-
-  body.single-room #rooms-container .room-card {
-    flex: 1 !important; display: flex !important; flex-direction: column !important;
-    margin: 0 !important;
-  }
-  body.single-room #rooms-container .room-card .room-card-header { flex-shrink: 0 !important; }
-  body.single-room #rooms-container .room-card .room-card-body {
-    flex: 1 !important; display: flex !important; flex-direction: column !important;
-    padding-bottom: 0 !important;
-  }
-  body.single-room #rooms-container .room-card .dims-row    { flex-shrink: 0 !important; }
-  body.single-room #rooms-container .room-card .sketch-section {
-    flex: 1 !important; display: flex !important; flex-direction: column !important;
-    min-height: 0 !important; margin-bottom: 0 !important;
-  }
-  body.single-room #rooms-container .room-card .sketch-label { flex-shrink: 0 !important; }
-  body.single-room #rooms-container .room-card .sketch-dims  { flex-shrink: 0 !important; }
-  /* canvas-wrap fills remaining flex space */
-  body.single-room #rooms-container .room-card .canvas-wrap {
-    flex: 1 !important; min-height: 0 !important;
-    position: relative !important; display: block !important;
-    overflow: hidden !important;
-  }
-  /* canvas stretches via all-four-edge constraint — no percentage height needed */
-  body.single-room #rooms-container .room-card .room-canvas {
-    position: absolute !important;
-    top: 0 !important; right: 0 !important; bottom: 0 !important; left: 0 !important;
-    width: 100% !important; min-height: 0 !important; max-height: none !important;
+  /* ── Single-room: JS sets canvas height to 205mm via inline !important.
+     This rule is a CSS fallback only — the JS in prepareForPrint() wins. */
+  body.single-room .room-canvas {
+    height: 205mm !important;
+    max-height: none !important;
+    min-height: 0 !important;
   }
 
   /* Global input/select reset — forces out all tablet padding/font rules.
