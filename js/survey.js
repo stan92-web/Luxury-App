@@ -233,6 +233,7 @@ const Survey = (() => {
             <button class="sk-btn" onclick="Sketch.clear(${id})">🗑 Clear</button>
             <div class="sk-sep"></div>
             <button class="sk-btn sk-tpl-btn" onclick="Sketch.insertTemplate(${id},'4door')" title="Insert 4-door internal wardrobe template (↩ Undo to remove)">▭ 4-Door</button>
+            <button class="sk-btn sk-del-btn" onclick="Sketch.deleteSelected(${id})" title="Delete selected shape">✕ Del</button>
             <div class="sk-sep"></div>
             <button class="sk-btn sk-fullscreen-btn" onclick="Sketch.openFullscreen(${id})">⛶ Full Screen</button>
           </div>

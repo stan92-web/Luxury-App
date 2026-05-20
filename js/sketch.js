@@ -4,16 +4,17 @@
    - One active pointer per canvas (no accidental marks)
    - Auto-straighten: pen strokes snap to H/V/45° axes
    - Endpoint snap: lines join automatically when drawn near an endpoint
-   - Rect selection + corner drag-to-resize
+   - Rect corner-drag resize + line endpoint drag
+   - Select any rect or line, then ✕ Del to remove
    - Full-screen sketch overlay
 ══════════════════════════════════════════════ */
 
 const Sketch = (() => {
   const states  = {};
   const SNAP_R     = 20;
-  const HANDLE_R   = 8;   // visual radius of resize handles
+  const HANDLE_R   = 8;   // visual radius of handles
   const HANDLE_HIT = 28;  // hit detection radius (touch-friendly)
-  const EDGE_HIT   = 16;  // border detection zone for rect selection
+  const EDGE_HIT   = 16;  // proximity for line/rect edge selection
 
   /* ── Init ────────────────────────────────────── */
   function init(id) {
@@ -71,7 +72,7 @@ const Sketch = (() => {
     return { x: (e.clientX - rect.left) * sx, y: (e.clientY - rect.top) * sy };
   }
 
-  /* ── Endpoint snap helpers ───────────────────── */
+  /* ── Endpoint snap ───────────────────────────── */
   function getSnapPoints(shapes) {
     const pts = [];
     for (const sh of shapes) {
@@ -100,7 +101,45 @@ const Sketch = (() => {
     return best;
   }
 
-  /* ── Rect selection helpers ──────────────────── */
+  /* ── Selection helpers ───────────────────────── */
+  // Returns handle name ('tl'/'tr'/'bl'/'br' for rects, 'ep1'/'ep2' for lines)
+  function hitShapeHandle(x, y, sh) {
+    if (sh.type === 'rect') {
+      const x2 = sh.x + sh.w, y2 = sh.y + sh.h;
+      const handles = [
+        { name: 'tl', x: sh.x, y: sh.y },
+        { name: 'tr', x: x2,   y: sh.y },
+        { name: 'bl', x: sh.x, y: y2   },
+        { name: 'br', x: x2,   y: y2   }
+      ];
+      for (const h of handles) {
+        if (Math.hypot(x - h.x, y - h.y) <= HANDLE_HIT) return h.name;
+      }
+    } else if (sh.type === 'line') {
+      if (Math.hypot(x - sh.x1, y - sh.y1) <= HANDLE_HIT) return 'ep1';
+      if (Math.hypot(x - sh.x2, y - sh.y2) <= HANDLE_HIT) return 'ep2';
+    }
+    return null;
+  }
+
+  // Returns true if point is on/near the shape's body (border for rect, line body for line)
+  function hitShapeBody(x, y, sh) {
+    if (sh.type === 'line') {
+      return distToSeg(x, y, sh.x1, sh.y1, sh.x2, sh.y2) <= EDGE_HIT;
+    }
+    if (sh.type === 'rect') {
+      const x1 = Math.min(sh.x, sh.x + sh.w), x2 = Math.max(sh.x, sh.x + sh.w);
+      const y1 = Math.min(sh.y, sh.y + sh.h), y2 = Math.max(sh.y, sh.y + sh.h);
+      const t  = EDGE_HIT;
+      const onTop    = Math.abs(y - y1) <= t && x >= x1 - t && x <= x2 + t;
+      const onBottom = Math.abs(y - y2) <= t && x >= x1 - t && x <= x2 + t;
+      const onLeft   = Math.abs(x - x1) <= t && y >= y1 - t && y <= y2 + t;
+      const onRight  = Math.abs(x - x2) <= t && y >= y1 - t && y <= y2 + t;
+      return onTop || onBottom || onLeft || onRight;
+    }
+    return false;
+  }
+
   function getCornerHandles(sh) {
     const x2 = sh.x + sh.w, y2 = sh.y + sh.h;
     return [
@@ -111,27 +150,6 @@ const Sketch = (() => {
     ];
   }
 
-  function hitHandle(x, y, sh) {
-    if (sh.type !== 'rect') return null;
-    for (const h of getCornerHandles(sh)) {
-      if (Math.hypot(x - h.x, y - h.y) <= HANDLE_HIT) return h.name;
-    }
-    return null;
-  }
-
-  // Tapping near a rect's border (not fill) selects it — allows drawing inside without accidentally selecting
-  function hitRectEdge(x, y, sh) {
-    if (sh.type !== 'rect') return false;
-    const x1 = Math.min(sh.x, sh.x + sh.w), x2 = Math.max(sh.x, sh.x + sh.w);
-    const y1 = Math.min(sh.y, sh.y + sh.h), y2 = Math.max(sh.y, sh.y + sh.h);
-    const t  = EDGE_HIT;
-    const onTop    = Math.abs(y - y1) <= t && x >= x1 - t && x <= x2 + t;
-    const onBottom = Math.abs(y - y2) <= t && x >= x1 - t && x <= x2 + t;
-    const onLeft   = Math.abs(x - x1) <= t && y >= y1 - t && y <= y2 + t;
-    const onRight  = Math.abs(x - x2) <= t && y >= y1 - t && y <= y2 + t;
-    return onTop || onBottom || onLeft || onRight;
-  }
-
   function resizePivotFor(handle, sh) {
     const x2 = sh.x + sh.w, y2 = sh.y + sh.h;
     if (handle === 'tl') return { x: x2,   y: y2   };
@@ -140,39 +158,13 @@ const Sketch = (() => {
     return                      { x: sh.x, y: sh.y };
   }
 
-  /* ── Eraser hit-testing ──────────────────────── */
-  const ERASE_R = 18;
-
+  /* ── Distance helpers ────────────────────────── */
   function distToSeg(px, py, x1, y1, x2, y2) {
     const dx = x2 - x1, dy = y2 - y1;
     const lenSq = dx * dx + dy * dy;
     if (lenSq === 0) return Math.hypot(px - x1, py - y1);
     const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / lenSq));
     return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
-  }
-
-  function hitTestShape(x, y, sh) {
-    if (sh.type === 'line') return distToSeg(x, y, sh.x1, sh.y1, sh.x2, sh.y2);
-    if (sh.type === 'rect') {
-      const x2 = sh.x + sh.w, y2 = sh.y + sh.h;
-      const inX = x >= Math.min(sh.x, x2) && x <= Math.max(sh.x, x2);
-      const inY = y >= Math.min(sh.y, y2) && y <= Math.max(sh.y, y2);
-      if (inX && inY) return 0;
-      return Math.min(
-        distToSeg(x, y, sh.x, sh.y, x2, sh.y),
-        distToSeg(x, y, x2, sh.y, x2, y2),
-        distToSeg(x, y, sh.x, y2, x2, y2),
-        distToSeg(x, y, sh.x, sh.y, sh.x, y2)
-      );
-    }
-    if (sh.type === 'pen') {
-      let min = Infinity;
-      for (let i = 1; i < sh.path.length; i++)
-        min = Math.min(min, distToSeg(x, y, sh.path[i-1].x, sh.path[i-1].y, sh.path[i].x, sh.path[i].y));
-      return min;
-    }
-    if (sh.type === 'text') return Math.hypot(x - sh.x, y - sh.y);
-    return Infinity;
   }
 
   /* ── Pointer events ──────────────────────────── */
@@ -192,27 +184,29 @@ const Sketch = (() => {
       return;
     }
 
-    // ── Rect: corner-handle resize + border selection ──
+    // ── Rect tool: selection + resize/drag ──
     if (s.tool === 'rect') {
+      // Check handle on already-selected shape
       if (s.selectedIdx >= 0 && s.selectedIdx < s.shapes.length) {
-        const sh     = s.shapes[s.selectedIdx];
-        const handle = hitHandle(p.x, p.y, sh);
+        const handle = hitShapeHandle(p.x, p.y, s.shapes[s.selectedIdx]);
         if (handle) {
+          const sh       = s.shapes[s.selectedIdx];
           s.drawing      = true;
           s.resizeHandle = handle;
-          s.resizePivot  = resizePivotFor(handle, sh);
+          s.resizePivot  = sh.type === 'rect' ? resizePivotFor(handle, sh) : null;
           return;
         }
       }
+      // Hit-test all selectable shapes (newest first)
       for (let i = s.shapes.length - 1; i >= 0; i--) {
-        if (hitRectEdge(p.x, p.y, s.shapes[i])) {
+        if (hitShapeBody(p.x, p.y, s.shapes[i])) {
           s.selectedIdx     = i;
           s.activePointerId = null;
           redraw(id);
           return;
         }
       }
-      s.selectedIdx = -1;
+      s.selectedIdx = -1; // tap empty space: deselect, then draw new rect
     }
 
     const snap = s.tool === 'line' ? findSnap(p.x, p.y, s.shapes) : null;
@@ -233,14 +227,17 @@ const Sketch = (() => {
 
     const p = getPos(canvas, e);
 
-    // ── Rect resize ──
+    // ── Handle resize / endpoint drag ──
     if (s.resizeHandle && s.selectedIdx >= 0 && s.selectedIdx < s.shapes.length) {
-      const sh  = s.shapes[s.selectedIdx];
-      const piv = s.resizePivot;
-      sh.x = Math.min(p.x, piv.x);
-      sh.y = Math.min(p.y, piv.y);
-      sh.w = Math.abs(p.x - piv.x);
-      sh.h = Math.abs(p.y - piv.y);
+      const sh = s.shapes[s.selectedIdx];
+      if (sh.type === 'rect') {
+        const piv = s.resizePivot;
+        sh.x = Math.min(p.x, piv.x); sh.y = Math.min(p.y, piv.y);
+        sh.w = Math.abs(p.x - piv.x); sh.h = Math.abs(p.y - piv.y);
+      } else if (sh.type === 'line') {
+        if (s.resizeHandle === 'ep1') { sh.x1 = p.x; sh.y1 = p.y; }
+        else                          { sh.x2 = p.x; sh.y2 = p.y; }
+      }
       redraw(id);
       return;
     }
@@ -398,23 +395,36 @@ const Sketch = (() => {
     inp.addEventListener('keydown', e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') inp.remove(); });
   }
 
-  /* ── Draw: resize handles ────────────────────── */
-  function drawResizeHandles(ctx, sh) {
-    if (sh.type !== 'rect') return;
+  /* ── Draw selection handles ──────────────────── */
+  function drawSelectionHandles(ctx, sh) {
     ctx.save();
-    ctx.strokeStyle = '#1a6eb5';
-    ctx.lineWidth   = 1.5;
-    ctx.setLineDash([6, 3]);
-    ctx.strokeRect(sh.x - 1, sh.y - 1, sh.w + 2, sh.h + 2);
-    ctx.setLineDash([]);
-    for (const h of getCornerHandles(sh)) {
-      ctx.beginPath();
-      ctx.arc(h.x, h.y, HANDLE_R, 0, Math.PI * 2);
-      ctx.fillStyle   = '#1a6eb5';
-      ctx.fill();
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth   = 2;
-      ctx.stroke();
+    if (sh.type === 'rect') {
+      // Dashed selection border
+      ctx.strokeStyle = '#1a6eb5';
+      ctx.lineWidth   = 1.5;
+      ctx.setLineDash([6, 3]);
+      ctx.strokeRect(sh.x - 1, sh.y - 1, sh.w + 2, sh.h + 2);
+      ctx.setLineDash([]);
+      // Corner handles
+      for (const h of getCornerHandles(sh)) {
+        ctx.beginPath(); ctx.arc(h.x, h.y, HANDLE_R, 0, Math.PI * 2);
+        ctx.fillStyle   = '#1a6eb5'; ctx.fill();
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+      }
+    } else if (sh.type === 'line') {
+      // Blue highlight over the line
+      ctx.strokeStyle  = '#1a6eb5';
+      ctx.lineWidth    = 5;
+      ctx.lineCap      = 'round';
+      ctx.globalAlpha  = 0.3;
+      ctx.beginPath(); ctx.moveTo(sh.x1, sh.y1); ctx.lineTo(sh.x2, sh.y2); ctx.stroke();
+      ctx.globalAlpha  = 1;
+      // Endpoint handles
+      for (const [x, y] of [[sh.x1, sh.y1], [sh.x2, sh.y2]]) {
+        ctx.beginPath(); ctx.arc(x, y, HANDLE_R, 0, Math.PI * 2);
+        ctx.fillStyle   = '#1a6eb5'; ctx.fill();
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+      }
     }
     ctx.restore();
   }
@@ -434,7 +444,7 @@ const Sketch = (() => {
 
     s.shapes.forEach(sh => renderShape(ctx, sh));
 
-    if (s.selectedIdx >= 0) drawResizeHandles(ctx, s.shapes[s.selectedIdx]);
+    if (s.selectedIdx >= 0) drawSelectionHandles(ctx, s.shapes[s.selectedIdx]);
 
     if (s.tool === 'pen' && s.currentPath.length > 1)
       drawPenPath(ctx, s.currentPath, s.colour, s.lineWidth);
@@ -538,6 +548,16 @@ const Sketch = (() => {
     notifyChange();
   }
 
+  function deleteSelected(id) {
+    const s = states[id];
+    if (!s || s.selectedIdx < 0 || s.selectedIdx >= s.shapes.length) return;
+    saveHistory(id);
+    s.shapes.splice(s.selectedIdx, 1);
+    s.selectedIdx = -1;
+    redraw(id);
+    notifyChange();
+  }
+
   function setTool(id, tool) {
     const s = states[id];
     if (s) {
@@ -587,10 +607,10 @@ const Sketch = (() => {
     const cols = 4;
     const colW = bw / cols;
     const topH = bh * 0.16;
-    const hangY = by + topH + bh * 0.27;
-    const sz   = Math.max(10, Math.round(W / 50));
+    // Hanging bars sit just below the top shelf (small gap)
+    const hangY = by + topH + bh * 0.04;
 
-    // Outer carcass
+    // Outer carcass (selectable rect — drag corners to resize)
     shapes.push({ type: 'rect', x: bx, y: by, w: bw, h: bh, colour: '#222', lw: 3 });
     // Top shelf
     shapes.push({ type: 'line', x1: bx, y1: by + topH, x2: bx + bw, y2: by + topH, colour: '#222', lw: 2 });
@@ -598,12 +618,10 @@ const Sketch = (() => {
     for (let i = 1; i < cols; i++) {
       shapes.push({ type: 'line', x1: bx + i * colW, y1: by, x2: bx + i * colW, y2: by + bh, colour: '#222', lw: 2 });
     }
-    // Per section: hanging bar + labels
+    // Hanging bars — one per section, just below top shelf
     for (let i = 0; i < cols; i++) {
       const cx = bx + i * colW;
       shapes.push({ type: 'line', x1: cx + colW * 0.12, y1: hangY, x2: cx + colW * 0.88, y2: hangY, colour: '#1a6eb5', lw: 2.5 });
-      shapes.push({ type: 'text', x: cx + colW * 0.25, y: by + topH * 0.68, text: 'TOP',  colour: '#888',    size: sz });
-      shapes.push({ type: 'text', x: cx + colW * 0.22, y: hangY + bh * 0.12, text: 'HANG', colour: '#1a6eb5', size: sz });
     }
     return shapes;
   }
@@ -753,20 +771,19 @@ const Sketch = (() => {
     let p = fsGetPos(e);
     if (fs.tool === 'text') { fsShowTextInput(p.x, p.y); fs.activePointerId = null; return; }
 
-    // ── Rect: corner-handle resize + border selection ──
     if (fs.tool === 'rect') {
       if (fs.selectedIdx >= 0 && fs.selectedIdx < fs.shapes.length) {
-        const sh     = fs.shapes[fs.selectedIdx];
-        const handle = hitHandle(p.x, p.y, sh);
+        const handle = hitShapeHandle(p.x, p.y, fs.shapes[fs.selectedIdx]);
         if (handle) {
+          const sh        = fs.shapes[fs.selectedIdx];
           fs.drawing      = true;
           fs.resizeHandle = handle;
-          fs.resizePivot  = resizePivotFor(handle, sh);
+          fs.resizePivot  = sh.type === 'rect' ? resizePivotFor(handle, sh) : null;
           return;
         }
       }
       for (let i = fs.shapes.length - 1; i >= 0; i--) {
-        if (hitRectEdge(p.x, p.y, fs.shapes[i])) {
+        if (hitShapeBody(p.x, p.y, fs.shapes[i])) {
           fs.selectedIdx     = i;
           fs.activePointerId = null;
           fsRedraw();
@@ -791,14 +808,16 @@ const Sketch = (() => {
     if (!fs.drawing || e.pointerId !== fs.activePointerId) return;
     const p = fsGetPos(e);
 
-    // ── Rect resize ──
     if (fs.resizeHandle && fs.selectedIdx >= 0 && fs.selectedIdx < fs.shapes.length) {
-      const sh  = fs.shapes[fs.selectedIdx];
-      const piv = fs.resizePivot;
-      sh.x = Math.min(p.x, piv.x);
-      sh.y = Math.min(p.y, piv.y);
-      sh.w = Math.abs(p.x - piv.x);
-      sh.h = Math.abs(p.y - piv.y);
+      const sh = fs.shapes[fs.selectedIdx];
+      if (sh.type === 'rect') {
+        const piv = fs.resizePivot;
+        sh.x = Math.min(p.x, piv.x); sh.y = Math.min(p.y, piv.y);
+        sh.w = Math.abs(p.x - piv.x); sh.h = Math.abs(p.y - piv.y);
+      } else if (sh.type === 'line') {
+        if (fs.resizeHandle === 'ep1') { sh.x1 = p.x; sh.y1 = p.y; }
+        else                           { sh.x2 = p.x; sh.y2 = p.y; }
+      }
       fsRedraw();
       return;
     }
@@ -913,7 +932,7 @@ const Sketch = (() => {
 
     fs.shapes.forEach(sh => renderShape(ctx, sh));
 
-    if (fs.selectedIdx >= 0) drawResizeHandles(ctx, fs.shapes[fs.selectedIdx]);
+    if (fs.selectedIdx >= 0) drawSelectionHandles(ctx, fs.shapes[fs.selectedIdx]);
 
     if (fs.tool === 'pen' && fs.currentPath.length > 1)
       drawPenPath(ctx, fs.currentPath, fs.colour, fs.lineWidth);
@@ -946,6 +965,14 @@ const Sketch = (() => {
     if (fs.history.length > 50) fs.history.shift();
   }
 
+  function fsDeleteSelected() {
+    if (fs.selectedIdx < 0 || fs.selectedIdx >= fs.shapes.length) return;
+    fsSaveHistory();
+    fs.shapes.splice(fs.selectedIdx, 1);
+    fs.selectedIdx = -1;
+    fsRedraw();
+  }
+
   function fsSetTool(tool) {
     fs.tool = tool;
     if (tool !== 'rect') fs.selectedIdx = -1;
@@ -961,7 +988,7 @@ const Sketch = (() => {
     if (el) el.classList.add('active');
   }
 
-  function fsUndo()  {
+  function fsUndo() {
     if (!fs.history.length) return;
     fs.shapes      = JSON.parse(fs.history.pop());
     fs.selectedIdx = -1;
@@ -989,9 +1016,9 @@ const Sketch = (() => {
   document.addEventListener('DOMContentLoaded', initFsCanvas);
 
   return {
-    init, resizeCanvas, redraw, redrawScaled, setTool, setColour, toggleStraighten, undo, clear, getShapes, setShapes,
+    init, resizeCanvas, redraw, redrawScaled, setTool, setColour, toggleStraighten, undo, clear, deleteSelected, getShapes, setShapes,
     insertTemplate, fsTpl,
     openFullscreen, closeFullscreen,
-    fsSetTool, fsSetColour, fsUndo, fsClear, fsToggleStraighten
+    fsSetTool, fsSetColour, fsUndo, fsClear, fsDeleteSelected, fsToggleStraighten
   };
 })();
