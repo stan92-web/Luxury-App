@@ -305,10 +305,18 @@ const Survey = (() => {
 
   function print() {
     save();
+    const door  = gv('c-door');
+    const addr  = gv('c-address');
+    const label = [door, addr].filter(Boolean).join(' ');
+    const prevTitle = document.title;
+    if (label) document.title = label;
     prepareForPrint();
     // 300ms lets the browser commit all DOM/style changes before the print dialog opens.
     // onbeforeprint will also fire (and prepareForPrint runs again, harmlessly).
-    setTimeout(function() { window.print(); }, 300);
+    setTimeout(function() {
+      window.print();
+      if (label) document.title = prevTitle;
+    }, 300);
   }
 
   /* ── High-res canvas for print / share ── */
