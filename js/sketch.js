@@ -4,12 +4,16 @@
    - One active pointer per canvas (no accidental marks)
    - Auto-straighten: pen strokes snap to H/V/45° axes
    - Endpoint snap: lines join automatically when drawn near an endpoint
+   - Rect selection + corner drag-to-resize
    - Full-screen sketch overlay
 ══════════════════════════════════════════════ */
 
 const Sketch = (() => {
   const states  = {};
-  const SNAP_R  = 20; // snap radius in canvas pixels
+  const SNAP_R     = 20;
+  const HANDLE_R   = 8;   // visual radius of resize handles
+  const HANDLE_HIT = 28;  // hit detection radius (touch-friendly)
+  const EDGE_HIT   = 16;  // border detection zone for rect selection
 
   /* ── Init ────────────────────────────────────── */
   function init(id) {
@@ -29,7 +33,10 @@ const Sketch = (() => {
       history:         [],
       startX:          0,
       startY:          0,
-      currentPath:     []
+      currentPath:     [],
+      selectedIdx:     -1,
+      resizeHandle:    null,
+      resizePivot:     null
     };
 
     canvas.style.touchAction = 'none';
@@ -46,6 +53,7 @@ const Sketch = (() => {
     const canvas = document.getElementById(`canvas-${id}`);
     const wrap   = document.getElementById(`canvas-wrap-${id}`);
     if (!canvas || !wrap) return;
+    if (states[id]) states[id].selectedIdx = -1;
     const w = wrap.clientWidth;
     const h = Math.round(w * 0.7);
     canvas.width        = w;
@@ -89,11 +97,51 @@ const Sketch = (() => {
       const d = Math.hypot(x - p.x, y - p.y);
       if (d < bestD) { bestD = d; best = p; }
     }
-    return best; // null if nothing within radius
+    return best;
+  }
+
+  /* ── Rect selection helpers ──────────────────── */
+  function getCornerHandles(sh) {
+    const x2 = sh.x + sh.w, y2 = sh.y + sh.h;
+    return [
+      { name: 'tl', x: sh.x, y: sh.y },
+      { name: 'tr', x: x2,   y: sh.y },
+      { name: 'bl', x: sh.x, y: y2   },
+      { name: 'br', x: x2,   y: y2   }
+    ];
+  }
+
+  function hitHandle(x, y, sh) {
+    if (sh.type !== 'rect') return null;
+    for (const h of getCornerHandles(sh)) {
+      if (Math.hypot(x - h.x, y - h.y) <= HANDLE_HIT) return h.name;
+    }
+    return null;
+  }
+
+  // Tapping near a rect's border (not fill) selects it — allows drawing inside without accidentally selecting
+  function hitRectEdge(x, y, sh) {
+    if (sh.type !== 'rect') return false;
+    const x1 = Math.min(sh.x, sh.x + sh.w), x2 = Math.max(sh.x, sh.x + sh.w);
+    const y1 = Math.min(sh.y, sh.y + sh.h), y2 = Math.max(sh.y, sh.y + sh.h);
+    const t  = EDGE_HIT;
+    const onTop    = Math.abs(y - y1) <= t && x >= x1 - t && x <= x2 + t;
+    const onBottom = Math.abs(y - y2) <= t && x >= x1 - t && x <= x2 + t;
+    const onLeft   = Math.abs(x - x1) <= t && y >= y1 - t && y <= y2 + t;
+    const onRight  = Math.abs(x - x2) <= t && y >= y1 - t && y <= y2 + t;
+    return onTop || onBottom || onLeft || onRight;
+  }
+
+  function resizePivotFor(handle, sh) {
+    const x2 = sh.x + sh.w, y2 = sh.y + sh.h;
+    if (handle === 'tl') return { x: x2,   y: y2   };
+    if (handle === 'tr') return { x: sh.x, y: y2   };
+    if (handle === 'bl') return { x: x2,   y: sh.y };
+    return                      { x: sh.x, y: sh.y };
   }
 
   /* ── Eraser hit-testing ──────────────────────── */
-  const ERASE_R = 18; // tap threshold in canvas pixels
+  const ERASE_R = 18;
 
   function distToSeg(px, py, x1, y1, x2, y2) {
     const dx = x2 - x1, dy = y2 - y1;
@@ -127,7 +175,7 @@ const Sketch = (() => {
     return Infinity;
   }
 
-  /* ── Pointer events (palm rejection) ─────────── */
+  /* ── Pointer events ──────────────────────────── */
   function onDown(id, e) {
     const s      = states[id];
     const canvas = document.getElementById(`canvas-${id}`);
@@ -144,7 +192,29 @@ const Sketch = (() => {
       return;
     }
 
-    // Snap start point — line tool only (pen snap disrupts freehand drawing)
+    // ── Rect: corner-handle resize + border selection ──
+    if (s.tool === 'rect') {
+      if (s.selectedIdx >= 0 && s.selectedIdx < s.shapes.length) {
+        const sh     = s.shapes[s.selectedIdx];
+        const handle = hitHandle(p.x, p.y, sh);
+        if (handle) {
+          s.drawing      = true;
+          s.resizeHandle = handle;
+          s.resizePivot  = resizePivotFor(handle, sh);
+          return;
+        }
+      }
+      for (let i = s.shapes.length - 1; i >= 0; i--) {
+        if (hitRectEdge(p.x, p.y, s.shapes[i])) {
+          s.selectedIdx     = i;
+          s.activePointerId = null;
+          redraw(id);
+          return;
+        }
+      }
+      s.selectedIdx = -1;
+    }
+
     const snap = s.tool === 'line' ? findSnap(p.x, p.y, s.shapes) : null;
     if (snap) p = snap;
 
@@ -163,6 +233,18 @@ const Sketch = (() => {
 
     const p = getPos(canvas, e);
 
+    // ── Rect resize ──
+    if (s.resizeHandle && s.selectedIdx >= 0 && s.selectedIdx < s.shapes.length) {
+      const sh  = s.shapes[s.selectedIdx];
+      const piv = s.resizePivot;
+      sh.x = Math.min(p.x, piv.x);
+      sh.y = Math.min(p.y, piv.y);
+      sh.w = Math.abs(p.x - piv.x);
+      sh.h = Math.abs(p.y - piv.y);
+      redraw(id);
+      return;
+    }
+
     if (s.pendingStart) {
       if (Math.hypot(p.x - s.pendingStart.x, p.y - s.pendingStart.y) < 8) return;
       s.currentPath  = [s.pendingStart, p];
@@ -171,13 +253,9 @@ const Sketch = (() => {
       s.currentPath.push(p);
     }
 
-    // Snap candidate — line tool only
     const snap = s.tool === 'line' ? findSnap(p.x, p.y, s.shapes) : null;
     s.snapCandidate = snap;
-    const px = snap ? snap.x : p.x;
-    const py = snap ? snap.y : p.y;
-
-    redraw(id, px, py);
+    redraw(id, snap ? snap.x : p.x, snap ? snap.y : p.y);
   }
 
   function onUp(id, e) {
@@ -185,22 +263,30 @@ const Sketch = (() => {
     const canvas = document.getElementById(`canvas-${id}`);
     if (!s || !s.drawing || e.pointerId !== s.activePointerId) return;
 
-    const raw   = getPos(canvas, e);
-    const snap  = s.tool === 'line' ? findSnap(raw.x, raw.y, s.shapes) : null;
-    const ex    = snap ? snap.x : raw.x;
-    const ey    = snap ? snap.y : raw.y;
+    const raw  = getPos(canvas, e);
+    const snap = s.tool === 'line' ? findSnap(raw.x, raw.y, s.shapes) : null;
+    const ex   = snap ? snap.x : raw.x;
+    const ey   = snap ? snap.y : raw.y;
 
     s.drawing         = false;
     s.activePointerId = null;
     s.pendingStart    = null;
     s.snapCandidate   = null;
 
+    if (s.resizeHandle) {
+      s.resizeHandle = null;
+      s.resizePivot  = null;
+      saveHistory(id);
+      redraw(id);
+      notifyChange();
+      return;
+    }
+
     saveHistory(id);
 
     if (s.tool === 'pen' && s.currentPath.length > 1) {
       if (s.autoStraighten && isRoughlyLinear(s.currentPath)) {
-        const a  = s.currentPath[0];
-        // Endpoint snap takes priority over angle snap
+        const a = s.currentPath[0];
         let x2, y2;
         if (snap) { x2 = snap.x; y2 = snap.y; }
         else      { const ep = snapEndpoint(a.x, a.y, raw.x, raw.y); x2 = ep.x; y2 = ep.y; }
@@ -215,11 +301,12 @@ const Sketch = (() => {
 
     } else if (s.tool === 'rect') {
       const w = ex - s.startX, h = ey - s.startY;
-      if (Math.abs(w) > 4 || Math.abs(h) > 4)
+      if (Math.abs(w) > 4 || Math.abs(h) > 4) {
         s.shapes.push({ type: 'rect', x: s.startX, y: s.startY, w, h, colour: s.colour, lw: s.lineWidth });
+        s.selectedIdx = s.shapes.length - 1; // auto-select newly drawn rect
 
+      }
     } else if (s.tool === 'eraser' && s.currentPath.length > 0) {
-      // Save eraser stroke as a white pen path — renders on top of everything, visually erasing it
       const path = s.currentPath.length > 1 ? s.currentPath.slice() : [s.currentPath[0], s.currentPath[0]];
       s.shapes.push({ type: 'pen', path, colour: '#ffffff', lw: 22 });
       s.currentPath = [];
@@ -237,6 +324,8 @@ const Sketch = (() => {
     s.pendingStart    = null;
     s.snapCandidate   = null;
     s.currentPath     = [];
+    s.resizeHandle    = null;
+    s.resizePivot     = null;
     redraw(id);
   }
 
@@ -260,8 +349,6 @@ const Sketch = (() => {
       : Math.abs(dx * (a.y - p.y) - (a.x - p.x) * dy) / len;
   }
 
-  // Snap end-point to nearest H/V/45° axis.
-  // H and V each own a 60° zone; 45° diagonals own 30° zones.
   function snapEndpoint(x1, y1, x2, y2) {
     const dx = x2 - x1, dy = y2 - y1;
     const len = Math.hypot(dx, dy);
@@ -311,6 +398,27 @@ const Sketch = (() => {
     inp.addEventListener('keydown', e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') inp.remove(); });
   }
 
+  /* ── Draw: resize handles ────────────────────── */
+  function drawResizeHandles(ctx, sh) {
+    if (sh.type !== 'rect') return;
+    ctx.save();
+    ctx.strokeStyle = '#1a6eb5';
+    ctx.lineWidth   = 1.5;
+    ctx.setLineDash([6, 3]);
+    ctx.strokeRect(sh.x - 1, sh.y - 1, sh.w + 2, sh.h + 2);
+    ctx.setLineDash([]);
+    for (const h of getCornerHandles(sh)) {
+      ctx.beginPath();
+      ctx.arc(h.x, h.y, HANDLE_R, 0, Math.PI * 2);
+      ctx.fillStyle   = '#1a6eb5';
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth   = 2;
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   /* ── Redraw ──────────────────────────────────── */
   function redraw(id, previewX, previewY) {
     const canvas = document.getElementById(`canvas-${id}`);
@@ -322,7 +430,11 @@ const Sketch = (() => {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     if (!s) return;
 
+    if (s.selectedIdx >= s.shapes.length) s.selectedIdx = -1;
+
     s.shapes.forEach(sh => renderShape(ctx, sh));
+
+    if (s.selectedIdx >= 0) drawResizeHandles(ctx, s.shapes[s.selectedIdx]);
 
     if (s.tool === 'pen' && s.currentPath.length > 1)
       drawPenPath(ctx, s.currentPath, s.colour, s.lineWidth);
@@ -340,7 +452,6 @@ const Sketch = (() => {
       } else if (s.tool === 'rect') {
         ctx.beginPath(); ctx.strokeRect(s.startX, s.startY, previewX - s.startX, previewY - s.startY);
       } else if (s.tool === 'eraser') {
-        // Dashed circle shows eraser size and position
         ctx.save();
         ctx.strokeStyle = '#bbb'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]);
         ctx.beginPath(); ctx.arc(previewX, previewY, 11, 0, Math.PI * 2); ctx.stroke();
@@ -348,7 +459,6 @@ const Sketch = (() => {
       }
     }
 
-    // Snap indicator — blue ring at snap target
     if (s.snapCandidate) drawSnapIndicator(ctx, s.snapCandidate);
   }
 
@@ -398,13 +508,12 @@ const Sketch = (() => {
   function undo(id) {
     const s = states[id];
     if (!s || !s.history.length) return;
-    s.shapes = JSON.parse(s.history.pop());
+    s.shapes      = JSON.parse(s.history.pop());
+    s.selectedIdx = -1;
     redraw(id);
     notifyChange();
   }
 
-  // Redraw shapes scaled to a high-res canvas (used for print / export).
-  // Caller must have already set canvas.width/height to the target pixel size.
   function redrawScaled(id, scaleX, scaleY) {
     const canvas = document.getElementById(`canvas-${id}`);
     if (!canvas) return;
@@ -423,14 +532,18 @@ const Sketch = (() => {
     const s = states[id];
     if (!s) return;
     saveHistory(id);
-    s.shapes = [];
+    s.shapes      = [];
+    s.selectedIdx = -1;
     redraw(id);
     notifyChange();
   }
 
   function setTool(id, tool) {
     const s = states[id];
-    if (s) s.tool = tool;
+    if (s) {
+      s.tool = tool;
+      if (tool !== 'rect') s.selectedIdx = -1;
+    }
     ['pen','line','rect','text','eraser'].forEach(t => {
       const btn = document.getElementById(`tool-${t}-${id}`);
       if (btn) btn.classList.toggle('active', t === tool);
@@ -458,8 +571,61 @@ const Sketch = (() => {
   function setShapes(id, shapes) {
     const s = states[id];
     if (!s) return;
-    s.shapes = Array.isArray(shapes) ? shapes : [];
+    s.shapes      = Array.isArray(shapes) ? shapes : [];
+    s.selectedIdx = -1;
     redraw(id);
+  }
+
+  /* ── Templates ───────────────────────────────── */
+  function buildTemplate(name, W, H) {
+    const shapes = [];
+    if (name !== '4door') return shapes;
+
+    const px   = W * 0.04, py  = H * 0.05;
+    const bw   = W - px * 2, bh = H - py * 2;
+    const bx   = px, by = py;
+    const cols = 4;
+    const colW = bw / cols;
+    const topH = bh * 0.16;
+    const hangY = by + topH + bh * 0.27;
+    const sz   = Math.max(10, Math.round(W / 50));
+
+    // Outer carcass
+    shapes.push({ type: 'rect', x: bx, y: by, w: bw, h: bh, colour: '#222', lw: 3 });
+    // Top shelf
+    shapes.push({ type: 'line', x1: bx, y1: by + topH, x2: bx + bw, y2: by + topH, colour: '#222', lw: 2 });
+    // 3 vertical dividers
+    for (let i = 1; i < cols; i++) {
+      shapes.push({ type: 'line', x1: bx + i * colW, y1: by, x2: bx + i * colW, y2: by + bh, colour: '#222', lw: 2 });
+    }
+    // Per section: hanging bar + labels
+    for (let i = 0; i < cols; i++) {
+      const cx = bx + i * colW;
+      shapes.push({ type: 'line', x1: cx + colW * 0.12, y1: hangY, x2: cx + colW * 0.88, y2: hangY, colour: '#1a6eb5', lw: 2.5 });
+      shapes.push({ type: 'text', x: cx + colW * 0.25, y: by + topH * 0.68, text: 'TOP',  colour: '#888',    size: sz });
+      shapes.push({ type: 'text', x: cx + colW * 0.22, y: hangY + bh * 0.12, text: 'HANG', colour: '#1a6eb5', size: sz });
+    }
+    return shapes;
+  }
+
+  function insertTemplate(id, name) {
+    const canvas = document.getElementById(`canvas-${id}`);
+    if (!canvas) return;
+    const s = states[id];
+    saveHistory(id);
+    s.shapes.push(...buildTemplate(name, canvas.width, canvas.height));
+    s.selectedIdx = -1;
+    redraw(id);
+    notifyChange();
+  }
+
+  function fsTpl(name) {
+    const canvas = document.getElementById('fs-canvas');
+    if (!canvas) return;
+    fsSaveHistory();
+    fs.shapes.push(...buildTemplate(name, canvas.width, canvas.height));
+    fs.selectedIdx = -1;
+    fsRedraw();
   }
 
   /* ── Notify survey module ────────────────────── */
@@ -484,7 +650,10 @@ const Sketch = (() => {
     history:         [],
     startX:          0,
     startY:          0,
-    currentPath:     []
+    currentPath:     [],
+    selectedIdx:     -1,
+    resizeHandle:    null,
+    resizePivot:     null
   };
 
   function openFullscreen(roomId) {
@@ -502,6 +671,9 @@ const Sketch = (() => {
     fs.snapCandidate   = null;
     fs.history         = [];
     fs.currentPath     = [];
+    fs.selectedIdx     = -1;
+    fs.resizeHandle    = null;
+    fs.resizePivot     = null;
 
     document.getElementById('fs-overlay').classList.add('open');
     document.body.style.overflow = 'hidden';
@@ -535,6 +707,7 @@ const Sketch = (() => {
     saveHistory(fs.roomId);
     s.shapes         = scaleShapes(fs.shapes, sx, sy);
     s.autoStraighten = fs.autoStraighten;
+    s.selectedIdx    = -1;
     redraw(fs.roomId);
 
     document.getElementById('fs-overlay').classList.remove('open');
@@ -580,7 +753,29 @@ const Sketch = (() => {
     let p = fsGetPos(e);
     if (fs.tool === 'text') { fsShowTextInput(p.x, p.y); fs.activePointerId = null; return; }
 
-    // Snap start point — line tool only
+    // ── Rect: corner-handle resize + border selection ──
+    if (fs.tool === 'rect') {
+      if (fs.selectedIdx >= 0 && fs.selectedIdx < fs.shapes.length) {
+        const sh     = fs.shapes[fs.selectedIdx];
+        const handle = hitHandle(p.x, p.y, sh);
+        if (handle) {
+          fs.drawing      = true;
+          fs.resizeHandle = handle;
+          fs.resizePivot  = resizePivotFor(handle, sh);
+          return;
+        }
+      }
+      for (let i = fs.shapes.length - 1; i >= 0; i--) {
+        if (hitRectEdge(p.x, p.y, fs.shapes[i])) {
+          fs.selectedIdx     = i;
+          fs.activePointerId = null;
+          fsRedraw();
+          return;
+        }
+      }
+      fs.selectedIdx = -1;
+    }
+
     const snap = fs.tool === 'line' ? findSnap(p.x, p.y, fs.shapes) : null;
     if (snap) p = snap;
 
@@ -595,6 +790,19 @@ const Sketch = (() => {
   function fsMove(e) {
     if (!fs.drawing || e.pointerId !== fs.activePointerId) return;
     const p = fsGetPos(e);
+
+    // ── Rect resize ──
+    if (fs.resizeHandle && fs.selectedIdx >= 0 && fs.selectedIdx < fs.shapes.length) {
+      const sh  = fs.shapes[fs.selectedIdx];
+      const piv = fs.resizePivot;
+      sh.x = Math.min(p.x, piv.x);
+      sh.y = Math.min(p.y, piv.y);
+      sh.w = Math.abs(p.x - piv.x);
+      sh.h = Math.abs(p.y - piv.y);
+      fsRedraw();
+      return;
+    }
+
     if (fs.pendingStart) {
       if (Math.hypot(p.x - fs.pendingStart.x, p.y - fs.pendingStart.y) < 8) return;
       fs.currentPath  = [fs.pendingStart, p];
@@ -619,6 +827,14 @@ const Sketch = (() => {
     fs.pendingStart    = null;
     fs.snapCandidate   = null;
 
+    if (fs.resizeHandle) {
+      fs.resizeHandle = null;
+      fs.resizePivot  = null;
+      fsSaveHistory();
+      fsRedraw();
+      return;
+    }
+
     fsSaveHistory();
 
     if (fs.tool === 'pen' && fs.currentPath.length > 1) {
@@ -636,9 +852,10 @@ const Sketch = (() => {
       fs.shapes.push({ type: 'line', x1: fs.startX, y1: fs.startY, x2: ex, y2: ey, colour: fs.colour, lw: fs.lineWidth });
     } else if (fs.tool === 'rect') {
       const w = ex - fs.startX, h = ey - fs.startY;
-      if (Math.abs(w) > 4 || Math.abs(h) > 4)
+      if (Math.abs(w) > 4 || Math.abs(h) > 4) {
         fs.shapes.push({ type: 'rect', x: fs.startX, y: fs.startY, w, h, colour: fs.colour, lw: fs.lineWidth });
-
+        fs.selectedIdx = fs.shapes.length - 1;
+      }
     } else if (fs.tool === 'eraser' && fs.currentPath.length > 0) {
       const path = fs.currentPath.length > 1 ? fs.currentPath.slice() : [fs.currentPath[0], fs.currentPath[0]];
       fs.shapes.push({ type: 'pen', path, colour: '#ffffff', lw: 22 });
@@ -654,6 +871,8 @@ const Sketch = (() => {
     fs.pendingStart    = null;
     fs.snapCandidate   = null;
     fs.currentPath     = [];
+    fs.resizeHandle    = null;
+    fs.resizePivot     = null;
     fsRedraw();
   }
 
@@ -690,7 +909,12 @@ const Sketch = (() => {
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+    if (fs.selectedIdx >= fs.shapes.length) fs.selectedIdx = -1;
+
     fs.shapes.forEach(sh => renderShape(ctx, sh));
+
+    if (fs.selectedIdx >= 0) drawResizeHandles(ctx, fs.shapes[fs.selectedIdx]);
+
     if (fs.tool === 'pen' && fs.currentPath.length > 1)
       drawPenPath(ctx, fs.currentPath, fs.colour, fs.lineWidth);
 
@@ -724,6 +948,7 @@ const Sketch = (() => {
 
   function fsSetTool(tool) {
     fs.tool = tool;
+    if (tool !== 'rect') fs.selectedIdx = -1;
     ['pen','line','rect','text','eraser'].forEach(t => {
       const btn = document.getElementById(`fs-tool-${t}`);
       if (btn) btn.classList.toggle('active', t === tool);
@@ -736,8 +961,18 @@ const Sketch = (() => {
     if (el) el.classList.add('active');
   }
 
-  function fsUndo()  { if (!fs.history.length) return; fs.shapes = JSON.parse(fs.history.pop()); fsRedraw(); }
-  function fsClear() { fsSaveHistory(); fs.shapes = []; fsRedraw(); }
+  function fsUndo()  {
+    if (!fs.history.length) return;
+    fs.shapes      = JSON.parse(fs.history.pop());
+    fs.selectedIdx = -1;
+    fsRedraw();
+  }
+  function fsClear() {
+    fsSaveHistory();
+    fs.shapes      = [];
+    fs.selectedIdx = -1;
+    fsRedraw();
+  }
 
   function fsToggleStraighten(btn) {
     fs.autoStraighten = !fs.autoStraighten;
@@ -755,6 +990,7 @@ const Sketch = (() => {
 
   return {
     init, resizeCanvas, redraw, redrawScaled, setTool, setColour, toggleStraighten, undo, clear, getShapes, setShapes,
+    insertTemplate, fsTpl,
     openFullscreen, closeFullscreen,
     fsSetTool, fsSetColour, fsUndo, fsClear, fsToggleStraighten
   };
