@@ -70,6 +70,8 @@ const Sketch = (() => {
     };
 
     canvas.style.touchAction = 'none';
+    canvas.addEventListener('touchstart',    e => e.preventDefault(), { passive: false });
+    canvas.addEventListener('touchmove',     e => e.preventDefault(), { passive: false });
     canvas.addEventListener('pointerdown',   e => { e.preventDefault(); onDown(id, e); });
     canvas.addEventListener('pointermove',   e => { e.preventDefault(); onMove(id, e); });
     canvas.addEventListener('pointerup',     e => { e.preventDefault(); onUp(id, e); });
@@ -588,7 +590,16 @@ const Sketch = (() => {
     ctx.lineJoin    = 'round';
     ctx.beginPath();
     ctx.moveTo(path[0].x, path[0].y);
-    for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
+    if (path.length === 2) {
+      ctx.lineTo(path[1].x, path[1].y);
+    } else {
+      for (let i = 1; i < path.length - 1; i++) {
+        const mx = (path[i].x + path[i + 1].x) / 2;
+        const my = (path[i].y + path[i + 1].y) / 2;
+        ctx.quadraticCurveTo(path[i].x, path[i].y, mx, my);
+      }
+      ctx.lineTo(path[path.length - 1].x, path[path.length - 1].y);
+    }
     ctx.stroke();
   }
 
@@ -840,6 +851,8 @@ const Sketch = (() => {
     const canvas = document.getElementById('fs-canvas');
     if (!canvas) return;
     canvas.style.touchAction = 'none';
+    canvas.addEventListener('touchstart',    e => e.preventDefault(), { passive: false });
+    canvas.addEventListener('touchmove',     e => e.preventDefault(), { passive: false });
     canvas.addEventListener('pointerdown',   e => { e.preventDefault(); fsDown(e); });
     canvas.addEventListener('pointermove',   e => { e.preventDefault(); fsMove(e); });
     canvas.addEventListener('pointerup',     e => { e.preventDefault(); fsUp(e); });
