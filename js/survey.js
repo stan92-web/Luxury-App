@@ -483,9 +483,11 @@ const Survey = (() => {
     try {
       canvas = await captureSheet();
     } catch (_) {
+      activeIds.forEach(restoreCanvas);
       showToast('Could not capture sheet');
       return;
     }
+    activeIds.forEach(restoreCanvas); // captureSheet scales canvases; always restore after
     triggerDownload(canvas);
     showToast('Image saved — attach it in WhatsApp ✓');
   }
