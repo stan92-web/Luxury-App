@@ -104,6 +104,9 @@ main { max-width: 860px; margin: 0 auto; padding: 24px 16px 60px; }
 
 /* ── Forms ───────────────────────────────────── */
 .form-grid  { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+/* Required customer fields: Name | Phone | Door (narrow) then Address full-width */
+.customer-req-grid { grid-template-columns: 1fr 1fr 90px; }
+.customer-address-group { grid-column: 1 / -1; }
 .form-group { display: flex; flex-direction: column; gap: 4px; }
 .form-group.full { grid-column: 1 / -1; }
 
@@ -752,9 +755,12 @@ textarea:focus {
   /* Primary inputs — BOLD BIG */
   .form-group:has(#c-first) input,
   .form-group:has(#c-door) input,
-  .form-group:has(#c-address) input,
   .form-group:has(#survey-date) input {
     font-size: 16px !important; font-weight: 900 !important; color: #111 !important;
+  }
+  /* Address — larger and more prominent */
+  .form-group:has(#c-address) input {
+    font-size: 18px !important; font-weight: 900 !important; color: #111 !important;
   }
 
   /* Secondary inputs */
