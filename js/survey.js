@@ -138,6 +138,11 @@ const Survey = (() => {
     }
   }
 
+  /* ── Single-room class (drives print flex chain — replaces :has() for Safari compat) ── */
+  function updateSingleRoomClass() {
+    document.body.classList.toggle('single-room', activeIds.length === 1);
+  }
+
   /* ── Add / Remove rooms ── */
   function addRoom() {
     nextId++;
@@ -155,6 +160,7 @@ const Survey = (() => {
       Sketch.init(id);
     });
 
+    updateSingleRoomClass();
     return id;
   }
 
@@ -163,6 +169,7 @@ const Survey = (() => {
     if (el) el.remove();
     const i = activeIds.indexOf(id);
     if (i !== -1) activeIds.splice(i, 1);
+    updateSingleRoomClass();
     save();
     showToast('Wardrobe removed');
   }
