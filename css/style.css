@@ -305,6 +305,29 @@ textarea:focus {
 .dim-input:focus { outline: none; border-color: var(--red); box-shadow: 0 0 0 3px rgba(139,26,26,0.08); }
 .dim-unit        { font-size: 10px; color: var(--muted); text-align: center; letter-spacing: 1px; margin-top: 3px; }
 
+/* ── Door Style row ──────────────────────────── */
+.door-style-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.ds-label {
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: bold;
+  white-space: nowrap;
+  padding-bottom: 6px;
+}
+.door-style-row select {
+  flex: 1;
+  max-width: 400px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
 /* ── Sketch ──────────────────────────────────── */
 .sketch-section { margin-bottom: 18px; }
 .sketch-label {

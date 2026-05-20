@@ -87,8 +87,9 @@ const Survey = (() => {
           w:      gv(`dw-${id}`),
           h:      gv(`dh-${id}`),
           d:      gv(`dd-${id}`),
-          doors:  gv(`du-${id}`),
-          notes:  gv(`rnotes-${id}`),
+          doors:     gv(`du-${id}`),
+          doorStyle: gv(`dstyle-${id}`),
+          notes:     gv(`rnotes-${id}`),
           shapes: Sketch.getShapes(id)
         }))
       };
@@ -126,7 +127,8 @@ const Survey = (() => {
         sv(`dw-${id}`,    r.w);
         sv(`dh-${id}`,    r.h);
         sv(`dd-${id}`,    r.d);
-        sv(`du-${id}`,    r.doors);
+        sv(`du-${id}`,     r.doors);
+        sv(`dstyle-${id}`, r.doorStyle);
         sv(`rnotes-${id}`, r.notes);
         // Defer shape load until canvas is sized
         requestAnimationFrame(() => { Sketch.setShapes(id, r.shapes); updateSketchDims(id); });
@@ -209,6 +211,61 @@ const Survey = (() => {
             <input type="number" class="dim-input" id="du-${id}" placeholder="—" min="1" max="20" inputmode="numeric">
             <div class="dim-unit">units</div>
           </div>
+        </div>
+
+        <div class="door-style-row">
+          <span class="ds-label">Door Style</span>
+          <select id="dstyle-${id}">
+            <option value="">— Select door style —</option>
+            <optgroup label="Glacier">
+              <option>Glacier — High Gloss White</option>
+              <option>Glacier — High Gloss Cashmere</option>
+              <option>Glacier — High Gloss Light Grey &amp; Graphite</option>
+              <option>Glacier — Super Matt Fir Green</option>
+              <option>Glacier — Super Matt Light Grey</option>
+              <option>Glacier — Super Matt Black</option>
+              <option>Glacier — Super Matt Graphite</option>
+              <option>Glacier — Super Matt Stone Grey &amp; Cashmere</option>
+            </optgroup>
+            <optgroup label="Turnberry">
+              <option>Turnberry — Ultra Matt Cashmere</option>
+            </optgroup>
+            <optgroup label="Bamburgh">
+              <option>Bamburgh — Ultra Matt White</option>
+            </optgroup>
+            <optgroup label="Hampton">
+              <option>Hampton — Ultra Matt Graphite</option>
+              <option>Hampton — Ultra Matt Mussel</option>
+            </optgroup>
+            <optgroup label="Matfen">
+              <option>Matfen — Parisian Blue Oak</option>
+              <option>Matfen — Dust Grey Oak &amp; Light Grey Oak</option>
+              <option>Matfen — Light Grey Oak &amp; Graphite Oak</option>
+            </optgroup>
+            <optgroup label="Alnwick">
+              <option>Alnwick — Ultra Matt White Grey</option>
+            </optgroup>
+            <optgroup label="Portree">
+              <option>Portree — Ultra Matt Indigo</option>
+              <option>Portree — White Oak</option>
+            </optgroup>
+            <optgroup label="Glendale">
+              <option>Glendale — Ultra Matt Pale Cream</option>
+            </optgroup>
+            <optgroup label="Arko">
+              <option>Arko — Light Casella Oak &amp; Reed Green Oak</option>
+            </optgroup>
+            <optgroup label="Rialto">
+              <option>Rialto — Ultra Matt Dust Grey</option>
+              <option>Rialto — Ultra Matt Cashmere</option>
+            </optgroup>
+            <optgroup label="Monaco">
+              <option>Monaco — Light Concrete</option>
+            </optgroup>
+            <optgroup label="Scoop">
+              <option>Scoop — Ultra Matt Light Grey</option>
+            </optgroup>
+          </select>
         </div>
 
         <div class="sketch-section">
