@@ -493,7 +493,8 @@ const Survey = (() => {
   function sendToCustomer() {
     const number = waPhone(gv('c-phone'));
     if (!number) { showToast("Enter customer's phone number first"); return; }
-    shareSheet(number);
+    window.open(`https://wa.me/${number}`, '_blank');
+    captureAndDownload();
   }
 
   /* ── Door type toggle ── */

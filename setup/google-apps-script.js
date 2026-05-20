@@ -63,12 +63,12 @@ function doPost(e) {
     ]);
 
     return ContentService
-      .createTextContent(JSON.stringify({ ok: true, orderId: data.orderId }))
+      .createTextOutput(JSON.stringify({ ok: true, orderId: data.orderId }))
       .setMimeType(ContentService.MimeType.JSON);
 
   } catch (err) {
     return ContentService
-      .createTextContent(JSON.stringify({ ok: false, error: err.message }))
+      .createTextOutput(JSON.stringify({ ok: false, error: err.message }))
       .setMimeType(ContentService.MimeType.JSON);
   }
 }
@@ -80,7 +80,7 @@ function doGet(e) {
     var sheet = ss.getSheetByName('Orders');
     if (!sheet || sheet.getLastRow() < 2) {
       return ContentService
-        .createTextContent(JSON.stringify({ orders: [] }))
+        .createTextOutput(JSON.stringify({ orders: [] }))
         .setMimeType(ContentService.MimeType.JSON);
     }
 
@@ -93,12 +93,12 @@ function doGet(e) {
     });
 
     return ContentService
-      .createTextContent(JSON.stringify({ orders: orders }))
+      .createTextOutput(JSON.stringify({ orders: orders }))
       .setMimeType(ContentService.MimeType.JSON);
 
   } catch (err) {
     return ContentService
-      .createTextContent(JSON.stringify({ error: err.message }))
+      .createTextOutput(JSON.stringify({ error: err.message }))
       .setMimeType(ContentService.MimeType.JSON);
   }
 }

@@ -95,7 +95,10 @@ const Orders = (() => {
       const r = await fetch(AppData.SHEETS_URL);
       const d = await r.json();
       return Array.isArray(d.orders) ? d.orders : [];
-    } catch (_) { return []; }
+    } catch (err) {
+      console.error('fetchOrders failed:', err);
+      return null; // null = fetch error, [] = genuinely empty
+    }
   }
 
   /* ── Orders panel ────────────────────────── */
@@ -128,7 +131,12 @@ const Orders = (() => {
     }
 
     list.innerHTML = '<div class="orders-loading">Loading orders…</div>';
-    allOrders = await fetchOrders();
+    const result = await fetchOrders();
+    if (result === null) {
+      list.innerHTML = '<div class="orders-empty">⚠️ Could not load orders — check your internet connection and that the Apps Script is deployed correctly.</div>';
+      return;
+    }
+    allOrders = result;
     renderList();
   }
 
