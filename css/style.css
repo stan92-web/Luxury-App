@@ -618,13 +618,14 @@ textarea:focus {
   .no-print, #toast, #fs-overlay, #auth-screen { display: none !important; }
 
   /* ── Structural reset — kill all screen spacing ── */
+  html { min-height: 0 !important; }
   body { background: #fff !important; color: #111 !important; min-height: 0 !important; }
   main { padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
 
-  /* ── Single-room: JS sets canvas height to 175mm via inline !important.
-     This rule is a CSS fallback only — the JS in prepareForPrint() wins. */
+  /* ── Single-room: canvas locked to 150mm by both CSS and JS inline !important.
+     canvas-wrap is also locked to 150mm so layout height can't escape. */
   body.single-room .room-canvas {
-    height: 175mm !important;
+    height: 150mm !important;
     max-height: none !important;
     min-height: 0 !important;
   }
@@ -740,15 +741,17 @@ textarea:focus {
   }
   .dim-unit { font-size: 6px !important; color: #777 !important; margin-top: 0 !important; }
 
-  /* Sketch canvas — 130mm leaves ~150mm for all other content on 287mm page */
+  /* Sketch canvas — multi-room: 130mm. Single-room: 150mm (JS also sets inline !important). */
   .sketch-section { margin-bottom: 2px !important; }
   .sketch-label   { color: #8b1a1a !important; font-size: 6px !important; margin-bottom: 2px !important; padding-bottom: 0 !important; border: none !important; }
   .sketch-toolbar { display: none !important; }
-  .canvas-wrap    { border: 1.5px solid #999 !important; box-shadow: none !important; border-radius: 2px !important; overflow: hidden !important; }
+  /* canvas-wrap height is locked so layout is correct even if canvas CSS fails */
+  .canvas-wrap    { border: 1.5px solid #999 !important; box-shadow: none !important; border-radius: 2px !important; overflow: hidden !important; height: 130mm !important; }
   .room-canvas    {
     display: block !important; width: 100% !important;
     min-height: 0 !important; height: 130mm !important; max-height: 130mm !important;
   }
+  body.single-room .canvas-wrap { height: 150mm !important; }
 
   /* Sketch dimension badges */
   .sketch-dims       { background: #f7f4f0 !important; border: 1px solid #ddd !important; border-radius: 2px !important; padding: 2px 6px !important; gap: 4px !important; margin-top: 2px !important; }

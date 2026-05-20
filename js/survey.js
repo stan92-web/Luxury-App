@@ -269,13 +269,16 @@ const Survey = (() => {
 
   function print() {
     save();
-    window.print();
+    prepareForPrint();
+    // 300ms lets the browser commit all DOM/style changes before the print dialog opens.
+    // onbeforeprint will also fire (and prepareForPrint runs again, harmlessly).
+    setTimeout(function() { window.print(); }, 300);
   }
 
   /* ── High-res canvas for print / share ── */
-  // Target: 190 × 175 mm at 300 dpi
+  // Target: 190 × 150 mm at 300 dpi
   const PRINT_W_PX = Math.round(190 / 25.4 * 300); // 2244
-  const PRINT_H_PX = Math.round(175 / 25.4 * 300); // 2067
+  const PRINT_H_PX = Math.round(150 / 25.4 * 300); // 1772
 
   function scaleCanvasForPrint(id) {
     const canvas = document.getElementById(`canvas-${id}`);
@@ -313,10 +316,12 @@ const Survey = (() => {
   function prepareForPrint() {
     save();
     activeIds.forEach(scaleCanvasForPrint);
-    // Inline !important beats every stylesheet rule — guaranteed 1-page for single room
     if (activeIds.length === 1) {
       const c = document.getElementById(`canvas-${activeIds[0]}`);
-      if (c) c.style.setProperty('height', '175mm', 'important');
+      if (c) c.style.setProperty('height', '150mm', 'important');
+      // Also lock the canvas-wrap so layout height is controlled even if canvas CSS fails
+      const w = document.getElementById(`canvas-wrap-${activeIds[0]}`);
+      if (w) w.style.setProperty('height', '150mm', 'important');
     }
   }
 
@@ -324,6 +329,8 @@ const Survey = (() => {
     if (activeIds.length === 1) {
       const c = document.getElementById(`canvas-${activeIds[0]}`);
       if (c) c.style.removeProperty('height');
+      const w = document.getElementById(`canvas-wrap-${activeIds[0]}`);
+      if (w) w.style.removeProperty('height');
     }
     activeIds.forEach(restoreCanvas);
   }
