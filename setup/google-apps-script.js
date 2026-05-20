@@ -93,6 +93,7 @@ function doPost(e) {
 
     // Save quote image to Google Drive → "Luxury House Quotes" folder
     if (data.imageData) {
+      Logger.log('imageData received, length: ' + data.imageData.length);
       try {
         var folders = DriveApp.getFoldersByName('Luxury House Quotes');
         var folder  = folders.hasNext()
@@ -101,7 +102,8 @@ function doPost(e) {
         var label   = (data.property || data.orderId || 'Quote').replace(/[\/\\:*?"<>|]/g, '-');
         var date    = (data.savedAt || '').slice(0, 10);
         var fname   = label + (date ? ' ' + date : '') + '.jpg';
-        var b64     = data.imageData.replace(/^data:image\/jpeg;base64,/, '');
+        // Strip data URL prefix — handle both jpeg and png
+        var b64     = data.imageData.replace(/^data:image\/(jpeg|png);base64,/, '');
         var blob    = Utilities.newBlob(Utilities.base64Decode(b64), 'image/jpeg', fname);
         folder.createFile(blob);
         driveStatus = 'saved: ' + fname;
@@ -110,6 +112,8 @@ function doPost(e) {
         driveStatus = 'drive error: ' + driveErr.message;
         Logger.log('Drive error: ' + driveErr.message);
       }
+    } else {
+      Logger.log('No imageData in payload — postData length: ' + (e.postData ? e.postData.contents.length : 0));
     }
 
     return ContentService

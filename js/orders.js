@@ -92,14 +92,17 @@ const Orders = (() => {
 
     Survey.toast('Saving…');
 
-    // Capture a compressed image of the quote for Google Drive archiving
+    // Capture a compressed image of the quote for Google Drive archiving.
+    // Cap at 600px wide to keep payload small enough for the no-cors POST.
     try {
-      const canvas = await Survey.captureSheet();
-      const thumb  = document.createElement('canvas');
-      thumb.width  = Math.round(canvas.width  / 2);
-      thumb.height = Math.round(canvas.height / 2);
+      const canvas  = await Survey.captureSheet();
+      const maxW    = 600;
+      const scale   = Math.min(1, maxW / canvas.width);
+      const thumb   = document.createElement('canvas');
+      thumb.width   = Math.round(canvas.width  * scale);
+      thumb.height  = Math.round(canvas.height * scale);
       thumb.getContext('2d').drawImage(canvas, 0, 0, thumb.width, thumb.height);
-      payload.imageData = thumb.toDataURL('image/jpeg', 0.4);
+      payload.imageData = thumb.toDataURL('image/jpeg', 0.3);
     } catch (_) { /* Drive image optional — don't block save */ }
 
     await saveToSheets(payload);
