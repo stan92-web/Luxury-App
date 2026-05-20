@@ -305,12 +305,39 @@ textarea:focus {
 .dim-input:focus { outline: none; border-color: var(--red); box-shadow: 0 0 0 3px rgba(139,26,26,0.08); }
 .dim-unit        { font-size: 10px; color: var(--muted); text-align: center; letter-spacing: 1px; margin-top: 3px; }
 
-/* ── Door Style row ──────────────────────────── */
+/* ── Door Type / Style rows ──────────────────── */
+.door-type-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.door-type-btns {
+  display: flex;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1.5px solid var(--border);
+}
+.dtype-btn {
+  background: var(--input-bg);
+  border: none;
+  color: var(--muted);
+  padding: 8px 22px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  letter-spacing: 0.5px;
+  transition: background 0.15s, color 0.15s;
+}
+.dtype-btn + .dtype-btn { border-left: 1.5px solid var(--border); }
+.dtype-btn.active       { background: var(--red); color: #fff; }
 .door-style-row {
   display: flex;
   align-items: flex-end;
   gap: 14px;
   margin-bottom: 20px;
+  flex-wrap: wrap;
 }
 .ds-label {
   font-size: 10px;
@@ -321,9 +348,11 @@ textarea:focus {
   white-space: nowrap;
   padding-bottom: 6px;
 }
+.ds-label-gap { margin-left: 8px; }
 .door-style-row select {
   flex: 1;
-  max-width: 400px;
+  min-width: 160px;
+  max-width: 380px;
   font-size: 15px;
   font-weight: 600;
 }

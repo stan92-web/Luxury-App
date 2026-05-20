@@ -88,7 +88,10 @@ const Survey = (() => {
           h:      gv(`dh-${id}`),
           d:      gv(`dd-${id}`),
           doors:     gv(`du-${id}`),
+          doorType:  gv(`dtype-${id}`),
           doorStyle: gv(`dstyle-${id}`),
+          doorSlide: gv(`dslide-${id}`),
+          doorFrame: gv(`dframe-${id}`),
           notes:     gv(`rnotes-${id}`),
           shapes: Sketch.getShapes(id)
         }))
@@ -129,7 +132,10 @@ const Survey = (() => {
         sv(`dd-${id}`,    r.d);
         sv(`du-${id}`,     r.doors);
         sv(`dstyle-${id}`, r.doorStyle);
+        sv(`dslide-${id}`, r.doorSlide);
+        sv(`dframe-${id}`, r.doorFrame);
         sv(`rnotes-${id}`, r.notes);
+        setDoorType(id, r.doorType || 'hinged');
         // Defer shape load until canvas is sized
         requestAnimationFrame(() => { Sketch.setShapes(id, r.shapes); updateSketchDims(id); });
       });
@@ -213,8 +219,18 @@ const Survey = (() => {
           </div>
         </div>
 
-        <div class="door-style-row">
-          <span class="ds-label">Door Style</span>
+        <input type="hidden" id="dtype-${id}" value="hinged">
+
+        <div class="door-type-row">
+          <span class="ds-label">Door Type</span>
+          <div class="door-type-btns">
+            <button class="dtype-btn active" id="dtype-hinged-${id}"  onclick="Survey.setDoorType(${id},'hinged')">Hinged</button>
+            <button class="dtype-btn"        id="dtype-sliding-${id}" onclick="Survey.setDoorType(${id},'sliding')">Sliding</button>
+          </div>
+        </div>
+
+        <div class="door-style-row" id="ds-hinged-${id}">
+          <span class="ds-label">Style</span>
           <select id="dstyle-${id}">
             <option value="">— Select door style —</option>
             <optgroup label="Glacier">
@@ -265,6 +281,32 @@ const Survey = (() => {
             <optgroup label="Scoop">
               <option>Scoop — Ultra Matt Light Grey</option>
             </optgroup>
+          </select>
+        </div>
+
+        <div class="door-style-row door-sliding-row" id="ds-sliding-${id}" style="display:none">
+          <span class="ds-label">Collection</span>
+          <select id="dslide-${id}">
+            <option value="">— Select collection —</option>
+            <option>Heritage</option>
+            <option>Florence</option>
+            <option>Napoli</option>
+            <option>Torino</option>
+            <option>Tuscany</option>
+            <option>Venice</option>
+          </select>
+          <span class="ds-label ds-label-gap">Frame</span>
+          <select id="dframe-${id}">
+            <option value="">— Select frame —</option>
+            <option>Polished Silver</option>
+            <option>Satin Silver</option>
+            <option>Bronze</option>
+            <option>Satin Bronze</option>
+            <option>Black</option>
+            <option>White</option>
+            <option>Graphite</option>
+            <option>Satin Graphite</option>
+            <option>Satin Gold</option>
           </select>
         </div>
 
@@ -501,6 +543,19 @@ const Survey = (() => {
     shareSheet(number);
   }
 
+  /* ── Door type toggle ── */
+  function setDoorType(id, type) {
+    document.getElementById(`dtype-hinged-${id}`)?.classList.toggle('active', type === 'hinged');
+    document.getElementById(`dtype-sliding-${id}`)?.classList.toggle('active', type === 'sliding');
+    const hingedRow  = document.getElementById(`ds-hinged-${id}`);
+    const slidingRow = document.getElementById(`ds-sliding-${id}`);
+    if (hingedRow)  hingedRow.style.display  = type === 'hinged'  ? '' : 'none';
+    if (slidingRow) slidingRow.style.display = type === 'sliding' ? '' : 'none';
+    const inp = document.getElementById(`dtype-${id}`);
+    if (inp) inp.value = type;
+    scheduleSave();
+  }
+
   /* ── Helpers ── */
   function gv(id) {
     const el = document.getElementById(id);
@@ -536,5 +591,5 @@ const Survey = (() => {
     }
   });
 
-  return { addRoom, removeRoom, clearAll, print, sendToOffice, sendToCustomer };
+  return { addRoom, removeRoom, clearAll, print, sendToOffice, sendToCustomer, setDoorType };
 })();
