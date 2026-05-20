@@ -466,7 +466,28 @@ const Survey = (() => {
   }
 
   function sendToOffice() {
-    shareSheet(AppData.OFFICE_WA);
+    // Open WhatsApp with office contact synchronously (must be tied to user gesture
+    // or iOS/Android will block the popup). Then capture + download image in background.
+    window.open(`https://wa.me/${AppData.OFFICE_WA}`, '_blank');
+    captureAndDownload();
+  }
+
+  async function captureAndDownload() {
+    if (typeof html2canvas === 'undefined') {
+      showToast('Image library not ready — check connection');
+      return;
+    }
+    save();
+    showToast('Saving image…');
+    let canvas;
+    try {
+      canvas = await captureSheet();
+    } catch (_) {
+      showToast('Could not capture sheet');
+      return;
+    }
+    triggerDownload(canvas);
+    showToast('Image saved — attach it in WhatsApp ✓');
   }
 
   function sendToCustomer() {

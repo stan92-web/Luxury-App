@@ -57,16 +57,20 @@ const Orders = (() => {
       .map(r => [r.name, r.w && r.h ? `${r.w}×${r.h}mm` : ''].filter(Boolean).join(' '))
       .join(' | ');
 
+    const doorNo  = data.customer?.door    || '';
+    const address = data.customer?.address || '';
+
     const payload = {
       orderId,
+      property: [doorNo, address].filter(Boolean).join(' '),
       version,
       savedAt:  new Date().toISOString(),
       status:   'Quote',
       rep:      data.customer?.surveyor   || '',
       customer: `${data.customer?.first || ''} ${data.customer?.last || ''}`.trim(),
       phone:    data.customer?.phone      || '',
-      doorNo:   data.customer?.door       || '',
-      address:  data.customer?.address    || '',
+      doorNo,
+      address,
       rooms,
       total:    data.pricing?.total       || '',
       deposit:  data.pricing?.deposit     || '',

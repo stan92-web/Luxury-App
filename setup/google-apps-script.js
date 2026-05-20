@@ -32,20 +32,21 @@ function doPost(e) {
     if (!sheet) {
       sheet = ss.insertSheet('Orders');
       sheet.appendRow([
-        'Order ID', 'Saved At', 'Version', 'Status',
+        'Order ID', 'Property', 'Saved At', 'Version', 'Status',
         'Rep', 'Customer', 'Phone', 'Door No', 'Address',
         'Rooms', 'Total £', 'Deposit £', 'Balance £',
         'Full Data'
       ]);
       sheet.setFrozenRows(1);
       // Bold header row
-      sheet.getRange(1, 1, 1, 14).setFontWeight('bold');
+      sheet.getRange(1, 1, 1, 15).setFontWeight('bold');
     }
 
     var data = JSON.parse(e.postData.contents);
 
     sheet.appendRow([
       data.orderId   || '',
+      data.property  || '',
       data.savedAt   || new Date().toISOString(),
       data.version   || 1,
       data.status    || 'Quote',
