@@ -36,8 +36,8 @@ const Orders = (() => {
     try {
       await fetch(AppData.SHEETS_URL, {
         method:  'POST',
-        mode:    'no-cors', // fire-and-forget; Apps Script receives it fine
-        headers: { 'Content-Type': 'application/json' },
+        mode:    'no-cors',
+        headers: { 'Content-Type': 'text/plain' }, // text/plain = simple request, no CORS preflight
         body:    JSON.stringify(payload)
       });
       return true;
