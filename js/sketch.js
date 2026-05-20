@@ -478,13 +478,15 @@ const Sketch = (() => {
     if (!wrap) return;
     const inp       = document.createElement('input');
     inp.type        = 'text';
-    inp.placeholder = 'Label / dimension…';
+    inp.placeholder = 'Write or type here…';
     inp.style.cssText = `
-      position:absolute; left:${x}px; top:${Math.max(0, y - 14)}px;
-      background:rgba(255,255,255,0.97); color:#111;
-      border:1.5px solid #c0392b; border-radius:4px;
-      font-size:14px; padding:4px 8px; z-index:10;
-      min-width:90px; max-width:200px; font-family:Arial,sans-serif;
+      position:absolute; left:${Math.min(x, wrap.clientWidth - 220)}px; top:${Math.max(0, y - 18)}px;
+      background:rgba(255,255,255,0.98); color:#1a1a1a;
+      border:2px solid #8b1a1a; border-radius:6px;
+      font-size:22px; padding:5px 10px; z-index:10;
+      min-width:160px; max-width:260px;
+      font-family:'Caveat',cursive; font-weight:700;
+      box-shadow:0 3px 12px rgba(0,0,0,0.15);
     `;
     wrap.appendChild(inp);
     inp.focus();
@@ -494,7 +496,7 @@ const Sketch = (() => {
       if (!text) return;
       saveHistory(id);
       const s = states[id];
-      s.shapes.push({ type: 'text', x, y, text, colour: s.colour, size: 18 });
+      s.shapes.push({ type: 'text', x, y, text, colour: s.colour, size: 22 });
       redraw(id);
       notifyChange();
     }
@@ -598,7 +600,7 @@ const Sketch = (() => {
     if      (sh.type === 'pen')  drawPenPath(ctx, sh.path, sh.colour, sh.lw);
     else if (sh.type === 'line') { ctx.beginPath(); ctx.moveTo(sh.x1, sh.y1); ctx.lineTo(sh.x2, sh.y2); ctx.stroke(); }
     else if (sh.type === 'rect') { ctx.beginPath(); ctx.strokeRect(sh.x, sh.y, sh.w, sh.h); }
-    else if (sh.type === 'text') { ctx.font = `bold ${sh.size || 18}px Arial`; ctx.fillText(sh.text, sh.x, sh.y); }
+    else if (sh.type === 'text') { ctx.font = `700 ${sh.size || 22}px 'Caveat', cursive`; ctx.fillText(sh.text, sh.x, sh.y); }
   }
 
   function drawPenPath(ctx, path, colour, lw) {
@@ -1073,16 +1075,19 @@ const Sketch = (() => {
 
   /* SKETCH:FSTEXT ───────────────────────────────── */
   function fsShowTextInput(x, y) {
-    const area = document.getElementById('fs-canvas-area');
-    const inp  = document.createElement('input');
-    inp.type   = 'text';
-    inp.placeholder = 'Label / dimension…';
+    const area   = document.getElementById('fs-canvas-area');
+    const canvas = document.getElementById('fs-canvas');
+    const inp    = document.createElement('input');
+    inp.type     = 'text';
+    inp.placeholder = 'Write or type here…';
     inp.style.cssText = `
-      position:absolute; left:${x}px; top:${Math.max(0, y - 16)}px;
-      background:rgba(255,255,255,0.97); color:#111;
-      border:2px solid #c0392b; border-radius:5px;
-      font-size:16px; padding:5px 10px; z-index:10;
-      min-width:100px; max-width:240px; font-family:Arial,sans-serif;
+      position:absolute; left:${Math.min(x, (canvas ? canvas.clientWidth : 800) - 300)}px; top:${Math.max(0, y - 20)}px;
+      background:rgba(255,255,255,0.98); color:#1a1a1a;
+      border:2px solid #8b1a1a; border-radius:6px;
+      font-size:28px; padding:6px 14px; z-index:10;
+      min-width:200px; max-width:400px;
+      font-family:'Caveat',cursive; font-weight:700;
+      box-shadow:0 4px 16px rgba(0,0,0,0.2);
     `;
     area.appendChild(inp);
     inp.focus();
@@ -1091,7 +1096,7 @@ const Sketch = (() => {
       inp.remove();
       if (!text) return;
       fsSaveHistory();
-      fs.shapes.push({ type: 'text', x, y, text, colour: fs.colour, size: 18 });
+      fs.shapes.push({ type: 'text', x, y, text, colour: fs.colour, size: 28 });
       fsRedraw();
     }
     inp.addEventListener('blur',    commit);
@@ -1193,7 +1198,11 @@ const Sketch = (() => {
   }
 
   /* SKETCH:BOOT */
-  document.addEventListener('DOMContentLoaded', initFsCanvas);
+  document.addEventListener('DOMContentLoaded', () => {
+    initFsCanvas();
+    // Redraw all canvases once Caveat font is loaded so saved text renders correctly
+    document.fonts.ready.then(() => Object.keys(states).forEach(id => redraw(id)));
+  });
 
   /* SKETCH:EXPORTS */
   return {

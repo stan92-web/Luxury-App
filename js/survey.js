@@ -266,7 +266,7 @@ const Survey = (() => {
             <button class="sk-btn active" id="tool-pen-${id}"    onclick="Sketch.setTool(${id},'pen')">✏️ Draw</button>
             <button class="sk-btn"        id="tool-line-${id}"   onclick="Sketch.setTool(${id},'line')">╱ Line</button>
             <button class="sk-btn"        id="tool-rect-${id}"   onclick="Sketch.setTool(${id},'rect')">▭ Box</button>
-            <button class="sk-btn"        id="tool-text-${id}"   onclick="Sketch.setTool(${id},'text')">T Label</button>
+            <button class="sk-btn"        id="tool-text-${id}"   onclick="Sketch.setTool(${id},'text')">✍ Write</button>
             <button class="sk-btn"        id="tool-eraser-${id}" onclick="Sketch.setTool(${id},'eraser')">✕ Erase</button>
             <div class="sk-sep"></div>
             <div class="colour-dots" id="colours-${id}">
