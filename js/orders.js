@@ -32,23 +32,36 @@ const Orders = (() => {
   }
 
   /* ── Save to Google Sheets ───────────────── */
-  // Standard CORS fetch — follows redirects (Apps Script uses a redirect),
-  // reads the response so we know if the row was actually written.
-  // AbortController cuts it off at 8 s so save() never hangs.
+  // Form submission to a hidden iframe — completely bypasses iOS Safari
+  // CORS/fetch restrictions. Form posts are never blocked cross-origin.
+  // Apps Script receives it as a text/plain body prefixed with "_=".
   function saveToSheets(payload) {
-    if (!AppData.SHEETS_URL) return Promise.resolve(false);
-    const body = JSON.stringify(payload);
-    const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), 8000);
-    return fetch(AppData.SHEETS_URL, {
-      method:  'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body,
-      signal:  ctrl.signal
-    })
-    .then(res => { clearTimeout(t); return res.json(); })
-    .then(j   => j.ok === true)
-    .catch(()  => { clearTimeout(t); return false; });
+    if (!AppData.SHEETS_URL) return;
+
+    let fr = document.getElementById('_lhFr');
+    if (!fr) {
+      fr = document.createElement('iframe');
+      fr.id = fr.name = '_lhFr';
+      fr.style.display = 'none';
+      document.body.appendChild(fr);
+    }
+
+    const form = document.createElement('form');
+    form.method  = 'POST';
+    form.action  = AppData.SHEETS_URL;
+    form.target  = '_lhFr';
+    form.enctype = 'text/plain';
+    form.style.display = 'none';
+
+    const inp = document.createElement('input');
+    inp.type  = 'hidden';
+    inp.name  = '_';
+    inp.value = JSON.stringify(payload);
+    form.appendChild(inp);
+
+    document.body.appendChild(form);
+    form.submit();
+    setTimeout(() => { if (form.parentNode) form.parentNode.removeChild(form); }, 5000);
   }
 
   /* ── Build Drive archive image (no html2canvas — works on iOS Safari) ── */
@@ -219,13 +232,8 @@ const Orders = (() => {
       Survey.toast(`Saved — ${orderId} v${version}`);
     }
 
-    // Step 1 — text POST; on confirmed ok remove from pendingOrders.
-    saveToSheets(payload).then(ok => {
-      if (ok) {
-        pendingOrders = pendingOrders.filter(p => p['Order ID'] !== orderId);
-        localStorage.setItem('lh_pending_orders', JSON.stringify(pendingOrders));
-      }
-    });
+    // Step 1 — text POST (form+iframe, fire-and-forget).
+    saveToSheets(payload);
 
     // Step 2 — Drive image, best-effort separate POST.
     try {
@@ -294,33 +302,37 @@ const Orders = (() => {
       return;
     }
 
-    // Only show the loading spinner when we have no cached orders to display
-    if (!allOrders.length && !pendingOrders.length) list.innerHTML = '<div class="orders-loading">Loading orders…</div>';
+    // Show locally-known orders immediately — don't make the user wait for JSONP.
+    // Merge pendingOrders into allOrders and render right away.
+    const pre = allOrders.slice();
+    pendingOrders.forEach(p => {
+      if (!pre.some(r => r['Order ID'] === p['Order ID'])) pre.unshift(p);
+    });
+    if (pre.length) {
+      allOrders = pre;
+      renderList();
+    } else {
+      list.innerHTML = '<div class="orders-loading">Loading orders…</div>';
+    }
+
+    // Fetch from Sheets in the background and merge when it arrives.
     const result = await fetchOrders();
 
     if (result === null) {
-      // Fetch failed (timeout/network error) — keep showing whatever we have
-      const combined = allOrders.slice();
-      pendingOrders.forEach(p => {
-        if (!combined.some(r => r['Order ID'] === p['Order ID'])) combined.unshift(p);
-      });
-      allOrders = combined;
-      if (allOrders.length) {
-        Survey.toast('Could not refresh — showing saved orders');
-        renderList();
-      } else {
+      // JSONP timed out — keep showing what we already rendered above.
+      if (!allOrders.length) {
         list.innerHTML = '<div class="orders-empty">⚠️ Could not load orders from Google Sheets — check your internet connection, then tap <strong>↻ Refresh</strong> to try again.</div>';
       }
       return;
     }
 
-    // Remove orders from pendingOrders that have been confirmed in the sheet
+    // Remove confirmed orders from pendingOrders.
     pendingOrders = pendingOrders.filter(p =>
       !result.some(r => r['Order ID'] === p['Order ID'] && Number(r['Version']) >= Number(p['Version']))
     );
     localStorage.setItem('lh_pending_orders', JSON.stringify(pendingOrders));
 
-    // Merge: sheet rows + any unconfirmed local saves
+    // Merge: sheet rows + any unconfirmed local saves.
     const merged = result.slice();
     pendingOrders.forEach(p => {
       if (!merged.some(r => r['Order ID'] === p['Order ID'])) merged.unshift(p);

@@ -45,7 +45,10 @@ function setupDrive() {
 // ── Save an order (called by the app on Save Order) ──
 function doPost(e) {
   try {
-    var data = JSON.parse(e.postData.contents);
+    // Form submissions (iframe POST) prefix the body with "_="; fetch sends raw JSON.
+    var raw = e.postData.contents;
+    if (raw.substring(0, 2) === '_=') raw = raw.substring(2);
+    var data = JSON.parse(raw);
 
     // Image-only POST — just save to Google Drive, don't touch the sheet.
     // The app sends this as a separate lightweight request after the text save.
