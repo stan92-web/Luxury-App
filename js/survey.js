@@ -187,6 +187,7 @@ const Survey = (() => {
     });
 
     updateSingleRoomClass();
+    save(); // persist immediately so Orders.save() always includes the new room
     return id;
   }
 

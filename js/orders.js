@@ -300,6 +300,9 @@ const Orders = (() => {
       return;
     }
 
+    const customer = versions[0]['Customer'] || orderId;
+    if (!confirm(`Load order for ${customer}?\n\nThis will replace everything on the current form.`)) return;
+
     try {
       localStorage.setItem('lh_survey_v1',    fullData);
       localStorage.setItem('lh_order_id',     orderId);
