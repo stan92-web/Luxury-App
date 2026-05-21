@@ -84,10 +84,13 @@ const Orders = (() => {
       clearTimeout(timer);
       delete window[cbName];
       if (script.parentNode) script.parentNode.removeChild(script);
-      if (result && result.ok) {
-        pendingOrders = pendingOrders.filter(p => p['Order ID'] !== payload.orderId);
-        localStorage.setItem('lh_pending_orders', JSON.stringify(pendingOrders));
-      }
+      // Do NOT remove from pendingOrders here.  There is a race condition where
+      // fetchOrders can run concurrently (Apps Script parallel executions) and
+      // read the sheet before this write is committed.  If we cleared
+      // pendingOrders now and that concurrent read returned an empty sheet,
+      // allOrders would be wiped and the order would disappear.
+      // pendingOrders is cleaned up by refresh() once fetchOrders confirms the
+      // row is present — which happens on the next panel open.
     };
 
     script.onerror = () => {
