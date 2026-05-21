@@ -88,13 +88,41 @@ function doGet(e) {
   try {
 
     // ── Save order via GET ?action=save&data=<JSON>&callback=<cb> ──
-    // This avoids all iOS Safari POST/CORS restrictions.
     if (e && e.parameter && e.parameter.action === 'save') {
       var saveData = JSON.parse(e.parameter.data);
       writeOrderRow(saveData);
       var saveJson = JSON.stringify({ ok: true, orderId: saveData.orderId });
       return ContentService
         .createTextOutput(cb ? cb + '(' + saveJson + ')' : saveJson)
+        .setMimeType(cb ? ContentService.MimeType.JAVASCRIPT : ContentService.MimeType.JSON);
+    }
+
+    // ── Save Drive image via GET ?action=saveImage&orderId=..&imageData=..&callback=<cb> ──
+    if (e && e.parameter && e.parameter.action === 'saveImage') {
+      var imgData = e.parameter.imageData || '';
+      var imgId   = e.parameter.orderId   || '';
+      var imgProp = e.parameter.property  || '';
+      var imgDate = (e.parameter.savedAt  || '').slice(0, 10);
+      var label   = (imgProp || imgId || 'Quote').replace(/[\/\\:*?"<>|]/g, '-');
+      var fname   = label + (imgDate ? ' ' + imgDate : '') + '.jpg';
+      var driveMsg = 'no image';
+      if (imgData) {
+        try {
+          var folders = DriveApp.getFoldersByName('Luxury House Quotes');
+          var folder  = folders.hasNext() ? folders.next() : DriveApp.createFolder('Luxury House Quotes');
+          var b64     = imgData.replace(/^data:image\/(jpeg|png);base64,/, '');
+          var blob    = Utilities.newBlob(Utilities.base64Decode(b64), 'image/jpeg', fname);
+          folder.createFile(blob);
+          driveMsg = 'saved: ' + fname;
+          Logger.log('Drive image saved via GET: ' + fname);
+        } catch (imgErr) {
+          driveMsg = 'error: ' + imgErr.message;
+          Logger.log('Drive image GET error: ' + imgErr.message);
+        }
+      }
+      var imgJson = JSON.stringify({ ok: true, drive: driveMsg });
+      return ContentService
+        .createTextOutput(cb ? cb + '(' + imgJson + ')' : imgJson)
         .setMimeType(cb ? ContentService.MimeType.JAVASCRIPT : ContentService.MimeType.JSON);
     }
 

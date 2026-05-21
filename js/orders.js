@@ -96,104 +96,108 @@ const Orders = (() => {
     document.head.appendChild(script);
   }
 
-  /* ── Save Drive image (form→iframe POST, separate from text save) ── */
-  function saveDriveImage(imagePayload) {
-    if (!AppData.SHEETS_URL) return;
+  /* ── Save Drive image via JSONP GET (same mechanism as text save) ── */
+  function saveDriveImage(payload, imageData) {
+    if (!AppData.SHEETS_URL || !imageData) return;
 
-    let fr = document.getElementById('_lhFrImg');
-    if (!fr) {
-      fr = document.createElement('iframe');
-      fr.id = fr.name = '_lhFrImg';
-      fr.style.display = 'none';
-      document.body.appendChild(fr);
-    }
+    const cbName = 'lhImg' + Date.now();
+    const script = document.createElement('script');
+    const timer  = setTimeout(() => {
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+    }, 20000);
 
-    const form = document.createElement('form');
-    form.method  = 'POST';
-    form.action  = AppData.SHEETS_URL;
-    form.target  = '_lhFrImg';
-    form.enctype = 'text/plain';
-    form.style.display = 'none';
+    window[cbName] = () => {
+      clearTimeout(timer);
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+    };
 
-    const inp = document.createElement('input');
-    inp.type  = 'hidden';
-    inp.name  = '_';
-    inp.value = JSON.stringify(imagePayload);
-    form.appendChild(inp);
+    script.onerror = () => {
+      clearTimeout(timer);
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+    };
 
-    document.body.appendChild(form);
-    form.submit();
-    setTimeout(() => { if (form.parentNode) form.parentNode.removeChild(form); }, 10000);
+    script.src = AppData.SHEETS_URL
+      + '?action=saveImage'
+      + '&orderId='    + encodeURIComponent(payload.orderId  || '')
+      + '&property='   + encodeURIComponent(payload.property || '')
+      + '&savedAt='    + encodeURIComponent(payload.savedAt  || '')
+      + '&imageData='  + encodeURIComponent(imageData)
+      + '&callback='   + cbName;
+
+    document.head.appendChild(script);
   }
 
   /* ── Build Drive archive image ── */
-  // Uses only system fonts + shapes — no drawImage from sketch canvases.
-  // Sketch canvases may be tainted on iOS Safari (cross-origin font),
-  // which would silently corrupt toDataURL. Text-only is guaranteed clean.
+  // Small canvas (400 wide, capped at 600 tall) at low JPEG quality so the
+  // base64 stays under ~8 KB and fits comfortably in a JSONP GET URL.
   function buildOrderImage(payload) {
-    const W = 600, PAD = 24;
+    const W = 400, PAD = 18;
     let y = 0;
 
     let rooms = [];
     try { rooms = JSON.parse(payload.fullData || '{}').rooms || []; } catch (_) {}
 
-    const rowH   = rooms.length * 28;
-    const totalH = Math.min(64 + 110 + rowH + 90 + PAD, 1200);
+    const rowH   = rooms.length * 22;
+    const totalH = Math.min(56 + 90 + rowH + 70 + PAD, 600);
 
     const out = document.createElement('canvas');
     out.width  = W;
-    out.height = Math.max(totalH, 350);
+    out.height = Math.max(totalH, 280);
     const ctx  = out.getContext('2d');
 
     ctx.fillStyle = '#fff';
     ctx.fillRect(0, 0, W, out.height);
 
     ctx.fillStyle = '#8b1a1a';
-    ctx.fillRect(0, 0, W, 64);
+    ctx.fillRect(0, 0, W, 52);
     ctx.fillStyle = '#fff';
-    ctx.font = 'bold 22px Arial, sans-serif';
+    ctx.font = 'bold 16px Arial, sans-serif';
     ctx.textBaseline = 'middle';
-    ctx.fillText('LUXURY HOUSE', PAD, 32);
-    ctx.font = '12px Arial, sans-serif';
+    ctx.fillText('LUXURY HOUSE', PAD, 26);
+    ctx.font = '11px Arial, sans-serif';
     ctx.textAlign = 'right';
-    ctx.fillText(payload.orderId || '', W - PAD, 25);
-    ctx.fillText(payload.savedAt ? new Date(payload.savedAt).toLocaleDateString('en-GB') : '', W - PAD, 42);
+    ctx.fillText(payload.orderId || '', W - PAD, 19);
+    ctx.fillText(payload.savedAt ? new Date(payload.savedAt).toLocaleDateString('en-GB') : '', W - PAD, 34);
     ctx.textAlign = 'left';
 
-    y = 80;
+    y = 64;
     ctx.textBaseline = 'top';
     ctx.fillStyle = '#1a1a1a';
-    ctx.font = 'bold 17px Arial, sans-serif';
-    ctx.fillText(payload.customer || '', PAD, y); y += 24;
-    ctx.font = '13px Arial, sans-serif';
+    ctx.font = 'bold 13px Arial, sans-serif';
+    ctx.fillText(payload.customer || '', PAD, y); y += 18;
+    ctx.font = '11px Arial, sans-serif';
     ctx.fillStyle = '#666';
-    if (payload.property) { ctx.fillText(payload.property, PAD, y); y += 19; }
-    if (payload.phone)    { ctx.fillText(payload.phone,    PAD, y); y += 19; }
-    if (payload.rep)      { ctx.fillText('Rep: ' + payload.rep, PAD, y); y += 19; }
+    if (payload.property) { ctx.fillText(payload.property, PAD, y); y += 15; }
+    if (payload.phone)    { ctx.fillText(payload.phone,    PAD, y); y += 15; }
+    if (payload.rep)      { ctx.fillText('Rep: ' + payload.rep, PAD, y); y += 15; }
 
     y += 6;
     ctx.strokeStyle = '#ddd'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(PAD, y); ctx.lineTo(W - PAD, y); ctx.stroke();
-    y += 14;
+    y += 10;
 
     rooms.forEach((room, i) => {
       ctx.fillStyle = '#333';
-      ctx.font = '13px Arial, sans-serif';
+      ctx.font = '11px Arial, sans-serif';
       const label = (room.name || ('Room ' + (i + 1)))
-        + (room.w && room.h ? '   ' + room.w + ' × ' + room.h + 'mm' : '');
-      ctx.fillText(label, PAD, y); y += 22;
+        + (room.w && room.h ? '  ' + room.w + '×' + room.h + 'mm' : '');
+      ctx.fillText(label, PAD, y); y += 17;
     });
 
+    y += 4;
     ctx.strokeStyle = '#ddd';
     ctx.beginPath(); ctx.moveTo(PAD, y); ctx.lineTo(W - PAD, y); ctx.stroke();
-    y += 14;
+    y += 10;
     ctx.fillStyle = '#1a1a1a';
-    ctx.font = 'bold 16px Arial, sans-serif';
-    if (payload.total)   { ctx.fillText('Total:    £' + payload.total,   PAD, y); y += 22; }
-    ctx.font = '13px Arial, sans-serif';
+    ctx.font = 'bold 13px Arial, sans-serif';
+    if (payload.total)   { ctx.fillText('Total:   £' + payload.total,   PAD, y); y += 18; }
+    ctx.font = '11px Arial, sans-serif';
     ctx.fillStyle = '#666';
-    if (payload.deposit) { ctx.fillText('Deposit:  £' + payload.deposit, PAD, y); y += 19; }
-    if (payload.balance) { ctx.fillText('Balance:  £' + payload.balance, PAD, y); }
+    if (payload.deposit) { ctx.fillText('Deposit: £' + payload.deposit, PAD, y); y += 15; }
+    if (payload.balance) { ctx.fillText('Balance: £' + payload.balance, PAD, y); }
 
     return out;
   }
@@ -280,12 +284,12 @@ const Orders = (() => {
     // Step 1 — text data via JSONP GET (same mechanism as load — works on iOS).
     saveToSheets(payload);
 
-    // Step 2 — Drive image via dedicated iframe POST (best-effort).
+    // Step 2 — Drive image via JSONP GET (same mechanism as text save).
+    // Low quality keeps the base64 small enough to fit in a URL parameter.
     try {
       const img       = buildOrderImage(payload);
-      const imageData = img.toDataURL('image/jpeg', 0.4);
-      saveDriveImage({ orderId, property: payload.property, savedAt: payload.savedAt,
-                       imageOnly: true, imageData });
+      const imageData = img.toDataURL('image/jpeg', 0.15);
+      saveDriveImage(payload, imageData);
     } catch (_) {}
   }
 
