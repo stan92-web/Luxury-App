@@ -5,10 +5,11 @@
 
 const Orders = (() => {
 
-  let allOrders    = [];
+  let allOrders     = [];
   let pendingOrders = JSON.parse(localStorage.getItem('lh_pending_orders') || '[]');
-  let filterStatus = '';
-  let searchTerm   = '';
+  let filterStatus  = '';
+  let searchTerm    = '';
+  const sessionSaved = []; // orders saved this page session — never wiped by JSONP
 
   /* ── Order ID ────────────────────────────── */
   function generateId() {
@@ -297,6 +298,9 @@ const Orders = (() => {
     if (pendingOrders.length > 50) pendingOrders = pendingOrders.slice(0, 50);
     localStorage.setItem('lh_pending_orders', JSON.stringify(pendingOrders));
 
+    // Session-permanent record — survives any JSONP result within this page load
+    sessionSaved.unshift(localOrder);
+
     allOrders = allOrders.filter(o => o['Order ID'] !== orderId);
     allOrders.unshift(localOrder);
     const panel = document.getElementById('orders-overlay');
@@ -352,7 +356,27 @@ const Orders = (() => {
     if (!el) return;
     el.classList.add('open');
     document.body.style.overflow = 'hidden';
-    refresh();
+    showLocal(); // instant — no JSONP race possible
+  }
+
+  // Show orders from local data only (allOrders + pendingOrders + sessionSaved).
+  // Called when the panel first opens so a just-saved order is always visible.
+  // The ↻ Refresh button calls refresh() to sync with Google Sheets.
+  function showLocal() {
+    const list = document.getElementById('orders-list');
+    if (!list) return;
+
+    const merged = allOrders.slice();
+    [...pendingOrders, ...sessionSaved].forEach(o => {
+      if (!merged.some(r => r['Order ID'] === o['Order ID'])) merged.unshift(o);
+    });
+    allOrders = merged;
+
+    if (allOrders.length) {
+      renderList();
+    } else {
+      list.innerHTML = '<div class="orders-empty">No orders on this device yet — tap <strong>↻ Refresh</strong> to load from Google Sheets.</div>';
+    }
   }
 
   function closePanel() {
@@ -405,11 +429,11 @@ const Orders = (() => {
     );
     localStorage.setItem('lh_pending_orders', JSON.stringify(pendingOrders));
 
-    // Merge: sheet rows + unconfirmed pending saves + anything saved this session.
-    // The three-way merge means an order saved in this session can never be wiped
-    // even if Sheets returns stale/empty data and pendingOrders was already cleared.
+    // Merge: Sheets rows + pending saves + this-session saves.
+    // sessionSaved is never cleared by JSONP so orders saved this page load
+    // always survive even if Sheets and pendingOrders both return empty.
     const merged = result.slice();
-    [...pendingOrders, ...allOrders].forEach(o => {
+    [...pendingOrders, ...allOrders, ...sessionSaved].forEach(o => {
       if (!merged.some(r => r['Order ID'] === o['Order ID'])) merged.unshift(o);
     });
     allOrders = merged;
