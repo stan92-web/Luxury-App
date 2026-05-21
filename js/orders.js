@@ -110,6 +110,23 @@ const Orders = (() => {
 
     await saveToSheets(payload);
 
+    // Immediately update the local orders list so the panel shows the new
+    // order without needing a network round-trip to Google Sheets.
+    const localOrder = {
+      'Order ID': orderId,  'Property': payload.property,
+      'Saved At': payload.savedAt, 'Version': String(version),
+      'Status':   'Quote',  'Rep':      payload.rep,
+      'Customer': payload.customer, 'Phone':    payload.phone,
+      'Door No':  payload.doorNo,   'Address':  payload.address,
+      'Rooms':    payload.rooms,    'Total £':  payload.total,
+      'Deposit £': payload.deposit, 'Balance £': payload.balance,
+      'Full Data': payload.fullData
+    };
+    allOrders = allOrders.filter(o => o['Order ID'] !== orderId);
+    allOrders.unshift(localOrder);
+    const panel = document.getElementById('orders-overlay');
+    if (panel && panel.classList.contains('open')) renderList();
+
     if (!AppData.SHEETS_URL) {
       Survey.toast('Add your Google Sheets URL to js/data.js first');
     } else {
@@ -123,8 +140,10 @@ const Orders = (() => {
     return new Promise(resolve => {
       const cbName = 'lhCb' + Date.now();
       const script = document.createElement('script');
+      const timer  = setTimeout(() => { cleanup(); resolve(null); }, 10000);
 
       const cleanup = () => {
+        clearTimeout(timer);
         delete window[cbName];
         if (script.parentNode) script.parentNode.removeChild(script);
       };
@@ -172,7 +191,7 @@ const Orders = (() => {
     list.innerHTML = '<div class="orders-loading">Loading orders…</div>';
     const result = await fetchOrders();
     if (result === null) {
-      list.innerHTML = '<div class="orders-empty">⚠️ Could not load orders — check your internet connection and that the Apps Script is deployed correctly.</div>';
+      list.innerHTML = '<div class="orders-empty">⚠️ Could not load orders from Google Sheets — check your internet connection, then tap <strong>↻ Refresh</strong> to try again.</div>';
       return;
     }
     allOrders = result;
