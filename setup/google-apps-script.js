@@ -130,13 +130,15 @@ function doPost(e) {
 
 // ── Load all orders (called by Orders panel in the app) ──
 function doGet(e) {
+  var cb = e && e.parameter && e.parameter.callback;
   try {
     var ss    = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = ss.getSheetByName('Orders');
     if (!sheet || sheet.getLastRow() < 2) {
+      var emptyJson = JSON.stringify({ orders: [] });
       return ContentService
-        .createTextOutput(JSON.stringify({ orders: [] }))
-        .setMimeType(ContentService.MimeType.JSON);
+        .createTextOutput(cb ? cb + '(' + emptyJson + ')' : emptyJson)
+        .setMimeType(cb ? ContentService.MimeType.JAVASCRIPT : ContentService.MimeType.JSON);
     }
 
     var rows    = sheet.getDataRange().getValues();
@@ -148,14 +150,15 @@ function doGet(e) {
     });
 
     var json = JSON.stringify({ orders: orders });
-    var cb   = e && e.parameter && e.parameter.callback;
     return ContentService
       .createTextOutput(cb ? cb + '(' + json + ')' : json)
       .setMimeType(cb ? ContentService.MimeType.JAVASCRIPT : ContentService.MimeType.JSON);
 
   } catch (err) {
+    Logger.log('doGet error: ' + err.message);
+    var errJson = JSON.stringify({ orders: [], error: err.message });
     return ContentService
-      .createTextOutput(JSON.stringify({ error: err.message }))
-      .setMimeType(ContentService.MimeType.JSON);
+      .createTextOutput(cb ? cb + '(' + errJson + ')' : errJson)
+      .setMimeType(cb ? ContentService.MimeType.JAVASCRIPT : ContentService.MimeType.JSON);
   }
 }

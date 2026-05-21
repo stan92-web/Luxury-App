@@ -188,10 +188,17 @@ const Orders = (() => {
       return;
     }
 
-    list.innerHTML = '<div class="orders-loading">Loading orders…</div>';
+    // Only show the loading spinner when we have no cached orders to display
+    if (!allOrders.length) list.innerHTML = '<div class="orders-loading">Loading orders…</div>';
     const result = await fetchOrders();
     if (result === null) {
-      list.innerHTML = '<div class="orders-empty">⚠️ Could not load orders from Google Sheets — check your internet connection, then tap <strong>↻ Refresh</strong> to try again.</div>';
+      // Fetch failed — keep showing cached orders if we have them
+      if (allOrders.length) {
+        Survey.toast('Could not refresh — showing saved orders');
+        renderList();
+      } else {
+        list.innerHTML = '<div class="orders-empty">⚠️ Could not load orders from Google Sheets — check your internet connection, then tap <strong>↻ Refresh</strong> to try again.</div>';
+      }
       return;
     }
     allOrders = result;
