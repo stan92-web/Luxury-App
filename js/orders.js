@@ -44,6 +44,95 @@ const Orders = (() => {
     } catch (_) { return false; }
   }
 
+  /* ── Build Drive archive image (no html2canvas — works on iOS Safari) ── */
+  function buildOrderImage(payload) {
+    const W = 600, PAD = 24;
+    let y = 0;
+
+    // Parse rooms from fullData; also grab live sketch canvases from DOM
+    let rooms = [];
+    try { rooms = JSON.parse(payload.fullData || '{}').rooms || []; } catch (_) {}
+    const canvasEls = Array.from(document.querySelectorAll('[id^="canvas-"]'));
+
+    const SKETCH_H  = 150;
+    const roomBlock = rooms.length * (26 + (canvasEls.length ? SKETCH_H + 10 : 0) + 16);
+    const totalH    = Math.min(64 + 110 + roomBlock + 90 + PAD, 1600);
+
+    const out = document.createElement('canvas');
+    out.width  = W;
+    out.height = Math.max(totalH, 400);
+    const ctx  = out.getContext('2d');
+
+    // White background
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, W, out.height);
+
+    // Red header bar
+    ctx.fillStyle = '#8b1a1a';
+    ctx.fillRect(0, 0, W, 64);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 22px Arial, sans-serif';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('LUXURY HOUSE', PAD, 32);
+    ctx.font = '12px Arial, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(payload.orderId || '', W - PAD, 25);
+    ctx.fillText(payload.savedAt ? new Date(payload.savedAt).toLocaleDateString('en-GB') : '', W - PAD, 42);
+    ctx.textAlign = 'left';
+
+    y = 80;
+
+    // Customer details
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = '#1a1a1a';
+    ctx.font = 'bold 17px Arial, sans-serif';
+    ctx.fillText(payload.customer || '', PAD, y); y += 24;
+    ctx.font = '13px Arial, sans-serif';
+    ctx.fillStyle = '#666';
+    if (payload.property) { ctx.fillText(payload.property, PAD, y); y += 19; }
+    if (payload.phone)    { ctx.fillText(payload.phone,    PAD, y); y += 19; }
+    if (payload.rep)      { ctx.fillText('Rep: ' + payload.rep, PAD, y); y += 19; }
+
+    // Divider
+    y += 6;
+    ctx.strokeStyle = '#ddd'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(PAD, y); ctx.lineTo(W - PAD, y); ctx.stroke();
+    y += 14;
+
+    // Rooms + sketch canvases
+    rooms.forEach((room, i) => {
+      ctx.fillStyle = '#1a1a1a';
+      ctx.font = 'bold 14px Arial, sans-serif';
+      const label = (room.name || ('Room ' + (i + 1))) +
+                    (room.w && room.h ? '   ' + room.w + ' × ' + room.h + 'mm' : '');
+      ctx.fillText(label, PAD, y); y += 22;
+
+      const rc = canvasEls[i];
+      if (rc && canvasEls.length) {
+        try {
+          const scale = Math.min((W - PAD * 2) / rc.width, SKETCH_H / rc.height, 1);
+          ctx.drawImage(rc, PAD, y, rc.width * scale, rc.height * scale);
+        } catch (_) {}
+        y += SKETCH_H + 10;
+      }
+      y += 6;
+    });
+
+    // Divider + pricing
+    ctx.strokeStyle = '#ddd';
+    ctx.beginPath(); ctx.moveTo(PAD, y); ctx.lineTo(W - PAD, y); ctx.stroke();
+    y += 14;
+    ctx.fillStyle = '#1a1a1a';
+    ctx.font = 'bold 16px Arial, sans-serif';
+    if (payload.total)   { ctx.fillText('Total:    £' + payload.total,   PAD, y); y += 22; }
+    ctx.font = '13px Arial, sans-serif';
+    ctx.fillStyle = '#666';
+    if (payload.deposit) { ctx.fillText('Deposit:  £' + payload.deposit, PAD, y); y += 19; }
+    if (payload.balance) { ctx.fillText('Balance:  £' + payload.balance, PAD, y); }
+
+    return out;
+  }
+
   /* ── Public: save current quote ─────────── */
   async function save() {
     const raw = localStorage.getItem('lh_survey_v1');
@@ -92,21 +181,13 @@ const Orders = (() => {
 
     Survey.toast('Saving…');
 
-    // Best-effort image capture — 6-second timeout so a hanging html2canvas
-    // never blocks the order save. On iOS Safari this may fail silently.
+    // Build a Drive archive image using the Canvas 2D API directly —
+    // html2canvas hangs on iOS Safari (CORS font fetch for Inter stalls).
+    // This approach uses only system fonts and same-origin canvas copies,
+    // so it works instantly on every browser including iOS Safari.
     try {
-      const captured = await Promise.race([
-        Survey.captureSheet(),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 6000))
-      ]);
-      const maxW  = 600;
-      const scale = Math.min(1, maxW / captured.width);
-      const thumb = document.createElement('canvas');
-      thumb.width  = Math.round(captured.width  * scale);
-      thumb.height = Math.round(captured.height * scale);
-      thumb.getContext('2d').drawImage(captured, 0, 0, thumb.width, thumb.height);
-      payload.imageData = thumb.toDataURL('image/jpeg', 0.3);
-    } catch (_) { /* image capture failed or timed out — save without image */ }
+      payload.imageData = buildOrderImage(payload).toDataURL('image/jpeg', 0.85);
+    } catch (_) { /* image build failed — save without image */ }
 
     await saveToSheets(payload);
 
