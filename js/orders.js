@@ -103,7 +103,10 @@ const Orders = (() => {
       thumb.height  = Math.round(canvas.height * scale);
       thumb.getContext('2d').drawImage(canvas, 0, 0, thumb.width, thumb.height);
       payload.imageData = thumb.toDataURL('image/jpeg', 0.3);
-    } catch (_) { /* Drive image optional — don't block save */ }
+      Survey.toast('Image: ' + Math.round(payload.imageData.length / 1024) + 'KB captured');
+    } catch (imgErr) {
+      Survey.toast('Image capture failed: ' + (imgErr.message || imgErr));
+    }
 
     await saveToSheets(payload);
 
