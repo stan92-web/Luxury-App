@@ -405,10 +405,12 @@ const Orders = (() => {
     );
     localStorage.setItem('lh_pending_orders', JSON.stringify(pendingOrders));
 
-    // Merge: sheet rows + any unconfirmed local saves.
+    // Merge: sheet rows + unconfirmed pending saves + anything saved this session.
+    // The three-way merge means an order saved in this session can never be wiped
+    // even if Sheets returns stale/empty data and pendingOrders was already cleared.
     const merged = result.slice();
-    pendingOrders.forEach(p => {
-      if (!merged.some(r => r['Order ID'] === p['Order ID'])) merged.unshift(p);
+    [...pendingOrders, ...allOrders].forEach(o => {
+      if (!merged.some(r => r['Order ID'] === o['Order ID'])) merged.unshift(o);
     });
     allOrders = merged;
     renderList();
