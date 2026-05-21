@@ -31,17 +31,79 @@ const Orders = (() => {
     return v;
   }
 
-  /* ── Save to Google Sheets ───────────────── */
-  // Form submission to a hidden iframe — completely bypasses iOS Safari
-  // CORS/fetch restrictions. Form posts are never blocked cross-origin.
-  // Apps Script receives it as a text/plain body prefixed with "_=".
+  /* ── Save order text data (JSONP GET — same mechanism as load, works on iOS) ── */
+  // Sketch shapes are stripped so the payload stays small enough for a URL.
+  // Room config, measurements, options and pricing are all preserved so orders
+  // can be loaded from any device.
   function saveToSheets(payload) {
     if (!AppData.SHEETS_URL) return;
 
-    let fr = document.getElementById('_lhFr');
+    let fullData = payload.fullData || '';
+    if (fullData) {
+      try {
+        const stripped = JSON.parse(fullData);
+        (stripped.rooms || []).forEach(r => { r.shapes = []; });
+        fullData = JSON.stringify(stripped);
+      } catch (_) { fullData = ''; }
+    }
+
+    const summary = {
+      orderId:  payload.orderId,
+      property: payload.property,
+      version:  payload.version,
+      savedAt:  payload.savedAt,
+      status:   payload.status,
+      rep:      payload.rep,
+      customer: payload.customer,
+      phone:    payload.phone,
+      doorNo:   payload.doorNo,
+      address:  payload.address,
+      rooms:    payload.rooms,
+      total:    payload.total,
+      deposit:  payload.deposit,
+      balance:  payload.balance,
+      fullData
+    };
+
+    const cbName = 'lhSv' + Date.now();
+    const script = document.createElement('script');
+    const timer  = setTimeout(() => {
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+    }, 15000);
+
+    window[cbName] = result => {
+      clearTimeout(timer);
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+      if (result && result.ok) {
+        pendingOrders = pendingOrders.filter(p => p['Order ID'] !== payload.orderId);
+        localStorage.setItem('lh_pending_orders', JSON.stringify(pendingOrders));
+      }
+    };
+
+    script.onerror = () => {
+      clearTimeout(timer);
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+    };
+
+    script.src = AppData.SHEETS_URL
+      + '?action=save'
+      + '&data='     + encodeURIComponent(JSON.stringify(summary))
+      + '&callback=' + cbName;
+
+    document.head.appendChild(script);
+  }
+
+  /* ── Save Drive image (form→iframe POST, separate from text save) ── */
+  function saveDriveImage(imagePayload) {
+    if (!AppData.SHEETS_URL) return;
+
+    let fr = document.getElementById('_lhFrImg');
     if (!fr) {
       fr = document.createElement('iframe');
-      fr.id = fr.name = '_lhFr';
+      fr.id = fr.name = '_lhFrImg';
       fr.style.display = 'none';
       document.body.appendChild(fr);
     }
@@ -49,45 +111,43 @@ const Orders = (() => {
     const form = document.createElement('form');
     form.method  = 'POST';
     form.action  = AppData.SHEETS_URL;
-    form.target  = '_lhFr';
+    form.target  = '_lhFrImg';
     form.enctype = 'text/plain';
     form.style.display = 'none';
 
     const inp = document.createElement('input');
     inp.type  = 'hidden';
     inp.name  = '_';
-    inp.value = JSON.stringify(payload);
+    inp.value = JSON.stringify(imagePayload);
     form.appendChild(inp);
 
     document.body.appendChild(form);
     form.submit();
-    setTimeout(() => { if (form.parentNode) form.parentNode.removeChild(form); }, 5000);
+    setTimeout(() => { if (form.parentNode) form.parentNode.removeChild(form); }, 10000);
   }
 
-  /* ── Build Drive archive image (no html2canvas — works on iOS Safari) ── */
+  /* ── Build Drive archive image ── */
+  // Uses only system fonts + shapes — no drawImage from sketch canvases.
+  // Sketch canvases may be tainted on iOS Safari (cross-origin font),
+  // which would silently corrupt toDataURL. Text-only is guaranteed clean.
   function buildOrderImage(payload) {
     const W = 600, PAD = 24;
     let y = 0;
 
-    // Parse rooms from fullData; also grab live sketch canvases from DOM
     let rooms = [];
     try { rooms = JSON.parse(payload.fullData || '{}').rooms || []; } catch (_) {}
-    const canvasEls = Array.from(document.querySelectorAll('[id^="canvas-"]'));
 
-    const SKETCH_H  = 150;
-    const roomBlock = rooms.length * (26 + (canvasEls.length ? SKETCH_H + 10 : 0) + 16);
-    const totalH    = Math.min(64 + 110 + roomBlock + 90 + PAD, 1600);
+    const rowH   = rooms.length * 28;
+    const totalH = Math.min(64 + 110 + rowH + 90 + PAD, 1200);
 
     const out = document.createElement('canvas');
     out.width  = W;
-    out.height = Math.max(totalH, 400);
+    out.height = Math.max(totalH, 350);
     const ctx  = out.getContext('2d');
 
-    // White background
     ctx.fillStyle = '#fff';
     ctx.fillRect(0, 0, W, out.height);
 
-    // Red header bar
     ctx.fillStyle = '#8b1a1a';
     ctx.fillRect(0, 0, W, 64);
     ctx.fillStyle = '#fff';
@@ -101,8 +161,6 @@ const Orders = (() => {
     ctx.textAlign = 'left';
 
     y = 80;
-
-    // Customer details
     ctx.textBaseline = 'top';
     ctx.fillStyle = '#1a1a1a';
     ctx.font = 'bold 17px Arial, sans-serif';
@@ -113,32 +171,19 @@ const Orders = (() => {
     if (payload.phone)    { ctx.fillText(payload.phone,    PAD, y); y += 19; }
     if (payload.rep)      { ctx.fillText('Rep: ' + payload.rep, PAD, y); y += 19; }
 
-    // Divider
     y += 6;
     ctx.strokeStyle = '#ddd'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(PAD, y); ctx.lineTo(W - PAD, y); ctx.stroke();
     y += 14;
 
-    // Rooms + sketch canvases
     rooms.forEach((room, i) => {
-      ctx.fillStyle = '#1a1a1a';
-      ctx.font = 'bold 14px Arial, sans-serif';
-      const label = (room.name || ('Room ' + (i + 1))) +
-                    (room.w && room.h ? '   ' + room.w + ' × ' + room.h + 'mm' : '');
+      ctx.fillStyle = '#333';
+      ctx.font = '13px Arial, sans-serif';
+      const label = (room.name || ('Room ' + (i + 1)))
+        + (room.w && room.h ? '   ' + room.w + ' × ' + room.h + 'mm' : '');
       ctx.fillText(label, PAD, y); y += 22;
-
-      const rc = canvasEls[i];
-      if (rc && canvasEls.length) {
-        try {
-          const scale = Math.min((W - PAD * 2) / rc.width, SKETCH_H / rc.height, 1);
-          ctx.drawImage(rc, PAD, y, rc.width * scale, rc.height * scale);
-        } catch (_) {}
-        y += SKETCH_H + 10;
-      }
-      y += 6;
     });
 
-    // Divider + pricing
     ctx.strokeStyle = '#ddd';
     ctx.beginPath(); ctx.moveTo(PAD, y); ctx.lineTo(W - PAD, y); ctx.stroke();
     y += 14;
@@ -232,19 +277,15 @@ const Orders = (() => {
       Survey.toast(`Saved — ${orderId} v${version}`);
     }
 
-    // Step 1 — text POST (form+iframe, fire-and-forget).
+    // Step 1 — text data via JSONP GET (same mechanism as load — works on iOS).
     saveToSheets(payload);
 
-    // Step 2 — Drive image, best-effort separate POST.
+    // Step 2 — Drive image via dedicated iframe POST (best-effort).
     try {
-      const img = buildOrderImage(payload);
-      saveToSheets({
-        orderId,
-        property:  payload.property,
-        savedAt:   payload.savedAt,
-        imageOnly: true,
-        imageData: img.toDataURL('image/jpeg', 0.4)
-      });
+      const img       = buildOrderImage(payload);
+      const imageData = img.toDataURL('image/jpeg', 0.4);
+      saveDriveImage({ orderId, property: payload.property, savedAt: payload.savedAt,
+                       imageOnly: true, imageData });
     } catch (_) {}
   }
 

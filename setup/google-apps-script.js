@@ -42,99 +42,63 @@ function setupDrive() {
   Logger.log('Google Drive authorised. Folder ready: ' + folder.getName());
 }
 
-// ── Save an order (called by the app on Save Order) ──
-function doPost(e) {
-  try {
-    // Form submissions (iframe POST) prefix the body with "_="; fetch sends raw JSON.
-    var raw = e.postData.contents;
-    if (raw.substring(0, 2) === '_=') raw = raw.substring(2);
-    var data = JSON.parse(raw);
-
-    // Image-only POST — just save to Google Drive, don't touch the sheet.
-    // The app sends this as a separate lightweight request after the text save.
-    if (data.imageOnly) {
-      var driveMsg = 'no image';
-      if (data.imageData) {
-        try {
-          var folders = DriveApp.getFoldersByName('Luxury House Quotes');
-          var folder  = folders.hasNext() ? folders.next() : DriveApp.createFolder('Luxury House Quotes');
-          var label   = (data.property || data.orderId || 'Quote').replace(/[\/\\:*?"<>|]/g, '-');
-          var date    = (data.savedAt  || '').slice(0, 10);
-          var fname   = label + (date ? ' ' + date : '') + '.jpg';
-          var b64     = data.imageData.replace(/^data:image\/(jpeg|png);base64,/, '');
-          var blob    = Utilities.newBlob(Utilities.base64Decode(b64), 'image/jpeg', fname);
-          folder.createFile(blob);
-          driveMsg = 'saved: ' + fname;
-          Logger.log('Image-only Drive save: ' + fname);
-        } catch (imgErr) {
-          driveMsg = 'error: ' + imgErr.message;
-          Logger.log('Image-only Drive error: ' + imgErr.message);
-        }
-      }
-      return ContentService
-        .createTextOutput(JSON.stringify({ ok: true, imageOnly: true, drive: driveMsg }))
-        .setMimeType(ContentService.MimeType.JSON);
-    }
-
-    var ss    = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName('Orders');
-
-    // Auto-create sheet with headers on first use
-    if (!sheet) {
-      sheet = ss.insertSheet('Orders');
-      sheet.appendRow([
-        'Order ID', 'Property', 'Saved At', 'Version', 'Status',
-        'Rep', 'Customer', 'Phone', 'Door No', 'Address',
-        'Rooms', 'Total £', 'Deposit £', 'Balance £',
-        'Full Data'
-      ]);
-      sheet.setFrozenRows(1);
-      sheet.getRange(1, 1, 1, 15).setFontWeight('bold');
-    }
-
-    var rowBase = [
-      data.orderId   || '',
-      data.property  || '',
-      data.savedAt   || new Date().toISOString(),
-      data.version   || 1,
-      data.status    || 'Quote',
-      data.rep       || '',
-      data.customer  || '',
-      data.phone     || '',
-      data.doorNo    || '',
-      data.address   || '',
-      data.rooms     || '',
-      data.total     || '',
-      data.deposit   || '',
-      data.balance   || ''
-    ];
-
-    // Google Sheets cell limit is 50,000 chars — always save the row,
-    // even if fullData is too large (row saves without it rather than failing).
-    try {
-      sheet.appendRow(rowBase.concat([data.fullData || '']));
-    } catch (rowErr) {
-      Logger.log('fullData too large (' + (data.fullData || '').length + ' chars) — saving row without it');
-      sheet.appendRow(rowBase.concat(['']));
-    }
-
-    Logger.log('Order saved: ' + data.orderId + ' v' + data.version);
-    return ContentService
-      .createTextOutput(JSON.stringify({ ok: true, orderId: data.orderId }))
-      .setMimeType(ContentService.MimeType.JSON);
-
-  } catch (err) {
-    Logger.log('doPost error: ' + err.message);
-    return ContentService
-      .createTextOutput(JSON.stringify({ ok: false, error: err.message }))
-      .setMimeType(ContentService.MimeType.JSON);
+// ── Shared: write one order row to the Orders sheet ──
+function writeOrderRow(data) {
+  var ss    = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Orders');
+  if (!sheet) {
+    sheet = ss.insertSheet('Orders');
+    sheet.appendRow([
+      'Order ID', 'Property', 'Saved At', 'Version', 'Status',
+      'Rep', 'Customer', 'Phone', 'Door No', 'Address',
+      'Rooms', 'Total £', 'Deposit £', 'Balance £', 'Full Data'
+    ]);
+    sheet.setFrozenRows(1);
+    sheet.getRange(1, 1, 1, 15).setFontWeight('bold');
   }
+  var rowBase = [
+    data.orderId   || '',
+    data.property  || '',
+    data.savedAt   || new Date().toISOString(),
+    data.version   || 1,
+    data.status    || 'Quote',
+    data.rep       || '',
+    data.customer  || '',
+    data.phone     || '',
+    data.doorNo    || '',
+    data.address   || '',
+    data.rooms     || '',
+    data.total     || '',
+    data.deposit   || '',
+    data.balance   || ''
+  ];
+  try {
+    sheet.appendRow(rowBase.concat([data.fullData || '']));
+  } catch (rowErr) {
+    Logger.log('fullData too large — saving row without it');
+    sheet.appendRow(rowBase.concat(['']));
+  }
+  Logger.log('Order saved: ' + data.orderId + ' v' + data.version);
 }
 
-// ── Load all orders (called by Orders panel in the app) ──
+// ── Save via GET + JSONP (primary path — iOS Safari compatible) ──
+// ── Drive image via POST (secondary path — form iframe) ─────────
 function doGet(e) {
   var cb = e && e.parameter && e.parameter.callback;
   try {
+
+    // ── Save order via GET ?action=save&data=<JSON>&callback=<cb> ──
+    // This avoids all iOS Safari POST/CORS restrictions.
+    if (e && e.parameter && e.parameter.action === 'save') {
+      var saveData = JSON.parse(e.parameter.data);
+      writeOrderRow(saveData);
+      var saveJson = JSON.stringify({ ok: true, orderId: saveData.orderId });
+      return ContentService
+        .createTextOutput(cb ? cb + '(' + saveJson + ')' : saveJson)
+        .setMimeType(cb ? ContentService.MimeType.JAVASCRIPT : ContentService.MimeType.JSON);
+    }
+
+    // ── Load all orders ──
     var ss    = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = ss.getSheetByName('Orders');
     if (!sheet || sheet.getLastRow() < 2) {
@@ -163,5 +127,52 @@ function doGet(e) {
     return ContentService
       .createTextOutput(cb ? cb + '(' + errJson + ')' : errJson)
       .setMimeType(cb ? ContentService.MimeType.JAVASCRIPT : ContentService.MimeType.JSON);
+  }
+}
+
+// ── Drive image POST (form iframe, imageOnly:true payload) ──
+function doPost(e) {
+  try {
+    // Form submissions prefix the body with "_="; strip it.
+    var raw = e.postData.contents;
+    if (raw.substring(0, 2) === '_=') raw = raw.substring(2);
+    var data = JSON.parse(raw);
+
+    if (!data.imageOnly) {
+      // Fallback: if somehow a plain POST arrives, save it.
+      writeOrderRow(data);
+      return ContentService
+        .createTextOutput(JSON.stringify({ ok: true, orderId: data.orderId }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // Save image to Google Drive.
+    var driveMsg = 'no image';
+    if (data.imageData) {
+      try {
+        var folders = DriveApp.getFoldersByName('Luxury House Quotes');
+        var folder  = folders.hasNext() ? folders.next() : DriveApp.createFolder('Luxury House Quotes');
+        var label   = (data.property || data.orderId || 'Quote').replace(/[\/\\:*?"<>|]/g, '-');
+        var date    = (data.savedAt  || '').slice(0, 10);
+        var fname   = label + (date ? ' ' + date : '') + '.jpg';
+        var b64     = data.imageData.replace(/^data:image\/(jpeg|png);base64,/, '');
+        var blob    = Utilities.newBlob(Utilities.base64Decode(b64), 'image/jpeg', fname);
+        folder.createFile(blob);
+        driveMsg = 'saved: ' + fname;
+        Logger.log('Drive image saved: ' + fname);
+      } catch (imgErr) {
+        driveMsg = 'error: ' + imgErr.message;
+        Logger.log('Drive image error: ' + imgErr.message);
+      }
+    }
+    return ContentService
+      .createTextOutput(JSON.stringify({ ok: true, imageOnly: true, drive: driveMsg }))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch (err) {
+    Logger.log('doPost error: ' + err.message);
+    return ContentService
+      .createTextOutput(JSON.stringify({ ok: false, error: err.message }))
+      .setMimeType(ContentService.MimeType.JSON);
   }
 }
