@@ -92,21 +92,21 @@ const Orders = (() => {
 
     Survey.toast('Saving…');
 
-    // Capture a compressed image of the quote for Google Drive archiving.
-    // Cap at 600px wide to keep payload small enough for the no-cors POST.
+    // Best-effort image capture — 6-second timeout so a hanging html2canvas
+    // never blocks the order save. On iOS Safari this may fail silently.
     try {
-      const canvas  = await Survey.captureSheet();
-      const maxW    = 600;
-      const scale   = Math.min(1, maxW / canvas.width);
-      const thumb   = document.createElement('canvas');
-      thumb.width   = Math.round(canvas.width  * scale);
-      thumb.height  = Math.round(canvas.height * scale);
-      thumb.getContext('2d').drawImage(canvas, 0, 0, thumb.width, thumb.height);
+      const captured = await Promise.race([
+        Survey.captureSheet(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 6000))
+      ]);
+      const maxW  = 600;
+      const scale = Math.min(1, maxW / captured.width);
+      const thumb = document.createElement('canvas');
+      thumb.width  = Math.round(captured.width  * scale);
+      thumb.height = Math.round(captured.height * scale);
+      thumb.getContext('2d').drawImage(captured, 0, 0, thumb.width, thumb.height);
       payload.imageData = thumb.toDataURL('image/jpeg', 0.3);
-      Survey.toast('Image: ' + Math.round(payload.imageData.length / 1024) + 'KB captured');
-    } catch (imgErr) {
-      Survey.toast('Image capture failed: ' + (imgErr.message || imgErr));
-    }
+    } catch (_) { /* image capture failed or timed out — save without image */ }
 
     await saveToSheets(payload);
 

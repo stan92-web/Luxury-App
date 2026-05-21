@@ -409,34 +409,36 @@ const Survey = (() => {
     window.scrollTo(0, 0);
     activeIds.forEach(scaleCanvasForPrint);
     await new Promise(r => requestAnimationFrame(r));
-    const result = await html2canvas(document.getElementById('app-wrap'), {
-      scale:           2,
-      useCORS:         true,
-      backgroundColor: '#ffffff',
-      logging:         false,
-      onclone: (doc) => {
-        doc.querySelectorAll('.no-print').forEach(el => el.remove());
-        doc.getElementById('toast')?.remove();
-        doc.body.style.background = '#fff';
-        doc.getElementById('app-wrap').style.background = '#fff';
-        const hdr = doc.querySelector('header');
-        if (hdr) Object.assign(hdr.style, {
-          background: '#fff', boxShadow: 'none',
-          position: 'relative', height: 'auto',
-          borderBottom: '2px solid #8b1a1a', padding: '8px 22px'
-        });
-        const lm = doc.querySelector('.logo-mark');
-        if (lm) Object.assign(lm.style, { background: '#8b1a1a', width: '32px', height: '32px', fontSize: '12px' });
-        const lt = doc.querySelector('.logo-text');
-        if (lt) lt.style.color = '#1a1a1a';
-        doc.querySelectorAll('.card, .room-card').forEach(el => {
-          el.style.boxShadow = 'none';
-          el.style.border = '1px solid #ddd';
-        });
-      }
-    });
-    activeIds.forEach(restoreCanvas); // always restore — was unreachable after return
-    return result;
+    try {
+      return await html2canvas(document.getElementById('app-wrap'), {
+        scale:           2,
+        useCORS:         true,
+        backgroundColor: '#ffffff',
+        logging:         false,
+        onclone: (doc) => {
+          doc.querySelectorAll('.no-print').forEach(el => el.remove());
+          doc.getElementById('toast')?.remove();
+          doc.body.style.background = '#fff';
+          doc.getElementById('app-wrap').style.background = '#fff';
+          const hdr = doc.querySelector('header');
+          if (hdr) Object.assign(hdr.style, {
+            background: '#fff', boxShadow: 'none',
+            position: 'relative', height: 'auto',
+            borderBottom: '2px solid #8b1a1a', padding: '8px 22px'
+          });
+          const lm = doc.querySelector('.logo-mark');
+          if (lm) Object.assign(lm.style, { background: '#8b1a1a', width: '32px', height: '32px', fontSize: '12px' });
+          const lt = doc.querySelector('.logo-text');
+          if (lt) lt.style.color = '#1a1a1a';
+          doc.querySelectorAll('.card, .room-card').forEach(el => {
+            el.style.boxShadow = 'none';
+            el.style.border = '1px solid #ddd';
+          });
+        }
+      });
+    } finally {
+      activeIds.forEach(restoreCanvas); // always restore even if html2canvas throws
+    }
   }
 
   function triggerDownload(canvas) {
