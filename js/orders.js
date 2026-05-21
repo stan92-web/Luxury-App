@@ -5,7 +5,8 @@
 
 const Orders = (() => {
 
-  let allOrders   = [];
+  let allOrders    = [];
+  let pendingOrders = JSON.parse(localStorage.getItem('lh_pending_orders') || '[]');
   let filterStatus = '';
   let searchTerm   = '';
 
@@ -31,17 +32,22 @@ const Orders = (() => {
   }
 
   /* ── Save to Google Sheets ───────────────── */
-  async function saveToSheets(payload) {
-    if (!AppData.SHEETS_URL) return false;
-    try {
-      await fetch(AppData.SHEETS_URL, {
-        method:  'POST',
-        mode:    'no-cors',
-        headers: { 'Content-Type': 'text/plain' }, // text/plain = simple request, no CORS preflight
-        body:    JSON.stringify(payload)
-      });
-      return true;
-    } catch (_) { return false; }
+  // sendBeacon is the most reliable POST on iPad/mobile — designed for fire-and-forget.
+  // Falls back to no-cors fetch if sendBeacon is unavailable.
+  function saveToSheets(payload) {
+    if (!AppData.SHEETS_URL) return;
+    const body = JSON.stringify(payload);
+    if (navigator.sendBeacon) {
+      try {
+        if (navigator.sendBeacon(AppData.SHEETS_URL, new Blob([body], { type: 'text/plain' }))) return;
+      } catch (_) {}
+    }
+    fetch(AppData.SHEETS_URL, {
+      method:  'POST',
+      mode:    'no-cors',
+      headers: { 'Content-Type': 'text/plain' },
+      body
+    }).catch(() => {});
   }
 
   /* ── Build Drive archive image (no html2canvas — works on iOS Safari) ── */
@@ -181,12 +187,8 @@ const Orders = (() => {
 
     Survey.toast('Saving…');
 
-    // Step 1 — save text + fullData only (small payload, always reliable).
-    // imageData is sent in a SEPARATE second POST so a large image can never
-    // cause the critical order data to fail.
-    await saveToSheets(payload);
-
-    // Update local list and show toast immediately after text save
+    // Build the local order record first — used for both the in-memory list
+    // and the pendingOrders cache so it survives if the POST doesn't reach Sheets.
     const localOrder = {
       'Order ID': orderId,  'Property': payload.property,
       'Saved At': payload.savedAt, 'Version': String(version),
@@ -197,10 +199,21 @@ const Orders = (() => {
       'Deposit £': payload.deposit, 'Balance £': payload.balance,
       'Full Data': payload.fullData
     };
+
+    // Persist locally so the order is ALWAYS visible even if the POST fails
+    // or the next JSONP refresh returns an empty sheet.
+    pendingOrders = pendingOrders.filter(p => p['Order ID'] !== orderId);
+    pendingOrders.unshift(localOrder);
+    if (pendingOrders.length > 50) pendingOrders = pendingOrders.slice(0, 50);
+    localStorage.setItem('lh_pending_orders', JSON.stringify(pendingOrders));
+
     allOrders = allOrders.filter(o => o['Order ID'] !== orderId);
     allOrders.unshift(localOrder);
     const panel = document.getElementById('orders-overlay');
     if (panel && panel.classList.contains('open')) renderList();
+
+    // Step 1 — fire text POST (sendBeacon is fire-and-forget; no await needed).
+    saveToSheets(payload);
 
     if (!AppData.SHEETS_URL) {
       Survey.toast('Add your Google Sheets URL to js/data.js first');
@@ -208,18 +221,17 @@ const Orders = (() => {
       Survey.toast(`Saved — ${orderId} v${version}`);
     }
 
-    // Step 2 — send Drive image in a separate small POST (best-effort).
-    // If this fails the order data above is already safe in Google Sheets.
+    // Step 2 — send Drive image (best-effort, separate POST).
     try {
       const img = buildOrderImage(payload);
-      await saveToSheets({
+      saveToSheets({
         orderId,
         property: payload.property,
         savedAt:  payload.savedAt,
         imageOnly: true,
         imageData: img.toDataURL('image/jpeg', 0.5)
       });
-    } catch (_) { /* Drive image failed — order data already saved */ }
+    } catch (_) {}
   }
 
   /* ── Load orders from Sheets (JSONP — bypasses CORS) ── */
@@ -277,10 +289,16 @@ const Orders = (() => {
     }
 
     // Only show the loading spinner when we have no cached orders to display
-    if (!allOrders.length) list.innerHTML = '<div class="orders-loading">Loading orders…</div>';
+    if (!allOrders.length && !pendingOrders.length) list.innerHTML = '<div class="orders-loading">Loading orders…</div>';
     const result = await fetchOrders();
+
     if (result === null) {
-      // Fetch failed — keep showing cached orders if we have them
+      // Fetch failed (timeout/network error) — keep showing whatever we have
+      const combined = allOrders.slice();
+      pendingOrders.forEach(p => {
+        if (!combined.some(r => r['Order ID'] === p['Order ID'])) combined.unshift(p);
+      });
+      allOrders = combined;
       if (allOrders.length) {
         Survey.toast('Could not refresh — showing saved orders');
         renderList();
@@ -289,7 +307,19 @@ const Orders = (() => {
       }
       return;
     }
-    allOrders = result;
+
+    // Remove orders from pendingOrders that have been confirmed in the sheet
+    pendingOrders = pendingOrders.filter(p =>
+      !result.some(r => r['Order ID'] === p['Order ID'] && Number(r['Version']) >= Number(p['Version']))
+    );
+    localStorage.setItem('lh_pending_orders', JSON.stringify(pendingOrders));
+
+    // Merge: sheet rows + any unconfirmed local saves
+    const merged = result.slice();
+    pendingOrders.forEach(p => {
+      if (!merged.some(r => r['Order ID'] === p['Order ID'])) merged.unshift(p);
+    });
+    allOrders = merged;
     renderList();
   }
 
