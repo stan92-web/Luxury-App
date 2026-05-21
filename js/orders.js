@@ -32,22 +32,23 @@ const Orders = (() => {
   }
 
   /* ── Save to Google Sheets ───────────────── */
-  // sendBeacon is the most reliable POST on iPad/mobile — designed for fire-and-forget.
-  // Falls back to no-cors fetch if sendBeacon is unavailable.
+  // Standard CORS fetch — follows redirects (Apps Script uses a redirect),
+  // reads the response so we know if the row was actually written.
+  // AbortController cuts it off at 8 s so save() never hangs.
   function saveToSheets(payload) {
-    if (!AppData.SHEETS_URL) return;
+    if (!AppData.SHEETS_URL) return Promise.resolve(false);
     const body = JSON.stringify(payload);
-    if (navigator.sendBeacon) {
-      try {
-        if (navigator.sendBeacon(AppData.SHEETS_URL, new Blob([body], { type: 'text/plain' }))) return;
-      } catch (_) {}
-    }
-    fetch(AppData.SHEETS_URL, {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 8000);
+    return fetch(AppData.SHEETS_URL, {
       method:  'POST',
-      mode:    'no-cors',
       headers: { 'Content-Type': 'text/plain' },
-      body
-    }).catch(() => {});
+      body,
+      signal:  ctrl.signal
+    })
+    .then(res => { clearTimeout(t); return res.json(); })
+    .then(j   => j.ok === true)
+    .catch(()  => { clearTimeout(t); return false; });
   }
 
   /* ── Build Drive archive image (no html2canvas — works on iOS Safari) ── */
@@ -212,24 +213,29 @@ const Orders = (() => {
     const panel = document.getElementById('orders-overlay');
     if (panel && panel.classList.contains('open')) renderList();
 
-    // Step 1 — fire text POST (sendBeacon is fire-and-forget; no await needed).
-    saveToSheets(payload);
-
     if (!AppData.SHEETS_URL) {
       Survey.toast('Add your Google Sheets URL to js/data.js first');
     } else {
       Survey.toast(`Saved — ${orderId} v${version}`);
     }
 
-    // Step 2 — send Drive image (best-effort, separate POST).
+    // Step 1 — text POST; on confirmed ok remove from pendingOrders.
+    saveToSheets(payload).then(ok => {
+      if (ok) {
+        pendingOrders = pendingOrders.filter(p => p['Order ID'] !== orderId);
+        localStorage.setItem('lh_pending_orders', JSON.stringify(pendingOrders));
+      }
+    });
+
+    // Step 2 — Drive image, best-effort separate POST.
     try {
       const img = buildOrderImage(payload);
       saveToSheets({
         orderId,
-        property: payload.property,
-        savedAt:  payload.savedAt,
+        property:  payload.property,
+        savedAt:   payload.savedAt,
         imageOnly: true,
-        imageData: img.toDataURL('image/jpeg', 0.5)
+        imageData: img.toDataURL('image/jpeg', 0.4)
       });
     } catch (_) {}
   }
