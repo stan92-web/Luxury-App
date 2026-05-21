@@ -625,7 +625,7 @@ const Sketch = (() => {
     else if (sh.type === 'line') { ctx.beginPath(); ctx.moveTo(sh.x1, sh.y1); ctx.lineTo(sh.x2, sh.y2); ctx.stroke(); }
     else if (sh.type === 'rect') { ctx.beginPath(); ctx.strokeRect(sh.x, sh.y, sh.w, sh.h); }
     else if (sh.type === 'text') {
-      ctx.font         = `700 ${sh.size || 28}px Georgia, serif`;
+      ctx.font         = `700 ${sh.size || 28}px 'Caveat', cursive`;
       ctx.textBaseline = 'alphabetic';
       ctx.shadowColor  = 'rgba(0,0,0,0.12)';
       ctx.shadowBlur   = 2;

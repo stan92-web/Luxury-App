@@ -412,7 +412,6 @@ const Survey = (() => {
     const result = await html2canvas(document.getElementById('app-wrap'), {
       scale:           2,
       useCORS:         true,
-      allowTaint:      true,
       backgroundColor: '#ffffff',
       logging:         false,
       onclone: (doc) => {
