@@ -181,18 +181,12 @@ const Orders = (() => {
 
     Survey.toast('Saving…');
 
-    // Build a Drive archive image using the Canvas 2D API directly —
-    // html2canvas hangs on iOS Safari (CORS font fetch for Inter stalls).
-    // This approach uses only system fonts and same-origin canvas copies,
-    // so it works instantly on every browser including iOS Safari.
-    try {
-      payload.imageData = buildOrderImage(payload).toDataURL('image/jpeg', 0.85);
-    } catch (_) { /* image build failed — save without image */ }
-
+    // Step 1 — save text + fullData only (small payload, always reliable).
+    // imageData is sent in a SEPARATE second POST so a large image can never
+    // cause the critical order data to fail.
     await saveToSheets(payload);
 
-    // Immediately update the local orders list so the panel shows the new
-    // order without needing a network round-trip to Google Sheets.
+    // Update local list and show toast immediately after text save
     const localOrder = {
       'Order ID': orderId,  'Property': payload.property,
       'Saved At': payload.savedAt, 'Version': String(version),
@@ -213,6 +207,19 @@ const Orders = (() => {
     } else {
       Survey.toast(`Saved — ${orderId} v${version}`);
     }
+
+    // Step 2 — send Drive image in a separate small POST (best-effort).
+    // If this fails the order data above is already safe in Google Sheets.
+    try {
+      const img = buildOrderImage(payload);
+      await saveToSheets({
+        orderId,
+        property: payload.property,
+        savedAt:  payload.savedAt,
+        imageOnly: true,
+        imageData: img.toDataURL('image/jpeg', 0.5)
+      });
+    } catch (_) { /* Drive image failed — order data already saved */ }
   }
 
   /* ── Load orders from Sheets (JSONP — bypasses CORS) ── */

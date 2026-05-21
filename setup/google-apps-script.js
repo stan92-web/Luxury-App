@@ -45,6 +45,34 @@ function setupDrive() {
 // ── Save an order (called by the app on Save Order) ──
 function doPost(e) {
   try {
+    var data = JSON.parse(e.postData.contents);
+
+    // Image-only POST — just save to Google Drive, don't touch the sheet.
+    // The app sends this as a separate lightweight request after the text save.
+    if (data.imageOnly) {
+      var driveMsg = 'no image';
+      if (data.imageData) {
+        try {
+          var folders = DriveApp.getFoldersByName('Luxury House Quotes');
+          var folder  = folders.hasNext() ? folders.next() : DriveApp.createFolder('Luxury House Quotes');
+          var label   = (data.property || data.orderId || 'Quote').replace(/[\/\\:*?"<>|]/g, '-');
+          var date    = (data.savedAt  || '').slice(0, 10);
+          var fname   = label + (date ? ' ' + date : '') + '.jpg';
+          var b64     = data.imageData.replace(/^data:image\/(jpeg|png);base64,/, '');
+          var blob    = Utilities.newBlob(Utilities.base64Decode(b64), 'image/jpeg', fname);
+          folder.createFile(blob);
+          driveMsg = 'saved: ' + fname;
+          Logger.log('Image-only Drive save: ' + fname);
+        } catch (imgErr) {
+          driveMsg = 'error: ' + imgErr.message;
+          Logger.log('Image-only Drive error: ' + imgErr.message);
+        }
+      }
+      return ContentService
+        .createTextOutput(JSON.stringify({ ok: true, imageOnly: true, drive: driveMsg }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
     var ss    = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = ss.getSheetByName('Orders');
 
@@ -60,8 +88,6 @@ function doPost(e) {
       sheet.setFrozenRows(1);
       sheet.getRange(1, 1, 1, 15).setFontWeight('bold');
     }
-
-    var data = JSON.parse(e.postData.contents);
 
     var rowBase = [
       data.orderId   || '',
@@ -89,35 +115,9 @@ function doPost(e) {
       sheet.appendRow(rowBase.concat(['']));
     }
 
-    var driveStatus = 'no image in payload';
-
-    // Save quote image to Google Drive → "Luxury House Quotes" folder
-    if (data.imageData) {
-      Logger.log('imageData received, length: ' + data.imageData.length);
-      try {
-        var folders = DriveApp.getFoldersByName('Luxury House Quotes');
-        var folder  = folders.hasNext()
-          ? folders.next()
-          : DriveApp.createFolder('Luxury House Quotes');
-        var label   = (data.property || data.orderId || 'Quote').replace(/[\/\\:*?"<>|]/g, '-');
-        var date    = (data.savedAt || '').slice(0, 10);
-        var fname   = label + (date ? ' ' + date : '') + '.jpg';
-        // Strip data URL prefix — handle both jpeg and png
-        var b64     = data.imageData.replace(/^data:image\/(jpeg|png);base64,/, '');
-        var blob    = Utilities.newBlob(Utilities.base64Decode(b64), 'image/jpeg', fname);
-        folder.createFile(blob);
-        driveStatus = 'saved: ' + fname;
-        Logger.log('Drive image saved: ' + fname);
-      } catch (driveErr) {
-        driveStatus = 'drive error: ' + driveErr.message;
-        Logger.log('Drive error: ' + driveErr.message);
-      }
-    } else {
-      Logger.log('No imageData in payload — postData length: ' + (e.postData ? e.postData.contents.length : 0));
-    }
-
+    Logger.log('Order saved: ' + data.orderId + ' v' + data.version);
     return ContentService
-      .createTextOutput(JSON.stringify({ ok: true, orderId: data.orderId, drive: driveStatus }))
+      .createTextOutput(JSON.stringify({ ok: true, orderId: data.orderId }))
       .setMimeType(ContentService.MimeType.JSON);
 
   } catch (err) {
