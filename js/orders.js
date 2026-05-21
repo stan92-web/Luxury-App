@@ -423,18 +423,20 @@ const Orders = (() => {
       return;
     }
 
-    // Remove confirmed orders from pendingOrders.
-    pendingOrders = pendingOrders.filter(p =>
-      !result.some(r => r['Order ID'] === p['Order ID'] && Number(r['Version']) >= Number(p['Version']))
-    );
-    localStorage.setItem('lh_pending_orders', JSON.stringify(pendingOrders));
-
-    // Merge: Sheets rows + pending saves + this-session saves.
-    // sessionSaved is never cleared by JSONP so orders saved this page load
-    // always survive even if Sheets and pendingOrders both return empty.
+    // Merge Sheets rows with local data.
+    // Rule: start with Sheets rows, then overlay any local version that has
+    // fullData where the Sheets version does not — so orders always remain
+    // loadable / editable even if Sheets stored a stripped copy.
+    // pendingOrders is intentionally NOT cleared here; it stays in localStorage
+    // so orders survive page reloads and remain loadable on this device.
     const merged = result.slice();
-    [...pendingOrders, ...allOrders, ...sessionSaved].forEach(o => {
-      if (!merged.some(r => r['Order ID'] === o['Order ID'])) merged.unshift(o);
+    [...pendingOrders, ...sessionSaved].forEach(o => {
+      const idx = merged.findIndex(r => r['Order ID'] === o['Order ID']);
+      if (idx === -1) {
+        merged.unshift(o); // not in Sheets yet — add it
+      } else if (o['Full Data'] && !merged[idx]['Full Data']) {
+        merged.splice(idx, 1, o); // prefer local copy that has fullData
+      }
     });
     allOrders = merged;
     renderList();
