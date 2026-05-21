@@ -65,6 +65,14 @@ const Orders = (() => {
       fullData
     };
 
+    // Drop fullData if keeping it would push the URL past Google's practical limit.
+    // The row still saves (customer, address, price) — just without the reload payload.
+    const encodedFull    = encodeURIComponent(JSON.stringify(summary));
+    const wouldBeLen     = AppData.SHEETS_URL.length + 15 + encodedFull.length + 30;
+    const encodedData    = wouldBeLen > 7000
+      ? encodeURIComponent(JSON.stringify({ ...summary, fullData: '' }))
+      : encodedFull;
+
     const cbName = 'lhSv' + Date.now();
     const script = document.createElement('script');
     const timer  = setTimeout(() => {
@@ -90,17 +98,40 @@ const Orders = (() => {
 
     script.src = AppData.SHEETS_URL
       + '?action=save'
-      + '&data='     + encodeURIComponent(JSON.stringify(summary))
+      + '&data='     + encodedData
       + '&callback=' + cbName;
 
     document.head.appendChild(script);
   }
 
   /* ── Save Drive image via JSONP GET (same mechanism as text save) ── */
+  // imageData is converted to base64url (RFC 4648 §5) before being placed in
+  // the URL.  Base64url uses only A-Z a-z 0-9 - _ characters, all of which are
+  // already URL-safe, so encodeURIComponent is not needed and the payload stays
+  // the same size as the base64 string (no 3× inflation).
+  // Apps Script decodes it back to standard base64 before Utilities.base64Decode.
   function saveDriveImage(payload, imageData) {
     if (!AppData.SHEETS_URL || !imageData) return;
 
+    // Strip the data-URI prefix and convert to base64url
+    const b64url = imageData
+      .replace(/^data:image\/(jpeg|png);base64,/, '')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+
+    const url = AppData.SHEETS_URL
+      + '?action=saveImage'
+      + '&orderId='   + encodeURIComponent(payload.orderId  || '')
+      + '&property='  + encodeURIComponent(payload.property || '')
+      + '&savedAt='   + encodeURIComponent(payload.savedAt  || '')
+      + '&imageData=' + b64url
+      + '&callback='; // callback name appended below
+
+    // Bail out if the final URL would exceed Google Apps Script's practical limit
     const cbName = 'lhImg' + Date.now();
+    if ((url + cbName).length > 7000) return;
+
     const script = document.createElement('script');
     const timer  = setTimeout(() => {
       delete window[cbName];
@@ -119,85 +150,78 @@ const Orders = (() => {
       if (script.parentNode) script.parentNode.removeChild(script);
     };
 
-    script.src = AppData.SHEETS_URL
-      + '?action=saveImage'
-      + '&orderId='    + encodeURIComponent(payload.orderId  || '')
-      + '&property='   + encodeURIComponent(payload.property || '')
-      + '&savedAt='    + encodeURIComponent(payload.savedAt  || '')
-      + '&imageData='  + encodeURIComponent(imageData)
-      + '&callback='   + cbName;
-
+    script.src = url + cbName;
     document.head.appendChild(script);
   }
 
   /* ── Build Drive archive image ── */
-  // Small canvas (400 wide, capped at 600 tall) at low JPEG quality so the
-  // base64 stays under ~8 KB and fits comfortably in a JSONP GET URL.
+  // Tiny canvas so the base64url string fits in a JSONP GET URL (<7 KB).
+  // 180 px wide keeps typical output around 1–2 KB base64 at 4% JPEG quality.
   function buildOrderImage(payload) {
-    const W = 400, PAD = 18;
+    const W = 180, PAD = 10;
     let y = 0;
 
     let rooms = [];
     try { rooms = JSON.parse(payload.fullData || '{}').rooms || []; } catch (_) {}
 
-    const rowH   = rooms.length * 22;
-    const totalH = Math.min(56 + 90 + rowH + 70 + PAD, 600);
+    const rowH   = rooms.length * 16;
+    const totalH = Math.min(40 + 70 + rowH + 50 + PAD, 300);
 
     const out = document.createElement('canvas');
     out.width  = W;
-    out.height = Math.max(totalH, 280);
+    out.height = Math.max(totalH, 160);
     const ctx  = out.getContext('2d');
 
     ctx.fillStyle = '#fff';
     ctx.fillRect(0, 0, W, out.height);
 
     ctx.fillStyle = '#8b1a1a';
-    ctx.fillRect(0, 0, W, 52);
+    ctx.fillRect(0, 0, W, 36);
     ctx.fillStyle = '#fff';
-    ctx.font = 'bold 16px Arial, sans-serif';
+    ctx.font = 'bold 10px Arial, sans-serif';
     ctx.textBaseline = 'middle';
-    ctx.fillText('LUXURY HOUSE', PAD, 26);
-    ctx.font = '11px Arial, sans-serif';
+    ctx.fillText('LUXURY HOUSE', PAD, 18);
+    ctx.font = '8px Arial, sans-serif';
     ctx.textAlign = 'right';
-    ctx.fillText(payload.orderId || '', W - PAD, 19);
-    ctx.fillText(payload.savedAt ? new Date(payload.savedAt).toLocaleDateString('en-GB') : '', W - PAD, 34);
+    ctx.fillText(payload.orderId || '', W - PAD, 13);
+    ctx.fillText(payload.savedAt ? new Date(payload.savedAt).toLocaleDateString('en-GB') : '', W - PAD, 24);
     ctx.textAlign = 'left';
 
-    y = 64;
+    y = 44;
     ctx.textBaseline = 'top';
     ctx.fillStyle = '#1a1a1a';
-    ctx.font = 'bold 13px Arial, sans-serif';
-    ctx.fillText(payload.customer || '', PAD, y); y += 18;
-    ctx.font = '11px Arial, sans-serif';
+    ctx.font = 'bold 9px Arial, sans-serif';
+    ctx.fillText(payload.customer || '', PAD, y); y += 13;
+    ctx.font = '8px Arial, sans-serif';
     ctx.fillStyle = '#666';
-    if (payload.property) { ctx.fillText(payload.property, PAD, y); y += 15; }
-    if (payload.phone)    { ctx.fillText(payload.phone,    PAD, y); y += 15; }
-    if (payload.rep)      { ctx.fillText('Rep: ' + payload.rep, PAD, y); y += 15; }
+    if (payload.property) { ctx.fillText(payload.property, PAD, y); y += 11; }
+    if (payload.phone)    { ctx.fillText(payload.phone,    PAD, y); y += 11; }
+    if (payload.rep)      { ctx.fillText('Rep: ' + payload.rep, PAD, y); y += 11; }
 
-    y += 6;
+    y += 4;
     ctx.strokeStyle = '#ddd'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(PAD, y); ctx.lineTo(W - PAD, y); ctx.stroke();
-    y += 10;
+    y += 7;
 
     rooms.forEach((room, i) => {
       ctx.fillStyle = '#333';
-      ctx.font = '11px Arial, sans-serif';
+      ctx.font = '8px Arial, sans-serif';
       const label = (room.name || ('Room ' + (i + 1)))
         + (room.w && room.h ? '  ' + room.w + '×' + room.h + 'mm' : '');
-      ctx.fillText(label, PAD, y); y += 17;
+      ctx.fillText(label, PAD, y); y += 12;
     });
 
-    y += 4;
+    y += 3;
     ctx.strokeStyle = '#ddd';
     ctx.beginPath(); ctx.moveTo(PAD, y); ctx.lineTo(W - PAD, y); ctx.stroke();
-    y += 10;
+    y += 7;
     ctx.fillStyle = '#1a1a1a';
-    ctx.font = 'bold 13px Arial, sans-serif';
-    if (payload.total)   { ctx.fillText('Total:   £' + payload.total,   PAD, y); y += 18; }
-    ctx.font = '11px Arial, sans-serif';
+    ctx.font = 'bold 9px Arial, sans-serif';
+    if (payload.total)   { ctx.fillText('Total: £' + payload.total,   PAD, y); y += 13; }
+    ctx.font = '8px Arial, sans-serif';
     ctx.fillStyle = '#666';
-    if (payload.deposit) { ctx.fillText('Deposit: £' + payload.deposit, PAD, y); y += 15; }
-    if (payload.balance) { ctx.fillText('Balance: £' + payload.balance, PAD, y); }
+    if (payload.deposit) { ctx.fillText('Dep: £' + payload.deposit, PAD, y); y += 11; }
+    if (payload.balance) { ctx.fillText('Bal: £' + payload.balance, PAD, y); }
 
     return out;
   }
@@ -285,10 +309,11 @@ const Orders = (() => {
     saveToSheets(payload);
 
     // Step 2 — Drive image via JSONP GET (same mechanism as text save).
-    // Low quality keeps the base64 small enough to fit in a URL parameter.
+    // 4% JPEG quality + 180 px canvas keeps base64url under ~2 KB so the
+    // full URL stays within Google Apps Script's practical limit.
     try {
       const img       = buildOrderImage(payload);
-      const imageData = img.toDataURL('image/jpeg', 0.15);
+      const imageData = img.toDataURL('image/jpeg', 0.04);
       saveDriveImage(payload, imageData);
     } catch (_) {}
   }

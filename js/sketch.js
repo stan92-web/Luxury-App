@@ -47,6 +47,7 @@ const Sketch = (() => {
   function init(id) {
     const canvas = document.getElementById(`canvas-${id}`);
     if (!canvas) return;
+    if (states[id]) return; // already initialised — don't double-bind events
 
     states[id] = {
       tool:            'pen',
@@ -76,6 +77,14 @@ const Sketch = (() => {
     canvas.addEventListener('pointermove',   e => { e.preventDefault(); onMove(id, e); });
     canvas.addEventListener('pointerup',     e => { e.preventDefault(); onUp(id, e); });
     canvas.addEventListener('pointercancel', e => onCancel(id, e));
+
+    // PC fallback: if setPointerCapture fails, pointerup outside the canvas
+    // won't fire on the canvas — this window listener rescues that case so the
+    // drawing state never gets permanently stuck.
+    window.addEventListener('pointerup', e => {
+      const s = states[id];
+      if (s && s.drawing && e.pointerId === s.activePointerId) onUp(id, e);
+    });
 
     resizeCanvas(id);
   }
@@ -210,7 +219,7 @@ const Sketch = (() => {
     if (!s || !canvas || s.activePointerId !== null) return;
 
     s.activePointerId = e.pointerId;
-    canvas.setPointerCapture(e.pointerId);
+    try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
 
     let p = getPos(canvas, e);
 
@@ -912,6 +921,11 @@ const Sketch = (() => {
     canvas.addEventListener('pointermove',   e => { e.preventDefault(); fsMove(e); });
     canvas.addEventListener('pointerup',     e => { e.preventDefault(); fsUp(e); });
     canvas.addEventListener('pointercancel', e => fsCancelDraw(e));
+
+    // PC fallback for fullscreen canvas — same reason as per-room canvas
+    window.addEventListener('pointerup', e => {
+      if (fs.drawing && e.pointerId === fs.activePointerId) fsUp(e);
+    });
   }
 
   function fsGetPos(e) {
@@ -924,7 +938,7 @@ const Sketch = (() => {
     if (fs.activePointerId !== null) return;
     const canvas = document.getElementById('fs-canvas');
     fs.activePointerId = e.pointerId;
-    canvas.setPointerCapture(e.pointerId);
+    try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
 
     let p = fsGetPos(e);
     if (fs.tool === 'text') { fsShowTextInput(p.x, p.y); fs.activePointerId = null; return; }

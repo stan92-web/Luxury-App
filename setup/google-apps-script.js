@@ -110,7 +110,12 @@ function doGet(e) {
         try {
           var folders = DriveApp.getFoldersByName('Luxury House Quotes');
           var folder  = folders.hasNext() ? folders.next() : DriveApp.createFolder('Luxury House Quotes');
-          var b64     = imgData.replace(/^data:image\/(jpeg|png);base64,/, '');
+          // Accept both standard base64 and base64url (- → +, _ → /, re-pad)
+          var b64 = imgData
+            .replace(/^data:image\/(jpeg|png);base64,/, '')
+            .replace(/-/g, '+')
+            .replace(/_/g, '/');
+          while (b64.length % 4) b64 += '=';
           var blob    = Utilities.newBlob(Utilities.base64Decode(b64), 'image/jpeg', fname);
           folder.createFile(blob);
           driveMsg = 'saved: ' + fname;
