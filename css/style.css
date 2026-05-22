@@ -821,11 +821,11 @@ textarea:focus {
   .logo-sub  { color: #999 !important; font-size: 6px !important; }
   .header-date { display: block !important; color: #555 !important; font-size: 8px !important; }
 
-  /* ══ CUSTOMER STRIP — Row 1 bold (Name, Door, Date) · Row 2 slim · Row 3 full-width address ══ */
+  /* ══ CUSTOMER STRIP — Row 1: full-width address · Row 2: name / door / date / phone ══ */
   #customer-card {
     display: grid !important;
     grid-template-columns: auto auto 1fr auto !important;
-    grid-template-rows: auto auto auto !important;
+    grid-template-rows: auto auto !important;
     column-gap: 14px !important; row-gap: 3px !important;
     padding: 4px 8px 5px !important; margin: 0 0 3px !important;
     background: #fff !important; border: none !important;
@@ -837,52 +837,40 @@ textarea:focus {
   #customer-card .form-grid  { display: contents !important; }
   #customer-card .form-group { display: flex !important; flex-direction: column !important; gap: 1px !important; }
 
-  /* Primary row — Name · Door No · Date */
-  .form-group:has(#c-first)     { grid-row: 1 !important; grid-column: 1 !important; }
-  .form-group:has(#c-door)      { grid-row: 1 !important; grid-column: 2 !important; }
-  .form-group:has(#survey-date) { grid-row: 1 !important; grid-column: 3 !important; }
+  /* Row 1 — Address spans full width (most important line on the quote) */
+  .form-group:has(#c-address) { grid-row: 1 !important; grid-column: 1 / -1 !important; }
 
-  /* Secondary row — Last · Phone · Rep · Source */
-  .form-group:has(#c-last)   { grid-row: 2 !important; grid-column: 1 !important; }
-  .form-group:has(#c-phone)  { grid-row: 2 !important; grid-column: 2 !important; }
-  .form-group:has(#surveyor) { grid-row: 2 !important; grid-column: 3 !important; }
-  .form-group:has(#c-source) { grid-row: 2 !important; grid-column: 4 !important; }
+  /* Row 2 — compact detail strip: First Name · Door · Date · Phone */
+  .form-group:has(#c-first)     { grid-row: 2 !important; grid-column: 1 !important; }
+  .form-group:has(#c-door)      { grid-row: 2 !important; grid-column: 2 !important; }
+  .form-group:has(#survey-date) { grid-row: 2 !important; grid-column: 3 !important; }
+  .form-group:has(#c-phone)     { grid-row: 2 !important; grid-column: 4 !important; }
 
-  /* Address — full-width row, prominent */
-  .form-group:has(#c-address) { grid-row: 3 !important; grid-column: 1 / -1 !important; }
-
-  /* Hidden */
+  /* Hidden in print */
+  .form-group:has(#c-last),
   .form-group:has(#c-email),
-  .form-group:has(#c-notes) { display: none !important; }
+  .form-group:has(#c-notes),
+  .form-group:has(#surveyor),
+  .form-group:has(#c-source) { display: none !important; }
 
   /* Labels */
   #customer-card label { font-size: 6px !important; text-transform: uppercase !important; letter-spacing: 0.5px !important; font-weight: bold !important; }
+  .form-group:has(#c-address) label { color: #aaa !important; }
   .form-group:has(#c-first) label,
   .form-group:has(#c-door) label,
-  .form-group:has(#c-address) label,
-  .form-group:has(#survey-date) label { color: #aaa !important; }
-  .form-group:has(#c-last) label,
-  .form-group:has(#c-phone) label,
-  .form-group:has(#surveyor) label,
-  .form-group:has(#c-source) label   { font-size: 5px !important; color: #bbb !important; }
+  .form-group:has(#survey-date) label,
+  .form-group:has(#c-phone) label   { font-size: 5px !important; color: #bbb !important; }
 
-  /* Primary inputs — BOLD BIG */
-  .form-group:has(#c-first) input,
-  .form-group:has(#c-door) input,
-  .form-group:has(#survey-date) input {
-    font-size: 16px !important; font-weight: 900 !important; color: #111 !important;
-  }
-  /* Address — larger and more prominent */
+  /* Address — full-width headline */
   .form-group:has(#c-address) input {
     font-size: 18px !important; font-weight: 900 !important; color: #111 !important;
   }
-
-  /* Secondary inputs */
-  .form-group:has(#c-last) input,
-  .form-group:has(#c-phone) input,
-  .form-group:has(#surveyor) input,
-  .form-group:has(#c-source) select {
-    font-size: 8px !important; color: #555 !important; font-weight: normal !important;
+  /* Row 2 inputs — compact secondary */
+  .form-group:has(#c-first) input,
+  .form-group:has(#c-door) input,
+  .form-group:has(#survey-date) input,
+  .form-group:has(#c-phone) input {
+    font-size: 8px !important; color: #555 !important; font-weight: bold !important;
   }
 
   /* ══ ROOM CARD ══ */
