@@ -129,29 +129,65 @@ const Orders = (() => {
     } catch (_) {}
   }
 
-  /* ── Build Drive archive image — full-page html2canvas screenshot ── */
-  // Captures the full app-wrap at 1.5× scale so text and sketches are crisp.
-  // Saved as 80% JPEG (~100–400 KB), uploaded via the Netlify proxy POST
-  // (no URL length constraint).
+  /* ── Build Drive archive image — print-layout screenshot ── */
+  // Reproduces the PDF the user sees on iPad by:
+  //   1. Extracting all @media print CSS rules from the loaded stylesheet
+  //   2. Triggering prepareForPrint (scales sketch canvases to high-res, 150 mm)
+  //   3. Injecting those rules into the html2canvas clone so it renders the print layout
+  //   4. Capturing at 2× scale with 92% JPEG quality
+  //   5. Restoring canvases via afterprint event
   async function buildOrderImage() {
     if (!window.html2canvas) return null;
     try {
-      const target = document.getElementById('app-wrap');
-      if (!target) return null;
-      const prevScroll = window.scrollY;
+      // Collect all rules that live inside @media print { … }
+      let printCSS = '';
+      try {
+        for (const sheet of document.styleSheets) {
+          try {
+            for (const rule of sheet.cssRules) {
+              const media = rule.conditionText ?? rule.media?.mediaText ?? '';
+              if (media.trim() === 'print') {
+                printCSS += Array.from(rule.cssRules || []).map(r => r.cssText).join('\n') + '\n';
+              }
+            }
+          } catch (_) {} // cross-origin sheets throw SecurityError
+        }
+      } catch (_) {}
+
+      // Trigger print preparation: scales sketch canvases to 300-dpi equivalent
+      window.dispatchEvent(new Event('beforeprint'));
+      await new Promise(r => requestAnimationFrame(r));
+      await new Promise(r => requestAnimationFrame(r));
+
       window.scrollTo(0, 0);
-      const canvas = await window.html2canvas(target, {
-        scale:        1.5,
-        useCORS:      true,
-        logging:      false,
-        backgroundColor: '#ffffff',
-        scrollX:      0,
-        scrollY:      0,
-        width:        target.offsetWidth,
-        height:       Math.min(target.scrollHeight, 2800),
-      });
-      window.scrollTo(0, prevScroll);
-      return canvas.toDataURL('image/jpeg', 0.80);
+
+      let shot;
+      try {
+        shot = await window.html2canvas(document.getElementById('app-wrap'), {
+          scale:           2,
+          useCORS:         true,
+          backgroundColor: '#ffffff',
+          logging:         false,
+          onclone: (doc) => {
+            // Inject print CSS — makes the clone look exactly like the PDF layout
+            if (printCSS) {
+              const s = doc.createElement('style');
+              s.textContent = printCSS;
+              doc.head.appendChild(s);
+            }
+            // Strip screen-only chrome
+            doc.querySelectorAll('.no-print').forEach(el => el.remove());
+            doc.getElementById('toast')?.remove();
+            doc.body.style.background = '#fff';
+            const wrap = doc.getElementById('app-wrap');
+            if (wrap) wrap.style.background = '#fff';
+          }
+        });
+      } finally {
+        window.dispatchEvent(new Event('afterprint')); // always restore canvases
+      }
+
+      return shot.toDataURL('image/jpeg', 0.92);
     } catch (_) { return null; }
   }
 
