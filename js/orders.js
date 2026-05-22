@@ -108,126 +108,51 @@ const Orders = (() => {
     document.head.appendChild(script);
   }
 
-  /* ── Save Drive image via JSONP GET (same mechanism as text save) ── */
-  // imageData is converted to base64url (RFC 4648 §5) before being placed in
-  // the URL.  Base64url uses only A-Z a-z 0-9 - _ characters, all of which are
-  // already URL-safe, so encodeURIComponent is not needed and the payload stays
-  // the same size as the base64 string (no 3× inflation).
-  // Apps Script decodes it back to standard base64 before Utilities.base64Decode.
-  function saveDriveImage(payload, imageData) {
-    if (!AppData.SHEETS_URL || !imageData) return;
-
-    // Strip the data-URI prefix and convert to base64url
-    const b64url = imageData
-      .replace(/^data:image\/(jpeg|png);base64,/, '')
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=+$/, '');
-
-    const url = AppData.SHEETS_URL
-      + '?action=saveImage'
-      + '&orderId='   + encodeURIComponent(payload.orderId  || '')
-      + '&property='  + encodeURIComponent(payload.property || '')
-      + '&savedAt='   + encodeURIComponent(payload.savedAt  || '')
-      + '&imageData=' + b64url
-      + '&callback='; // callback name appended below
-
-    // Bail out if the final URL would exceed Google Apps Script's practical limit
-    const cbName = 'lhImg' + Date.now();
-    if ((url + cbName).length > 7000) return;
-
-    const script = document.createElement('script');
-    const timer  = setTimeout(() => {
-      delete window[cbName];
-      if (script.parentNode) script.parentNode.removeChild(script);
-    }, 20000);
-
-    window[cbName] = () => {
-      clearTimeout(timer);
-      delete window[cbName];
-      if (script.parentNode) script.parentNode.removeChild(script);
-    };
-
-    script.onerror = () => {
-      clearTimeout(timer);
-      delete window[cbName];
-      if (script.parentNode) script.parentNode.removeChild(script);
-    };
-
-    script.src = url + cbName;
-    document.head.appendChild(script);
+  /* ── Save Drive image via Netlify function proxy (full quality POST) ── */
+  // The browser POSTs to /.netlify/functions/drive-image (same-origin, no CORS
+  // issues, no URL length limit).  That function forwards the payload to Google
+  // Apps Script, manually following the 302 redirect so the POST body is not lost.
+  async function saveDriveImage(payload, imageData) {
+    if (!imageData) return;
+    try {
+      await fetch('/.netlify/functions/drive-image', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          imageOnly: true,
+          imageData,
+          orderId:  payload.orderId  || '',
+          property: payload.property || '',
+          savedAt:  payload.savedAt  || '',
+        }),
+      });
+    } catch (_) {}
   }
 
-  /* ── Build Drive archive image ── */
-  // Tiny canvas so the base64url string fits in a JSONP GET URL (<7 KB).
-  // 180 px wide keeps typical output around 1–2 KB base64 at 4% JPEG quality.
-  function buildOrderImage(payload) {
-    const W = 180, PAD = 10;
-    let y = 0;
-
-    let rooms = [];
-    try { rooms = JSON.parse(payload.fullData || '{}').rooms || []; } catch (_) {}
-
-    const rowH   = rooms.length * 16;
-    const totalH = Math.min(40 + 70 + rowH + 50 + PAD, 300);
-
-    const out = document.createElement('canvas');
-    out.width  = W;
-    out.height = Math.max(totalH, 160);
-    const ctx  = out.getContext('2d');
-
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, W, out.height);
-
-    ctx.fillStyle = '#8b1a1a';
-    ctx.fillRect(0, 0, W, 36);
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 10px Arial, sans-serif';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('LUXURY HOUSE', PAD, 18);
-    ctx.font = '8px Arial, sans-serif';
-    ctx.textAlign = 'right';
-    ctx.fillText(payload.orderId || '', W - PAD, 13);
-    ctx.fillText(payload.savedAt ? new Date(payload.savedAt).toLocaleDateString('en-GB') : '', W - PAD, 24);
-    ctx.textAlign = 'left';
-
-    y = 44;
-    ctx.textBaseline = 'top';
-    ctx.fillStyle = '#1a1a1a';
-    ctx.font = 'bold 9px Arial, sans-serif';
-    ctx.fillText(payload.customer || '', PAD, y); y += 13;
-    ctx.font = '8px Arial, sans-serif';
-    ctx.fillStyle = '#666';
-    if (payload.property) { ctx.fillText(payload.property, PAD, y); y += 11; }
-    if (payload.phone)    { ctx.fillText(payload.phone,    PAD, y); y += 11; }
-    if (payload.rep)      { ctx.fillText('Rep: ' + payload.rep, PAD, y); y += 11; }
-
-    y += 4;
-    ctx.strokeStyle = '#ddd'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(PAD, y); ctx.lineTo(W - PAD, y); ctx.stroke();
-    y += 7;
-
-    rooms.forEach((room, i) => {
-      ctx.fillStyle = '#333';
-      ctx.font = '8px Arial, sans-serif';
-      const label = (room.name || ('Room ' + (i + 1)))
-        + (room.w && room.h ? '  ' + room.w + '×' + room.h + 'mm' : '');
-      ctx.fillText(label, PAD, y); y += 12;
-    });
-
-    y += 3;
-    ctx.strokeStyle = '#ddd';
-    ctx.beginPath(); ctx.moveTo(PAD, y); ctx.lineTo(W - PAD, y); ctx.stroke();
-    y += 7;
-    ctx.fillStyle = '#1a1a1a';
-    ctx.font = 'bold 9px Arial, sans-serif';
-    if (payload.total)   { ctx.fillText('Total: £' + payload.total,   PAD, y); y += 13; }
-    ctx.font = '8px Arial, sans-serif';
-    ctx.fillStyle = '#666';
-    if (payload.deposit) { ctx.fillText('Dep: £' + payload.deposit, PAD, y); y += 11; }
-    if (payload.balance) { ctx.fillText('Bal: £' + payload.balance, PAD, y); }
-
-    return out;
+  /* ── Build Drive archive image — full-page html2canvas screenshot ── */
+  // Captures the full app-wrap at 1.5× scale so text and sketches are crisp.
+  // Saved as 80% JPEG (~100–400 KB), uploaded via the Netlify proxy POST
+  // (no URL length constraint).
+  async function buildOrderImage() {
+    if (!window.html2canvas) return null;
+    try {
+      const target = document.getElementById('app-wrap');
+      if (!target) return null;
+      const prevScroll = window.scrollY;
+      window.scrollTo(0, 0);
+      const canvas = await window.html2canvas(target, {
+        scale:        1.5,
+        useCORS:      true,
+        logging:      false,
+        backgroundColor: '#ffffff',
+        scrollX:      0,
+        scrollY:      0,
+        width:        target.offsetWidth,
+        height:       Math.min(target.scrollHeight, 2800),
+      });
+      window.scrollTo(0, prevScroll);
+      return canvas.toDataURL('image/jpeg', 0.80);
+    } catch (_) { return null; }
   }
 
   /* ── Public: save current quote ─────────── */
@@ -315,14 +240,11 @@ const Orders = (() => {
     // Step 1 — text data via JSONP GET (same mechanism as load — works on iOS).
     saveToSheets(payload);
 
-    // Step 2 — Drive image via JSONP GET (same mechanism as text save).
-    // 4% JPEG quality + 180 px canvas keeps base64url under ~2 KB so the
-    // full URL stays within Google Apps Script's practical limit.
-    try {
-      const img       = buildOrderImage(payload);
-      const imageData = img.toDataURL('image/jpeg', 0.04);
-      saveDriveImage(payload, imageData);
-    } catch (_) {}
+    // Step 2 — Drive image via Netlify proxy (full-quality html2canvas screenshot).
+    // Fire-and-forget: runs after save toast so it doesn't block the UI.
+    buildOrderImage().then(imageData => {
+      if (imageData) saveDriveImage(payload, imageData);
+    }).catch(() => {});
   }
 
   /* ── Load orders from Sheets (JSONP — bypasses CORS) ── */
