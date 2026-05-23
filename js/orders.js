@@ -314,7 +314,19 @@ const Orders = (() => {
     if (!el) return;
     el.classList.add('open');
     document.body.style.overflow = 'hidden';
-    showLocal(); // instant — no JSONP race possible
+    showLocal(); // instant — local orders appear immediately
+
+    // Auto-fetch from Sheets so orders saved on other devices show up
+    // without the user needing to tap ↻ Refresh.
+    // 2-second delay lets any in-progress save reach Apps Script first,
+    // preventing the race where a fresh fetch returns before the write commits.
+    if (AppData.SHEETS_URL) {
+      setTimeout(() => {
+        if (document.getElementById('orders-overlay')?.classList.contains('open')) {
+          silentRefresh();
+        }
+      }, 2000);
+    }
   }
 
   // Show orders from local data only (allOrders + pendingOrders + sessionSaved).
@@ -334,6 +346,28 @@ const Orders = (() => {
       renderList();
     } else {
       list.innerHTML = '<div class="orders-empty">No orders on this device yet — tap <strong>↻ Refresh</strong> to load from Google Sheets.</div>';
+    }
+  }
+
+  // Background Sheets sync triggered automatically on panel open.
+  // Merges remote orders into the list without any loading spinner.
+  // Identical merge rules to refresh() — local copies with fullData always win.
+  async function silentRefresh() {
+    if (!AppData.SHEETS_URL) return;
+    const result = await fetchOrders();
+    if (result === null) return; // network error — keep local data as-is
+    const merged = result.slice();
+    [...pendingOrders, ...sessionSaved].forEach(o => {
+      const idx = merged.findIndex(r => r['Order ID'] === o['Order ID']);
+      if (idx === -1) {
+        merged.unshift(o);
+      } else if (o['Full Data'] && !merged[idx]['Full Data']) {
+        merged.splice(idx, 1, o);
+      }
+    });
+    allOrders = merged;
+    if (document.getElementById('orders-overlay')?.classList.contains('open')) {
+      renderList();
     }
   }
 
