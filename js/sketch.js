@@ -492,6 +492,60 @@ const Sketch = (() => {
   }
 
   /* SKETCH:TEXTINPUT ────────────────────────────── */
+  function insertMeasurement(id, label, prefix) {
+    const canvas = document.getElementById('canvas-' + id);
+    const wrap   = document.getElementById('canvas-wrap-' + id);
+    const s      = states[id];
+    if (!canvas || !wrap || !s) return;
+
+    const wd = s.shapes.find(sh => sh.type === 'wardrobe4door');
+    let px = canvas.width * 0.08, py = canvas.height * 0.6;
+    if (wd) {
+      if      (prefix === 'W') { px = wd.x + wd.w * 0.2; py = wd.y + wd.h + 22; }
+      else if (prefix === 'H') { px = wd.x + wd.w + 18;  py = wd.y + wd.h * 0.45; }
+      else                     { px = wd.x + wd.w * 0.2; py = Math.max(20, wd.y - 18); }
+    }
+    px = Math.max(4,  Math.min(px, canvas.width  - 10));
+    py = Math.max(20, Math.min(py, canvas.height - 8));
+
+    const inp = document.createElement('input');
+    inp.type      = 'number';
+    inp.inputMode = 'decimal';
+    inp.placeholder = label + ' (mm)';
+    inp.style.cssText = `
+      position:absolute;
+      left:${Math.max(0, Math.min(px, wrap.clientWidth - 200))}px;
+      top:${Math.max(0, py - 16)}px;
+      background:rgba(255,255,255,0.98); color:#1a1a1a;
+      border:2px solid #1a6eb5; border-radius:6px;
+      font-size:22px; padding:4px 10px; z-index:10;
+      min-width:170px; max-width:280px;
+      font-family:'Inter', sans-serif; font-weight:700;
+      box-shadow:0 4px 16px rgba(0,0,0,0.22);
+    `;
+    wrap.appendChild(inp);
+    inp.focus();
+
+    let committed = false;
+    function commit() {
+      if (committed) return;
+      committed = true;
+      const val = inp.value.trim();
+      inp.remove();
+      if (!val) return;
+      saveHistory(id);
+      s.shapes.push({ type: 'text', x: px, y: py, text: label + ': ' + val + 'mm', colour: '#1a6eb5', size: 18, font: 'bold' });
+      s.selectedIdx = s.shapes.length - 1;
+      redraw(id);
+      notifyChange();
+    }
+    inp.addEventListener('blur', commit);
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { inp.removeEventListener('blur', commit); commit(); }
+      if (e.key === 'Escape') { inp.remove(); committed = true; }
+    });
+  }
+
   function showTextInput(id, x, y) {
     const wrap = document.getElementById(`canvas-wrap-${id}`);
     if (!wrap) return;
@@ -673,15 +727,20 @@ const Sketch = (() => {
       }
     }
     else if (sh.type === 'text') {
-      ctx.font         = `700 ${sh.size || 28}px 'Caveat', cursive`;
+      const isBold = sh.font === 'bold';
+      ctx.font = isBold
+        ? `700 ${sh.size || 22}px 'Inter', sans-serif`
+        : `700 ${sh.size || 28}px 'Caveat', cursive`;
       ctx.textBaseline = 'alphabetic';
-      ctx.shadowColor  = 'rgba(0,0,0,0.12)';
-      ctx.shadowBlur   = 2;
-      ctx.shadowOffsetX = 0.5;
-      ctx.shadowOffsetY = 0.5;
+      if (!isBold) {
+        ctx.shadowColor   = 'rgba(0,0,0,0.12)';
+        ctx.shadowBlur    = 2;
+        ctx.shadowOffsetX = 0.5;
+        ctx.shadowOffsetY = 0.5;
+      }
       ctx.fillText(sh.text, sh.x, sh.y);
-      ctx.shadowColor  = 'transparent';
-      ctx.shadowBlur   = 0;
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur  = 0;
     }
   }
 
@@ -1323,7 +1382,7 @@ const Sketch = (() => {
       inp.remove();
       if (!val) return;
       fsSaveHistory();
-      fs.shapes.push({ type: 'text', x: px, y: py, text: prefix + ': ' + val + 'mm', colour: '#1a6eb5', size: 36 });
+      fs.shapes.push({ type: 'text', x: px, y: py, text: label + ': ' + val + 'mm', colour: '#1a6eb5', size: 26, font: 'bold' });
       fs.selectedIdx = fs.shapes.length - 1;
       fsRedraw();
     }
@@ -1385,7 +1444,7 @@ const Sketch = (() => {
   /* SKETCH:EXPORTS */
   return {
     init, resizeCanvas, redraw, redrawScaled, setTool, setColour, toggleStraighten, undo, clear, deleteSelected, getShapes, setShapes,
-    insertTemplate, fsTpl, fsAddSection, fsRemoveSection, fsSaveDim, fsInsertMeasurement,
+    insertTemplate, insertMeasurement, fsTpl, fsAddSection, fsRemoveSection, fsSaveDim, fsInsertMeasurement,
     openFullscreen, closeFullscreen,
     fsSetTool, fsSetColour, fsUndo, fsClear, fsDeleteSelected, fsToggleStraighten
   };
