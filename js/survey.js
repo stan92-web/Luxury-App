@@ -102,10 +102,6 @@ const Survey = (() => {
         },
         rooms: activeIds.map(id => ({
           name:   gv(`rname-${id}`),
-          w:      gv(`dw-${id}`),
-          h:      gv(`dh-${id}`),
-          d:      gv(`dd-${id}`),
-          doors:     gv(`du-${id}`),
           doorType:  gv(`dtype-${id}`),
           doorStyle: gv(`dstyle-${id}`),
           doorSlide: gv(`dslide-${id}`),
@@ -145,10 +141,6 @@ const Survey = (() => {
       (data.rooms || []).forEach(r => {
         const id = addRoom();
         sv(`rname-${id}`, r.name);
-        sv(`dw-${id}`,    r.w);
-        sv(`dh-${id}`,    r.h);
-        sv(`dd-${id}`,    r.d);
-        sv(`du-${id}`,     r.doors);
         sv(`dstyle-${id}`, r.doorStyle);
         sv(`dslide-${id}`, r.doorSlide);
         sv(`dframe-${id}`, r.doorFrame);
@@ -214,29 +206,6 @@ const Survey = (() => {
       </div>
 
       <div class="room-card-body">
-
-        <div class="dims-row">
-          <div class="dim-group">
-            <label>Width</label>
-            <input type="number" class="dim-input" id="dw-${id}" placeholder="—" inputmode="decimal">
-            <div class="dim-unit">mm</div>
-          </div>
-          <div class="dim-group">
-            <label>Height</label>
-            <input type="number" class="dim-input" id="dh-${id}" placeholder="—" inputmode="decimal">
-            <div class="dim-unit">mm</div>
-          </div>
-          <div class="dim-group">
-            <label>Depth</label>
-            <input type="number" class="dim-input" id="dd-${id}" placeholder="—" inputmode="decimal">
-            <div class="dim-unit">mm</div>
-          </div>
-          <div class="dim-group">
-            <label>Doors</label>
-            <input type="number" class="dim-input" id="du-${id}" placeholder="—" min="1" max="20" inputmode="numeric">
-            <div class="dim-unit">units</div>
-          </div>
-        </div>
 
         <input type="hidden" id="dtype-${id}" value="hinged">
 

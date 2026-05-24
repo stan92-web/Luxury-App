@@ -181,6 +181,16 @@
       <span class="sk-section-count" id="fs-section-count" style="display:none">4</span>
       <button class="sk-btn sk-section-btn" id="fs-section-add" onclick="Sketch.fsAddSection()" title="Add one section" style="display:none">+ Door</button>
       <button class="sk-btn sk-del-btn" onclick="Sketch.fsDeleteSelected()" title="Delete selected shape">✕ Del</button>
+      <div class="sk-sep" id="fs-dim-sep" style="display:none"></div>
+      <div class="sk-dim-group" id="fs-dims" style="display:none">
+        <span class="sk-dim-label">W</span>
+        <input type="number" id="fs-dim-w" class="sk-dim-input" placeholder="mm" inputmode="decimal" oninput="Sketch.fsSaveDim('w')">
+        <span class="sk-dim-label">H</span>
+        <input type="number" id="fs-dim-h" class="sk-dim-input" placeholder="mm" inputmode="decimal" oninput="Sketch.fsSaveDim('h')">
+        <span class="sk-dim-label">D</span>
+        <input type="number" id="fs-dim-d" class="sk-dim-input" placeholder="mm" inputmode="decimal" oninput="Sketch.fsSaveDim('d')">
+        <span class="sk-dim-label" style="color:#aaa;font-size:10px">mm</span>
+      </div>
     </div>
     <button class="btn btn-red fs-done-btn" onclick="Sketch.closeFullscreen()">✓ Done</button>
   </div>
@@ -214,10 +224,10 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-<script src="js/auth.js?v=37"></script>
-<script src="js/data.js?v=37"></script>
-<script src="js/sketch.js?v=37"></script>
-<script src="js/survey.js?v=37"></script>
-<script src="js/orders.js?v=37"></script>
+<script src="js/auth.js?v=38"></script>
+<script src="js/data.js?v=38"></script>
+<script src="js/sketch.js?v=38"></script>
+<script src="js/survey.js?v=38"></script>
+<script src="js/orders.js?v=38"></script>
 </body>
 </html>

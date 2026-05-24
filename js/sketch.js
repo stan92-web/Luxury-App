@@ -656,6 +656,21 @@ const Sketch = (() => {
         const cx = x + i * colW;
         ctx.beginPath(); ctx.moveTo(cx + colW * 0.12, hangY); ctx.lineTo(cx + colW * 0.88, hangY); ctx.stroke();
       }
+      // Dimension annotation (W/H/D) — shown if values are stored on the shape
+      if (sh.dimW || sh.dimH || sh.dimD) {
+        const parts = [];
+        if (sh.dimW) parts.push('W: ' + sh.dimW + 'mm');
+        if (sh.dimH) parts.push('H: ' + sh.dimH + 'mm');
+        if (sh.dimD) parts.push('D: ' + sh.dimD + 'mm');
+        const fSize = Math.max(11, Math.min(22, Math.round(h * 0.055)));
+        ctx.save();
+        ctx.font         = `700 ${fSize}px 'Inter', sans-serif`;
+        ctx.fillStyle    = '#1a6eb5';
+        ctx.textAlign    = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(parts.join('   '), x + w / 2, y + h - 5);
+        ctx.restore();
+      }
     }
     else if (sh.type === 'text') {
       ctx.font         = `700 ${sh.size || 28}px 'Caveat', cursive`;
@@ -1021,7 +1036,7 @@ const Sketch = (() => {
 
     if (fs.resizeHandle && fs.selectedIdx >= 0 && fs.selectedIdx < fs.shapes.length) {
       const sh = fs.shapes[fs.selectedIdx];
-      if (sh.type === 'rect') {
+      if (sh.type === 'rect' || sh.type === 'wardrobe4door') {
         const piv = fs.resizePivot;
         sh.x = Math.min(p.x, piv.x); sh.y = Math.min(p.y, piv.y);
         sh.w = Math.abs(p.x - piv.x); sh.h = Math.abs(p.y - piv.y);
@@ -1131,30 +1146,9 @@ const Sketch = (() => {
   function fsShowTextInput(x, y) {
     const area   = document.getElementById('fs-canvas-area');
     const canvas = document.getElementById('fs-canvas');
-
-    // Measurement mode: wardrobe selected + text tool → auto-position Width / Height / Depth
-    const selSh     = fs.selectedIdx >= 0 && fs.selectedIdx < fs.shapes.length ? fs.shapes[fs.selectedIdx] : null;
-    const measuring = selSh?.type === 'wardrobe4door';
-    const turn      = fs.measureTurn;
-    const labels    = ['Width', 'Height', 'Depth'];
-
-    if (measuring && turn < 3) {
-      const sh = selSh;
-      if (turn === 0) {
-        x = sh.x + sh.w * 0.3;
-        y = sh.y + sh.h + 50;
-      } else if (turn === 1) {
-        x = sh.x + sh.w + 30;
-        y = sh.y + sh.h * 0.5;
-      } else {
-        x = sh.x + sh.w * 0.3;
-        y = Math.max(30, sh.y - 20);
-      }
-    }
-
-    const inp = document.createElement('input');
-    inp.type  = 'text';
-    inp.placeholder = measuring && turn < 3 ? labels[turn] + '…' : 'Write or type here…';
+    const inp    = document.createElement('input');
+    inp.type     = 'text';
+    inp.placeholder = 'Write or type here…';
     inp.style.cssText = `
       position:absolute; left:${Math.min(x, (canvas ? canvas.clientWidth : 800) - 300)}px; top:${Math.max(0, y - 20)}px;
       background:rgba(255,255,255,0.98); color:#1a1a1a;
@@ -1166,46 +1160,24 @@ const Sketch = (() => {
     `;
     area.appendChild(inp);
     inp.focus();
-
     let committed = false;
     function commit() {
       if (committed) return;
       committed = true;
       const text = inp.value.trim();
       inp.remove();
-      if (!text) {
-        if (measuring) { fs.measureTurn = 0; fsSetTool('select'); }
-        return;
-      }
+      if (!text) return;
       fsSaveHistory();
       fs.shapes.push({ type: 'text', x, y, text, colour: fs.colour, size: 36 });
-      const newIdx = fs.shapes.length - 1;
-
-      if (measuring) {
-        fs.measureTurn = turn + 1;
-        if (fs.measureTurn >= 3) {
-          fs.measureTurn = 0;
-          fs.selectedIdx = newIdx;
-          fsRedraw();
-          fsSetTool('select');
-        } else {
-          fsRedraw();
-          setTimeout(() => { if (fs.tool === 'text') fsShowTextInput(0, 0); }, 120);
-        }
-      } else {
-        fs.measureTurn = turn + 1;
-        fs.selectedIdx = newIdx;
-        fsRedraw();
-        if (fs.measureTurn >= 3) {
-          fs.measureTurn = 0;
-          fsSetTool('select');
-        }
-      }
+      fs.selectedIdx = fs.shapes.length - 1;
+      fs.measureTurn++;
+      fsRedraw();
+      if (fs.measureTurn >= 3) { fs.measureTurn = 0; fsSetTool('select'); }
     }
     inp.addEventListener('blur', commit);
     inp.addEventListener('keydown', e => {
       if (e.key === 'Enter') { inp.removeEventListener('blur', commit); commit(); }
-      if (e.key === 'Escape') { inp.remove(); committed = true; if (measuring) fs.measureTurn = 0; }
+      if (e.key === 'Escape') { inp.remove(); committed = true; }
     });
   }
 
@@ -1248,7 +1220,7 @@ const Sketch = (() => {
 
     if (fs.snapCandidate) drawSnapIndicator(ctx, fs.snapCandidate);
 
-    // Show/hide section +/- buttons based on whether a wardrobe is selected
+    // Show/hide section +/- buttons and W/H/D dim inputs based on wardrobe selection
     const selSh = fs.selectedIdx >= 0 && fs.selectedIdx < fs.shapes.length ? fs.shapes[fs.selectedIdx] : null;
     const showSec = selSh?.type === 'wardrobe4door';
     ['fs-section-sep','fs-section-rem','fs-section-count','fs-section-add'].forEach(id => {
@@ -1258,6 +1230,18 @@ const Sketch = (() => {
     if (showSec) {
       const countEl = document.getElementById('fs-section-count');
       if (countEl) countEl.textContent = selSh.cols || 4;
+    }
+    ['fs-dim-sep','fs-dims'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = showSec ? '' : 'none';
+    });
+    if (showSec) {
+      const iw = document.getElementById('fs-dim-w');
+      const ih = document.getElementById('fs-dim-h');
+      const id = document.getElementById('fs-dim-d');
+      if (iw && iw !== document.activeElement) iw.value = selSh.dimW || '';
+      if (ih && ih !== document.activeElement) ih.value = selSh.dimH || '';
+      if (id && id !== document.activeElement) id.value = selSh.dimD || '';
     }
   }
 
@@ -1293,10 +1277,21 @@ const Sketch = (() => {
     fsRedraw();
   }
 
+  function fsSaveDim(axis) {
+    if (fs.selectedIdx < 0 || fs.selectedIdx >= fs.shapes.length) return;
+    const sh = fs.shapes[fs.selectedIdx];
+    if (sh.type !== 'wardrobe4door') return;
+    const val = document.getElementById('fs-dim-' + axis)?.value?.trim() || '';
+    if (axis === 'w') sh.dimW = val;
+    else if (axis === 'h') sh.dimH = val;
+    else if (axis === 'd') sh.dimD = val;
+    fsRedraw();
+  }
+
   function fsSetTool(tool) {
     if (tool !== 'text') fs.measureTurn = 0;
     fs.tool = tool;
-    if (tool !== 'rect' && tool !== 'select' && tool !== 'text') fs.selectedIdx = -1;
+    if (tool !== 'rect' && tool !== 'select') fs.selectedIdx = -1;
     ['select','pen','line','rect','text','eraser'].forEach(t => {
       const btn = document.getElementById(`fs-tool-${t}`);
       if (btn) btn.classList.toggle('active', t === tool);
@@ -1344,7 +1339,7 @@ const Sketch = (() => {
   /* SKETCH:EXPORTS */
   return {
     init, resizeCanvas, redraw, redrawScaled, setTool, setColour, toggleStraighten, undo, clear, deleteSelected, getShapes, setShapes,
-    insertTemplate, fsTpl, fsAddSection, fsRemoveSection,
+    insertTemplate, fsTpl, fsAddSection, fsRemoveSection, fsSaveDim,
     openFullscreen, closeFullscreen,
     fsSetTool, fsSetColour, fsUndo, fsClear, fsDeleteSelected, fsToggleStraighten
   };

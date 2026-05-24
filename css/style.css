@@ -451,6 +451,10 @@ textarea:focus {
 .sk-del-btn        { background: #c0392b !important; color: #fff !important; border-color: #c0392b !important; }
 .sk-section-btn    { background: #1a6eb5 !important; color: #fff !important; border-color: #1a6eb5 !important; }
 .sk-section-count  { font-size: 13px; font-weight: 700; color: #1a6eb5; padding: 0 4px; align-self: center; min-width: 18px; text-align: center; }
+.sk-dim-group   { display: flex; align-items: center; gap: 5px; }
+.sk-dim-label   { font-size: 12px; font-weight: 700; color: #ccc; }
+.sk-dim-input   { width: 66px; height: 30px; border: 1.5px solid #555; border-radius: 4px; background: #2a2a2a; color: #fff; font-size: 13px; font-weight: 600; padding: 0 5px; text-align: center; }
+.sk-dim-input:focus { outline: none; border-color: #1a6eb5; }
 
 /* CSS:SKETCHDIMS */
 .sketch-dims {
