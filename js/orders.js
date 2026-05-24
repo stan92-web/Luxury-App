@@ -32,87 +32,28 @@ const Orders = (() => {
     return v;
   }
 
-  /* ── Save order text data (JSONP GET — same mechanism as load, works on iOS) ── */
-  // Sketch shapes are stripped so the payload stays small enough for a URL.
-  // Room config, measurements, options and pricing are all preserved so orders
-  // can be loaded from any device.
-  function saveToSheets(payload) {
+  /* ── Save order text data (POST via Netlify proxy — no URL length limit) ── */
+  // Full payload including fullData is sent via fetch POST to the same-origin
+  // Netlify function, which forwards it to Apps Script doPost → writeOrderRow.
+  // This replaces the old JSONP GET which had to strip fullData for large quotes,
+  // making those orders appear as "resave to enable loading" on other devices.
+  async function saveToSheets(payload) {
     if (!AppData.SHEETS_URL) return;
-
-    let fullData = payload.fullData || '';
-    if (fullData) {
-      try {
-        const stripped = JSON.parse(fullData);
-        (stripped.rooms || []).forEach(r => { r.shapes = []; });
-        fullData = JSON.stringify(stripped);
-      } catch (_) { fullData = ''; }
-    }
-
-    const summary = {
-      orderId:  payload.orderId,
-      property: payload.property,
-      version:  payload.version,
-      savedAt:  payload.savedAt,
-      status:   payload.status,
-      rep:      payload.rep,
-      customer: payload.customer,
-      phone:    payload.phone,
-      doorNo:   payload.doorNo,
-      address:  payload.address,
-      rooms:    payload.rooms,
-      total:    payload.total,
-      deposit:  payload.deposit,
-      balance:  payload.balance,
-      fullData
-    };
-
-    // Drop fullData if keeping it would push the URL past Google's practical limit.
-    // The row still saves (customer, address, price) — just without the reload payload.
-    const encodedFull    = encodeURIComponent(JSON.stringify(summary));
-    const wouldBeLen     = AppData.SHEETS_URL.length + 15 + encodedFull.length + 30;
-    const encodedData    = wouldBeLen > 7000
-      ? encodeURIComponent(JSON.stringify({ ...summary, fullData: '' }))
-      : encodedFull;
-
-    const cbName = 'lhSv' + Date.now();
-    const script = document.createElement('script');
-    const timer  = setTimeout(() => {
-      delete window[cbName];
-      if (script.parentNode) script.parentNode.removeChild(script);
-      Survey.toast('⚠ Sheets save timed out — order is saved on this device');
-    }, 15000);
-
-    window[cbName] = result => {
-      clearTimeout(timer);
-      delete window[cbName];
-      if (script.parentNode) script.parentNode.removeChild(script);
-      if (result && result.ok) {
+    try {
+      const res  = await fetch('/.netlify/functions/save-order', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (data && data.ok) {
         Survey.toast('☁ Sheets saved ✓');
       } else {
-        Survey.toast('⚠ Sheets save failed — order is saved on this device');
+        Survey.toast('⚠ Sheets save failed — order saved on this device');
       }
-      // Do NOT remove from pendingOrders here.  There is a race condition where
-      // fetchOrders can run concurrently (Apps Script parallel executions) and
-      // read the sheet before this write is committed.  If we cleared
-      // pendingOrders now and that concurrent read returned an empty sheet,
-      // allOrders would be wiped and the order would disappear.
-      // pendingOrders is cleaned up by refresh() once fetchOrders confirms the
-      // row is present — which happens on the next panel open.
-    };
-
-    script.onerror = () => {
-      clearTimeout(timer);
-      delete window[cbName];
-      if (script.parentNode) script.parentNode.removeChild(script);
-      Survey.toast('⚠ Sheets save failed — order is saved on this device');
-    };
-
-    script.src = AppData.SHEETS_URL
-      + '?action=save'
-      + '&data='     + encodedData
-      + '&callback=' + cbName;
-
-    document.head.appendChild(script);
+    } catch (_) {
+      Survey.toast('⚠ Sheets save failed — order saved on this device');
+    }
   }
 
   /* ── Save Drive image via Netlify function proxy (full quality POST) ── */
