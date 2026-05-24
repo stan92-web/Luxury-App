@@ -85,13 +85,12 @@ const Survey = (() => {
     try {
       const data = {
         customer: {
-          first:    gv('c-first'),
+          name:     gv('c-first'),
           last:     gv('c-last'),
           phone:    gv('c-phone'),
           email:    gv('c-email'),
           address:  gv('c-address'),
-          door:     gv('c-door'),
-          source:   gv('c-source'),
+source:   gv('c-source'),
           surveyor: gv('surveyor'),
           date:     gv('survey-date'),
           notes:    gv('c-notes')
@@ -122,12 +121,11 @@ const Survey = (() => {
       const data = JSON.parse(raw);
 
       const c = data.customer || {};
-      sv('c-first',    c.first);
+      sv('c-first',    c.name || c.first);
       sv('c-last',     c.last);
       sv('c-phone',    c.phone);
       sv('c-email',    c.email);
       sv('c-address',  c.address);
-      sv('c-door',     c.door);
       sv('c-source',   c.source);
       sv('surveyor',   c.surveyor);
       sv('survey-date', c.date);
@@ -297,9 +295,8 @@ const Survey = (() => {
 
   function print() {
     save();
-    const door  = gv('c-door');
     const addr  = gv('c-address');
-    const label = [door, addr].filter(Boolean).join(' ');
+    const label = addr || gv('c-first') || '';
     const prevTitle = document.title;
     if (label) document.title = label;
     prepareForPrint();

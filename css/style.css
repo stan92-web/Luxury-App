@@ -149,11 +149,34 @@ main { max-width: 860px; margin: 0 auto; padding: 24px 16px 60px; }
 
 /* CSS:FORMS */
 .form-grid  { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-/* Required customer fields: Name | Phone | Door (narrow) then Address full-width */
-.customer-req-grid { grid-template-columns: 1fr 1fr 90px; }
+/* Required customer fields: Name | Phone — then Address spans full width */
+.customer-req-grid { grid-template-columns: 1fr 1fr; gap: 20px; }
 .customer-address-group { grid-column: 1 / -1; }
 .form-group { display: flex; flex-direction: column; gap: 4px; }
 .form-group.full { grid-column: 1 / -1; }
+
+/* Required customer fields — larger, bolder inputs */
+.cust-req-field label {
+  font-size: 11px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--red-mid);
+  font-weight: 800;
+}
+.cust-req-field input {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  padding: 11px 0 10px;
+  border-bottom: 2px solid var(--border);
+}
+.cust-req-field input:focus {
+  border-bottom-color: var(--red);
+}
+.customer-address-group input {
+  font-size: 18px;
+  font-weight: 600;
+}
 
 label {
   font-size: 10px;
@@ -828,10 +851,10 @@ textarea:focus {
   .logo-sub  { color: #999 !important; font-size: 6px !important; }
   .header-date { display: block !important; color: #555 !important; font-size: 8px !important; }
 
-  /* ══ CUSTOMER STRIP — Row 1: full-width address · Row 2: name / door / date / phone ══ */
+  /* ══ CUSTOMER STRIP — Row 1: full-width address · Row 2: name / date / phone ══ */
   #customer-card {
     display: grid !important;
-    grid-template-columns: auto auto 1fr auto !important;
+    grid-template-columns: 1fr auto auto !important;
     grid-template-rows: auto auto !important;
     column-gap: 14px !important; row-gap: 3px !important;
     padding: 4px 8px 5px !important; margin: 0 0 3px !important;
@@ -840,18 +863,17 @@ textarea:focus {
     border-radius: 0 !important; box-shadow: none !important;
   }
   #customer-card .card-title { display: none !important; }
-  .sub-heading { display: none !important; }
+  .sub-heading, .cust-optional-heading { display: none !important; }
   #customer-card .form-grid  { display: contents !important; }
   #customer-card .form-group { display: flex !important; flex-direction: column !important; gap: 1px !important; }
 
-  /* Row 1 — Address spans full width (most important line on the quote) */
+  /* Row 1 — Address spans full width */
   .form-group:has(#c-address) { grid-row: 1 !important; grid-column: 1 / -1 !important; }
 
-  /* Row 2 — compact detail strip: First Name · Door · Date · Phone */
+  /* Row 2 — compact strip: Name · Date · Phone */
   .form-group:has(#c-first)     { grid-row: 2 !important; grid-column: 1 !important; }
-  .form-group:has(#c-door)      { grid-row: 2 !important; grid-column: 2 !important; }
-  .form-group:has(#survey-date) { grid-row: 2 !important; grid-column: 3 !important; }
-  .form-group:has(#c-phone)     { grid-row: 2 !important; grid-column: 4 !important; }
+  .form-group:has(#survey-date) { grid-row: 2 !important; grid-column: 2 !important; }
+  .form-group:has(#c-phone)     { grid-row: 2 !important; grid-column: 3 !important; }
 
   /* Hidden in print */
   .form-group:has(#c-last),
@@ -861,12 +883,7 @@ textarea:focus {
   .form-group:has(#c-source) { display: none !important; }
 
   /* Labels */
-  #customer-card label { font-size: 6px !important; text-transform: uppercase !important; letter-spacing: 0.5px !important; font-weight: bold !important; }
-  .form-group:has(#c-address) label { color: #aaa !important; }
-  .form-group:has(#c-first) label,
-  .form-group:has(#c-door) label,
-  .form-group:has(#survey-date) label,
-  .form-group:has(#c-phone) label   { font-size: 5px !important; color: #bbb !important; }
+  #customer-card label { font-size: 6px !important; text-transform: uppercase !important; letter-spacing: 0.5px !important; font-weight: bold !important; color: #aaa !important; }
 
   /* Address — full-width headline */
   .form-group:has(#c-address) input {
@@ -874,7 +891,6 @@ textarea:focus {
   }
   /* Row 2 inputs — compact secondary */
   .form-group:has(#c-first) input,
-  .form-group:has(#c-door) input,
   .form-group:has(#survey-date) input,
   .form-group:has(#c-phone) input {
     font-size: 8px !important; color: #555 !important; font-weight: bold !important;
