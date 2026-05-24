@@ -79,12 +79,18 @@ const Orders = (() => {
     const timer  = setTimeout(() => {
       delete window[cbName];
       if (script.parentNode) script.parentNode.removeChild(script);
+      Survey.toast('⚠ Sheets save timed out — order is saved on this device');
     }, 15000);
 
     window[cbName] = result => {
       clearTimeout(timer);
       delete window[cbName];
       if (script.parentNode) script.parentNode.removeChild(script);
+      if (result && result.ok) {
+        Survey.toast('☁ Sheets saved ✓');
+      } else {
+        Survey.toast('⚠ Sheets save failed — order is saved on this device');
+      }
       // Do NOT remove from pendingOrders here.  There is a race condition where
       // fetchOrders can run concurrently (Apps Script parallel executions) and
       // read the sheet before this write is committed.  If we cleared
@@ -98,6 +104,7 @@ const Orders = (() => {
       clearTimeout(timer);
       delete window[cbName];
       if (script.parentNode) script.parentNode.removeChild(script);
+      Survey.toast('⚠ Sheets save failed — order is saved on this device');
     };
 
     script.src = AppData.SHEETS_URL
@@ -350,12 +357,31 @@ const Orders = (() => {
   }
 
   // Background Sheets sync triggered automatically on panel open.
-  // Merges remote orders into the list without any loading spinner.
+  // Shows a subtle indicator while fetching, then merges remote orders in.
   // Identical merge rules to refresh() — local copies with fullData always win.
   async function silentRefresh() {
     if (!AppData.SHEETS_URL) return;
+
+    // Append a subtle "checking…" note at the bottom of the visible list
+    const list = document.getElementById('orders-list');
+    const ind  = document.createElement('div');
+    ind.id = 'orders-sync-ind';
+    ind.style.cssText = 'text-align:center;padding:8px 0 4px;font-size:11px;color:#aaa;';
+    ind.textContent = '↻ Checking other devices…';
+    if (list) list.appendChild(ind);
+
     const result = await fetchOrders();
-    if (result === null) return; // network error — keep local data as-is
+
+    // Remove indicator however the fetch ended
+    if (ind.parentNode) ind.parentNode.removeChild(ind);
+
+    if (result === null) {
+      // Network / timeout — keep whatever is already showing
+      Survey.toast('⚠ Could not reach Google Sheets — showing this device only');
+      return;
+    }
+
+    const before = allOrders.length;
     const merged = result.slice();
     [...pendingOrders, ...sessionSaved].forEach(o => {
       const idx = merged.findIndex(r => r['Order ID'] === o['Order ID']);
@@ -366,8 +392,14 @@ const Orders = (() => {
       }
     });
     allOrders = merged;
+
     if (document.getElementById('orders-overlay')?.classList.contains('open')) {
       renderList();
+      // Tell the user how many orders came from Sheets so they can confirm sync
+      const newCount = allOrders.length - before;
+      if (newCount > 0) {
+        Survey.toast(`☁ ${allOrders.length} orders loaded from all devices`);
+      }
     }
   }
 
