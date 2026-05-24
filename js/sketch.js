@@ -922,10 +922,11 @@ const Sketch = (() => {
 
   function scaleShapes(shapes, sx, sy) {
     return shapes.map(sh => {
-      if (sh.type === 'pen')  return { ...sh, path: sh.path.map(p => ({ x: p.x*sx, y: p.y*sy })) };
-      if (sh.type === 'line') return { ...sh, x1: sh.x1*sx, y1: sh.y1*sy, x2: sh.x2*sx, y2: sh.y2*sy };
-      if (sh.type === 'rect') return { ...sh, x: sh.x*sx, y: sh.y*sy, w: sh.w*sx, h: sh.h*sy };
-      if (sh.type === 'text') return { ...sh, x: sh.x*sx, y: sh.y*sy };
+      if (sh.type === 'pen')           return { ...sh, path: sh.path.map(p => ({ x: p.x*sx, y: p.y*sy })) };
+      if (sh.type === 'line')          return { ...sh, x1: sh.x1*sx, y1: sh.y1*sy, x2: sh.x2*sx, y2: sh.y2*sy };
+      if (sh.type === 'rect')          return { ...sh, x: sh.x*sx, y: sh.y*sy, w: sh.w*sx, h: sh.h*sy };
+      if (sh.type === 'wardrobe4door') return { ...sh, x: sh.x*sx, y: sh.y*sy, w: sh.w*sx, h: sh.h*sy };
+      if (sh.type === 'text')          return { ...sh, x: sh.x*sx, y: sh.y*sy };
       return sh;
     });
   }
@@ -1231,18 +1232,6 @@ const Sketch = (() => {
       const countEl = document.getElementById('fs-section-count');
       if (countEl) countEl.textContent = selSh.cols || 4;
     }
-    ['fs-dim-sep','fs-dims'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.style.display = showSec ? '' : 'none';
-    });
-    if (showSec) {
-      const iw = document.getElementById('fs-dim-w');
-      const ih = document.getElementById('fs-dim-h');
-      const id = document.getElementById('fs-dim-d');
-      if (iw && iw !== document.activeElement) iw.value = selSh.dimW || '';
-      if (ih && ih !== document.activeElement) ih.value = selSh.dimH || '';
-      if (id && id !== document.activeElement) id.value = selSh.dimD || '';
-    }
   }
 
   function fsSaveHistory() {
@@ -1286,6 +1275,63 @@ const Sketch = (() => {
     else if (axis === 'h') sh.dimH = val;
     else if (axis === 'd') sh.dimD = val;
     fsRedraw();
+  }
+
+  // Place a labelled measurement text on the canvas (Width / Height / Depth buttons)
+  function fsInsertMeasurement(label, prefix) {
+    const area   = document.getElementById('fs-canvas-area');
+    const canvas = document.getElementById('fs-canvas');
+    if (!area || !canvas) return;
+
+    // Smart placement near wardrobe if one is visible
+    const selSh = fs.selectedIdx >= 0 && fs.selectedIdx < fs.shapes.length ? fs.shapes[fs.selectedIdx] : null;
+    const wd    = selSh?.type === 'wardrobe4door' ? selSh : fs.shapes.find(s => s.type === 'wardrobe4door');
+
+    let px = canvas.width  * 0.12;
+    let py = canvas.height * 0.5;
+    if (wd) {
+      if      (prefix === 'W') { px = wd.x + wd.w * 0.2; py = wd.y + wd.h + 55; }
+      else if (prefix === 'H') { px = wd.x + wd.w + 44;  py = wd.y + wd.h * 0.4; }
+      else                     { px = wd.x + wd.w * 0.2; py = Math.max(55, wd.y - 45); }
+    }
+    px = Math.max(10,  Math.min(px, canvas.width  - 20));
+    py = Math.max(55,  Math.min(py, canvas.height - 20));
+
+    const inp = document.createElement('input');
+    inp.type      = 'number';
+    inp.inputMode = 'decimal';
+    inp.placeholder = label + ' (mm)';
+    inp.style.cssText = `
+      position:absolute;
+      left:${Math.max(0, Math.min(px, canvas.clientWidth - 320))}px;
+      top:${Math.max(0, py - 24)}px;
+      background:rgba(255,255,255,0.98); color:#1a1a1a;
+      border:2px solid #1a6eb5; border-radius:6px;
+      font-size:34px; padding:6px 14px; z-index:10;
+      min-width:240px; max-width:400px;
+      font-family:'Caveat',cursive; font-weight:700;
+      box-shadow:0 4px 16px rgba(0,0,0,0.22);
+    `;
+    area.appendChild(inp);
+    inp.focus();
+
+    let committed = false;
+    function commit() {
+      if (committed) return;
+      committed = true;
+      const val = inp.value.trim();
+      inp.remove();
+      if (!val) return;
+      fsSaveHistory();
+      fs.shapes.push({ type: 'text', x: px, y: py, text: prefix + ': ' + val + 'mm', colour: '#1a6eb5', size: 36 });
+      fs.selectedIdx = fs.shapes.length - 1;
+      fsRedraw();
+    }
+    inp.addEventListener('blur', commit);
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { inp.removeEventListener('blur', commit); commit(); }
+      if (e.key === 'Escape') { inp.remove(); committed = true; }
+    });
   }
 
   function fsSetTool(tool) {
@@ -1339,7 +1385,7 @@ const Sketch = (() => {
   /* SKETCH:EXPORTS */
   return {
     init, resizeCanvas, redraw, redrawScaled, setTool, setColour, toggleStraighten, undo, clear, deleteSelected, getShapes, setShapes,
-    insertTemplate, fsTpl, fsAddSection, fsRemoveSection, fsSaveDim,
+    insertTemplate, fsTpl, fsAddSection, fsRemoveSection, fsSaveDim, fsInsertMeasurement,
     openFullscreen, closeFullscreen,
     fsSetTool, fsSetColour, fsUndo, fsClear, fsDeleteSelected, fsToggleStraighten
   };
