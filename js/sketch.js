@@ -639,7 +639,7 @@ const Sketch = (() => {
     else if (sh.type === 'rect') { ctx.beginPath(); ctx.strokeRect(sh.x, sh.y, sh.w, sh.h); }
     else if (sh.type === 'wardrobe4door') {
       const { x, y, w, h } = sh;
-      const cols = 4, colW = w / cols, topH = h * 0.16, hangY = y + topH + h * 0.04;
+      const cols = sh.cols || 4, colW = w / cols, topH = h * 0.16, hangY = y + topH + h * 0.04;
       // Outer carcass
       ctx.strokeStyle = sh.colour || '#222'; ctx.lineWidth = sh.lw || 3;
       ctx.beginPath(); ctx.strokeRect(x, y, w, h);
@@ -787,7 +787,7 @@ const Sketch = (() => {
     const px = W * 0.04, py = H * 0.05;
     const x  = px, y = py, w = W - px * 2, h = H - py * 2;
     // Single shape — resize/move updates x,y,w,h and renderShape redraws everything
-    return [{ type: 'wardrobe4door', x, y, w, h, colour: '#222', lw: 3 }];
+    return [{ type: 'wardrobe4door', x, y, w, h, cols: 4, colour: '#222', lw: 3 }];
   }
 
   function insertTemplate(id, name) {
@@ -1193,6 +1193,18 @@ const Sketch = (() => {
     }
 
     if (fs.snapCandidate) drawSnapIndicator(ctx, fs.snapCandidate);
+
+    // Show/hide section +/- buttons based on whether a wardrobe is selected
+    const selSh = fs.selectedIdx >= 0 && fs.selectedIdx < fs.shapes.length ? fs.shapes[fs.selectedIdx] : null;
+    const showSec = selSh?.type === 'wardrobe4door';
+    ['fs-section-sep','fs-section-rem','fs-section-count','fs-section-add'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = showSec ? '' : 'none';
+    });
+    if (showSec) {
+      const countEl = document.getElementById('fs-section-count');
+      if (countEl) countEl.textContent = selSh.cols || 4;
+    }
   }
 
   function fsSaveHistory() {
@@ -1206,6 +1218,24 @@ const Sketch = (() => {
     fsSaveHistory();
     fs.shapes.splice(fs.selectedIdx, 1);
     fs.selectedIdx = -1;
+    fsRedraw();
+  }
+
+  function fsAddSection() {
+    if (fs.selectedIdx < 0 || fs.selectedIdx >= fs.shapes.length) return;
+    const sh = fs.shapes[fs.selectedIdx];
+    if (sh.type !== 'wardrobe4door' || (sh.cols || 4) >= 8) return;
+    fsSaveHistory();
+    sh.cols = (sh.cols || 4) + 1;
+    fsRedraw();
+  }
+
+  function fsRemoveSection() {
+    if (fs.selectedIdx < 0 || fs.selectedIdx >= fs.shapes.length) return;
+    const sh = fs.shapes[fs.selectedIdx];
+    if (sh.type !== 'wardrobe4door' || (sh.cols || 4) <= 1) return;
+    fsSaveHistory();
+    sh.cols = (sh.cols || 4) - 1;
     fsRedraw();
   }
 
@@ -1259,7 +1289,7 @@ const Sketch = (() => {
   /* SKETCH:EXPORTS */
   return {
     init, resizeCanvas, redraw, redrawScaled, setTool, setColour, toggleStraighten, undo, clear, deleteSelected, getShapes, setShapes,
-    insertTemplate, fsTpl,
+    insertTemplate, fsTpl, fsAddSection, fsRemoveSection,
     openFullscreen, closeFullscreen,
     fsSetTool, fsSetColour, fsUndo, fsClear, fsDeleteSelected, fsToggleStraighten
   };

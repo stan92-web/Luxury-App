@@ -449,6 +449,8 @@ textarea:focus {
 .sk-fullscreen-btn { background: var(--red) !important; color: #fff !important; border-color: var(--red) !important; }
 .sk-tpl-btn        { background: #2c5f2e !important; color: #fff !important; border-color: #2c5f2e !important; }
 .sk-del-btn        { background: #c0392b !important; color: #fff !important; border-color: #c0392b !important; }
+.sk-section-btn    { background: #1a6eb5 !important; color: #fff !important; border-color: #1a6eb5 !important; }
+.sk-section-count  { font-size: 13px; font-weight: 700; color: #1a6eb5; padding: 0 4px; align-self: center; min-width: 18px; text-align: center; }
 
 /* CSS:SKETCHDIMS */
 .sketch-dims {
