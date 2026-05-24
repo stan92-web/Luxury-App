@@ -90,7 +90,7 @@ const Survey = (() => {
           phone:    gv('c-phone'),
           email:    gv('c-email'),
           address:  gv('c-address'),
-source:   gv('c-source'),
+          source:   gv('c-source'),
           surveyor: gv('surveyor'),
           date:     gv('survey-date'),
           notes:    gv('c-notes')
@@ -110,7 +110,11 @@ source:   gv('c-source'),
         }))
       };
       localStorage.setItem('lh_survey_v1', JSON.stringify(data));
-    } catch (_) {}
+    } catch (e) {
+      if (e && e.name === 'QuotaExceededError') {
+        showToast('⚠ Storage full — could not auto-save');
+      }
+    }
   }
 
   /* ── Load ── */

@@ -152,7 +152,6 @@ const Orders = (() => {
       .map(r => [r.name, r.w && r.h ? `${r.w}×${r.h}mm` : ''].filter(Boolean).join(' '))
       .join(' | ');
 
-    const doorNo  = data.customer?.door    || '';
     const address = data.customer?.address || '';
 
     // Google Sheets has a 50,000 char cell limit.
@@ -169,14 +168,14 @@ const Orders = (() => {
 
     const payload = {
       orderId,
-      property: [doorNo, address].filter(Boolean).join(' '),
+      property: address,
       version,
       savedAt:  new Date().toISOString(),
       status:   'Quote',
       rep:      data.customer?.surveyor   || '',
-      customer: `${data.customer?.first || ''} ${data.customer?.last || ''}`.trim(),
+      customer: `${data.customer?.name || data.customer?.first || ''} ${data.customer?.last || ''}`.trim(),
       phone:    data.customer?.phone      || '',
-      doorNo,
+      doorNo:   '',
       address,
       rooms,
       total:    data.pricing?.total       || '',
@@ -194,7 +193,7 @@ const Orders = (() => {
       'Saved At': payload.savedAt, 'Version': String(version),
       'Status':   'Quote',  'Rep':      payload.rep,
       'Customer': payload.customer, 'Phone':    payload.phone,
-      'Door No':  payload.doorNo,   'Address':  payload.address,
+      'Door No':  '',                'Address':  payload.address,
       'Rooms':    payload.rooms,    'Total £':  payload.total,
       'Deposit £': payload.deposit, 'Balance £': payload.balance,
       'Full Data': payload.fullData
