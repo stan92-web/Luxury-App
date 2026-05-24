@@ -144,7 +144,7 @@ const Sketch = (() => {
   /* SKETCH:SELECTION ────────────────────────────── */
   // Returns handle name ('tl'/'tr'/'bl'/'br' for rects, 'ep1'/'ep2' for lines)
   function hitShapeHandle(x, y, sh) {
-    if (sh.type === 'rect') {
+    if (sh.type === 'rect' || sh.type === 'wardrobe4door') {
       const x2 = sh.x + sh.w, y2 = sh.y + sh.h;
       const handles = [
         { name: 'tl', x: sh.x, y: sh.y },
@@ -176,6 +176,10 @@ const Sketch = (() => {
       const onLeft   = Math.abs(x - x1) <= t && y >= y1 - t && y <= y2 + t;
       const onRight  = Math.abs(x - x2) <= t && y >= y1 - t && y <= y2 + t;
       return onTop || onBottom || onLeft || onRight;
+    }
+    if (sh.type === 'wardrobe4door') {
+      // Click anywhere inside the bounding box to select / move the whole wardrobe
+      return x >= sh.x && x <= sh.x + sh.w && y >= sh.y && y <= sh.y + sh.h;
     }
     if (sh.type === 'text') {
       const size = sh.size || 28;
@@ -237,7 +241,7 @@ const Sketch = (() => {
           const sh       = s.shapes[s.selectedIdx];
           s.drawing      = true;
           s.resizeHandle = handle;
-          s.resizePivot  = sh.type === 'rect' ? resizePivotFor(handle, sh) : null;
+          s.resizePivot  = (sh.type === 'rect' || sh.type === 'wardrobe4door') ? resizePivotFor(handle, sh) : null;
           return;
         }
         if (hitShapeBody(p.x, p.y, s.shapes[s.selectedIdx])) {
@@ -273,7 +277,7 @@ const Sketch = (() => {
           const sh       = s.shapes[s.selectedIdx];
           s.drawing      = true;
           s.resizeHandle = handle;
-          s.resizePivot  = sh.type === 'rect' ? resizePivotFor(handle, sh) : null;
+          s.resizePivot  = (sh.type === 'rect' || sh.type === 'wardrobe4door') ? resizePivotFor(handle, sh) : null;
           return;
         }
       }
@@ -310,7 +314,7 @@ const Sketch = (() => {
     // ── Handle resize / endpoint drag ──
     if (s.resizeHandle && s.selectedIdx >= 0 && s.selectedIdx < s.shapes.length) {
       const sh = s.shapes[s.selectedIdx];
-      if (sh.type === 'rect') {
+      if (sh.type === 'rect' || sh.type === 'wardrobe4door') {
         const piv = s.resizePivot;
         sh.x = Math.min(p.x, piv.x); sh.y = Math.min(p.y, piv.y);
         sh.w = Math.abs(p.x - piv.x); sh.h = Math.abs(p.y - piv.y);
@@ -326,7 +330,7 @@ const Sketch = (() => {
     if (s.moving && s.selectedIdx >= 0 && s.selectedIdx < s.shapes.length) {
       const dx = p.x - s.startX, dy = p.y - s.startY;
       const orig = s.moveShapeStart, sh = s.shapes[s.selectedIdx];
-      if (sh.type === 'rect') { sh.x = orig.x + dx; sh.y = orig.y + dy; }
+      if (sh.type === 'rect' || sh.type === 'wardrobe4door') { sh.x = orig.x + dx; sh.y = orig.y + dy; }
       else if (sh.type === 'line') { sh.x1 = orig.x1+dx; sh.y1 = orig.y1+dy; sh.x2 = orig.x2+dx; sh.y2 = orig.y2+dy; }
       else if (sh.type === 'pen')  { sh.path = orig.path.map(pt => ({ x: pt.x+dx, y: pt.y+dy })); }
       else if (sh.type === 'text') { sh.x = orig.x + dx; sh.y = orig.y + dy; }
@@ -522,7 +526,7 @@ const Sketch = (() => {
   /* SKETCH:HANDLES ──────────────────────────────── */
   function drawSelectionHandles(ctx, sh) {
     ctx.save();
-    if (sh.type === 'rect') {
+    if (sh.type === 'rect' || sh.type === 'wardrobe4door') {
       // Dashed selection border
       ctx.strokeStyle = '#1a6eb5';
       ctx.lineWidth   = 1.5;
@@ -633,6 +637,26 @@ const Sketch = (() => {
     if      (sh.type === 'pen')  drawPenPath(ctx, sh.path, sh.colour, sh.lw);
     else if (sh.type === 'line') { ctx.beginPath(); ctx.moveTo(sh.x1, sh.y1); ctx.lineTo(sh.x2, sh.y2); ctx.stroke(); }
     else if (sh.type === 'rect') { ctx.beginPath(); ctx.strokeRect(sh.x, sh.y, sh.w, sh.h); }
+    else if (sh.type === 'wardrobe4door') {
+      const { x, y, w, h } = sh;
+      const cols = 4, colW = w / cols, topH = h * 0.16, hangY = y + topH + h * 0.04;
+      // Outer carcass
+      ctx.strokeStyle = sh.colour || '#222'; ctx.lineWidth = sh.lw || 3;
+      ctx.beginPath(); ctx.strokeRect(x, y, w, h);
+      // Top shelf
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x, y + topH); ctx.lineTo(x + w, y + topH); ctx.stroke();
+      // Vertical dividers
+      for (let i = 1; i < cols; i++) {
+        ctx.beginPath(); ctx.moveTo(x + i * colW, y); ctx.lineTo(x + i * colW, y + h); ctx.stroke();
+      }
+      // Hanging bars (blue)
+      ctx.strokeStyle = '#1a6eb5'; ctx.lineWidth = 2.5;
+      for (let i = 0; i < cols; i++) {
+        const cx = x + i * colW;
+        ctx.beginPath(); ctx.moveTo(cx + colW * 0.12, hangY); ctx.lineTo(cx + colW * 0.88, hangY); ctx.stroke();
+      }
+    }
     else if (sh.type === 'text') {
       ctx.font         = `700 ${sh.size || 28}px 'Caveat', cursive`;
       ctx.textBaseline = 'alphabetic';
@@ -759,32 +783,11 @@ const Sketch = (() => {
 
   /* SKETCH:TEMPLATES ────────────────────────────── */
   function buildTemplate(name, W, H) {
-    const shapes = [];
-    if (name !== '4door') return shapes;
-
-    const px   = W * 0.04, py  = H * 0.05;
-    const bw   = W - px * 2, bh = H - py * 2;
-    const bx   = px, by = py;
-    const cols = 4;
-    const colW = bw / cols;
-    const topH = bh * 0.16;
-    // Hanging bars sit just below the top shelf (small gap)
-    const hangY = by + topH + bh * 0.04;
-
-    // Outer carcass (selectable rect — drag corners to resize)
-    shapes.push({ type: 'rect', x: bx, y: by, w: bw, h: bh, colour: '#222', lw: 3 });
-    // Top shelf
-    shapes.push({ type: 'line', x1: bx, y1: by + topH, x2: bx + bw, y2: by + topH, colour: '#222', lw: 2 });
-    // 3 vertical dividers
-    for (let i = 1; i < cols; i++) {
-      shapes.push({ type: 'line', x1: bx + i * colW, y1: by, x2: bx + i * colW, y2: by + bh, colour: '#222', lw: 2 });
-    }
-    // Hanging bars — one per section, just below top shelf
-    for (let i = 0; i < cols; i++) {
-      const cx = bx + i * colW;
-      shapes.push({ type: 'line', x1: cx + colW * 0.12, y1: hangY, x2: cx + colW * 0.88, y2: hangY, colour: '#1a6eb5', lw: 2.5 });
-    }
-    return shapes;
+    if (name !== '4door') return [];
+    const px = W * 0.04, py = H * 0.05;
+    const x  = px, y = py, w = W - px * 2, h = H - py * 2;
+    // Single shape — resize/move updates x,y,w,h and renderShape redraws everything
+    return [{ type: 'wardrobe4door', x, y, w, h, colour: '#222', lw: 3 }];
   }
 
   function insertTemplate(id, name) {
@@ -950,7 +953,7 @@ const Sketch = (() => {
           const sh        = fs.shapes[fs.selectedIdx];
           fs.drawing      = true;
           fs.resizeHandle = handle;
-          fs.resizePivot  = sh.type === 'rect' ? resizePivotFor(handle, sh) : null;
+          fs.resizePivot  = (sh.type === 'rect' || sh.type === 'wardrobe4door') ? resizePivotFor(handle, sh) : null;
           return;
         }
         if (hitShapeBody(p.x, p.y, fs.shapes[fs.selectedIdx])) {
@@ -984,7 +987,7 @@ const Sketch = (() => {
           const sh        = fs.shapes[fs.selectedIdx];
           fs.drawing      = true;
           fs.resizeHandle = handle;
-          fs.resizePivot  = sh.type === 'rect' ? resizePivotFor(handle, sh) : null;
+          fs.resizePivot  = (sh.type === 'rect' || sh.type === 'wardrobe4door') ? resizePivotFor(handle, sh) : null;
           return;
         }
       }
@@ -1031,7 +1034,7 @@ const Sketch = (() => {
     if (fs.moving && fs.selectedIdx >= 0 && fs.selectedIdx < fs.shapes.length) {
       const dx = p.x - fs.startX, dy = p.y - fs.startY;
       const orig = fs.moveShapeStart, sh = fs.shapes[fs.selectedIdx];
-      if (sh.type === 'rect') { sh.x = orig.x + dx; sh.y = orig.y + dy; }
+      if (sh.type === 'rect' || sh.type === 'wardrobe4door') { sh.x = orig.x + dx; sh.y = orig.y + dy; }
       else if (sh.type === 'line') { sh.x1 = orig.x1+dx; sh.y1 = orig.y1+dy; sh.x2 = orig.x2+dx; sh.y2 = orig.y2+dy; }
       else if (sh.type === 'pen')  { sh.path = orig.path.map(pt => ({ x: pt.x+dx, y: pt.y+dy })); }
       else if (sh.type === 'text') { sh.x = orig.x + dx; sh.y = orig.y + dy; }
