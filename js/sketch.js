@@ -839,7 +839,8 @@ const Sketch = (() => {
     resizeHandle:    null,
     resizePivot:     null,
     moving:          false,
-    moveShapeStart:  null
+    moveShapeStart:  null,
+    measureTurn:     0
   };
 
   function openFullscreen(roomId) {
@@ -860,6 +861,7 @@ const Sketch = (() => {
     fs.selectedIdx     = -1;
     fs.resizeHandle    = null;
     fs.resizePivot     = null;
+    fs.measureTurn     = 0;
 
     document.getElementById('fs-overlay').classList.add('open');
     document.body.style.overflow = 'hidden';
@@ -1129,9 +1131,30 @@ const Sketch = (() => {
   function fsShowTextInput(x, y) {
     const area   = document.getElementById('fs-canvas-area');
     const canvas = document.getElementById('fs-canvas');
-    const inp    = document.createElement('input');
-    inp.type     = 'text';
-    inp.placeholder = 'Write or type here…';
+
+    // Measurement mode: wardrobe selected + text tool → auto-position Width / Height / Depth
+    const selSh     = fs.selectedIdx >= 0 && fs.selectedIdx < fs.shapes.length ? fs.shapes[fs.selectedIdx] : null;
+    const measuring = selSh?.type === 'wardrobe4door';
+    const turn      = fs.measureTurn;
+    const labels    = ['Width', 'Height', 'Depth'];
+
+    if (measuring && turn < 3) {
+      const sh = selSh;
+      if (turn === 0) {
+        x = sh.x + sh.w * 0.3;
+        y = sh.y + sh.h + 50;
+      } else if (turn === 1) {
+        x = sh.x + sh.w + 30;
+        y = sh.y + sh.h * 0.5;
+      } else {
+        x = sh.x + sh.w * 0.3;
+        y = Math.max(30, sh.y - 20);
+      }
+    }
+
+    const inp = document.createElement('input');
+    inp.type  = 'text';
+    inp.placeholder = measuring && turn < 3 ? labels[turn] + '…' : 'Write or type here…';
     inp.style.cssText = `
       position:absolute; left:${Math.min(x, (canvas ? canvas.clientWidth : 800) - 300)}px; top:${Math.max(0, y - 20)}px;
       background:rgba(255,255,255,0.98); color:#1a1a1a;
@@ -1143,16 +1166,47 @@ const Sketch = (() => {
     `;
     area.appendChild(inp);
     inp.focus();
+
+    let committed = false;
     function commit() {
+      if (committed) return;
+      committed = true;
       const text = inp.value.trim();
       inp.remove();
-      if (!text) return;
+      if (!text) {
+        if (measuring) { fs.measureTurn = 0; fsSetTool('select'); }
+        return;
+      }
       fsSaveHistory();
       fs.shapes.push({ type: 'text', x, y, text, colour: fs.colour, size: 36 });
-      fsRedraw();
+      const newIdx = fs.shapes.length - 1;
+
+      if (measuring) {
+        fs.measureTurn = turn + 1;
+        if (fs.measureTurn >= 3) {
+          fs.measureTurn = 0;
+          fs.selectedIdx = newIdx;
+          fsRedraw();
+          fsSetTool('select');
+        } else {
+          fsRedraw();
+          setTimeout(() => { if (fs.tool === 'text') fsShowTextInput(0, 0); }, 120);
+        }
+      } else {
+        fs.measureTurn = turn + 1;
+        fs.selectedIdx = newIdx;
+        fsRedraw();
+        if (fs.measureTurn >= 3) {
+          fs.measureTurn = 0;
+          fsSetTool('select');
+        }
+      }
     }
-    inp.addEventListener('blur',    commit);
-    inp.addEventListener('keydown', e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') inp.remove(); });
+    inp.addEventListener('blur', commit);
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { inp.removeEventListener('blur', commit); commit(); }
+      if (e.key === 'Escape') { inp.remove(); committed = true; if (measuring) fs.measureTurn = 0; }
+    });
   }
 
   /* SKETCH:FSREDRAW ─────────────────────────────── */
@@ -1240,8 +1294,9 @@ const Sketch = (() => {
   }
 
   function fsSetTool(tool) {
+    if (tool !== 'text') fs.measureTurn = 0;
     fs.tool = tool;
-    if (tool !== 'rect' && tool !== 'select') fs.selectedIdx = -1;
+    if (tool !== 'rect' && tool !== 'select' && tool !== 'text') fs.selectedIdx = -1;
     ['select','pen','line','rect','text','eraser'].forEach(t => {
       const btn = document.getElementById(`fs-tool-${t}`);
       if (btn) btn.classList.toggle('active', t === tool);
