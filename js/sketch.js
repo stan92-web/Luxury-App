@@ -144,7 +144,7 @@ const Sketch = (() => {
   /* SKETCH:SELECTION ────────────────────────────── */
   // Returns handle name ('tl'/'tr'/'bl'/'br' for rects, 'ep1'/'ep2' for lines)
   function hitShapeHandle(x, y, sh) {
-    if (sh.type === 'rect' || sh.type === 'wardrobe4door' || sh.type === 'wardrobeCorner') {
+    if (sh.type === 'rect' || sh.type === 'wardrobe4door' || sh.type === 'wardrobeCorner' || sh.type === 'wardrobeChest' || sh.type === 'wardrobeDesk') {
       const x2 = sh.x + sh.w, y2 = sh.y + sh.h;
       const handles = [
         { name: 'tl', x: sh.x, y: sh.y },
@@ -187,6 +187,9 @@ const Sketch = (() => {
         ? x >= sh.x + sh.w - aW && x <= sh.x + sh.w && y >= sh.y && y <= sh.y + sh.h
         : x >= sh.x             && x <= sh.x + aW   && y >= sh.y && y <= sh.y + sh.h;
       return inTop || inArm;
+    }
+    if (sh.type === 'wardrobeChest' || sh.type === 'wardrobeDesk') {
+      return x >= sh.x && x <= sh.x + sh.w && y >= sh.y && y <= sh.y + sh.h;
     }
     if (sh.type === 'text') {
       const size = sh.size || 28;
@@ -248,7 +251,7 @@ const Sketch = (() => {
           const sh       = s.shapes[s.selectedIdx];
           s.drawing      = true;
           s.resizeHandle = handle;
-          s.resizePivot  = (sh.type === 'rect' || sh.type === 'wardrobe4door' || sh.type === 'wardrobeCorner') ? resizePivotFor(handle, sh) : null;
+          s.resizePivot  = (sh.type === 'rect' || sh.type === 'wardrobe4door' || sh.type === 'wardrobeCorner' || sh.type === 'wardrobeChest' || sh.type === 'wardrobeDesk') ? resizePivotFor(handle, sh) : null;
           return;
         }
         if (hitShapeBody(p.x, p.y, s.shapes[s.selectedIdx])) {
@@ -284,7 +287,7 @@ const Sketch = (() => {
           const sh       = s.shapes[s.selectedIdx];
           s.drawing      = true;
           s.resizeHandle = handle;
-          s.resizePivot  = (sh.type === 'rect' || sh.type === 'wardrobe4door' || sh.type === 'wardrobeCorner') ? resizePivotFor(handle, sh) : null;
+          s.resizePivot  = (sh.type === 'rect' || sh.type === 'wardrobe4door' || sh.type === 'wardrobeCorner' || sh.type === 'wardrobeChest' || sh.type === 'wardrobeDesk') ? resizePivotFor(handle, sh) : null;
           return;
         }
       }
@@ -321,7 +324,7 @@ const Sketch = (() => {
     // ── Handle resize / endpoint drag ──
     if (s.resizeHandle && s.selectedIdx >= 0 && s.selectedIdx < s.shapes.length) {
       const sh = s.shapes[s.selectedIdx];
-      if (sh.type === 'rect' || sh.type === 'wardrobe4door' || sh.type === 'wardrobeCorner') {
+      if (sh.type === 'rect' || sh.type === 'wardrobe4door' || sh.type === 'wardrobeCorner' || sh.type === 'wardrobeChest' || sh.type === 'wardrobeDesk') {
         const piv = s.resizePivot;
         sh.x = Math.min(p.x, piv.x); sh.y = Math.min(p.y, piv.y);
         sh.w = Math.abs(p.x - piv.x); sh.h = Math.abs(p.y - piv.y);
@@ -337,7 +340,7 @@ const Sketch = (() => {
     if (s.moving && s.selectedIdx >= 0 && s.selectedIdx < s.shapes.length) {
       const dx = p.x - s.startX, dy = p.y - s.startY;
       const orig = s.moveShapeStart, sh = s.shapes[s.selectedIdx];
-      if (sh.type === 'rect' || sh.type === 'wardrobe4door' || sh.type === 'wardrobeCorner') { sh.x = orig.x + dx; sh.y = orig.y + dy; }
+      if (sh.type === 'rect' || sh.type === 'wardrobe4door' || sh.type === 'wardrobeCorner' || sh.type === 'wardrobeChest' || sh.type === 'wardrobeDesk') { sh.x = orig.x + dx; sh.y = orig.y + dy; }
       else if (sh.type === 'line') { sh.x1 = orig.x1+dx; sh.y1 = orig.y1+dy; sh.x2 = orig.x2+dx; sh.y2 = orig.y2+dy; }
       else if (sh.type === 'pen')  { sh.path = orig.path.map(pt => ({ x: pt.x+dx, y: pt.y+dy })); }
       else if (sh.type === 'text') { sh.x = orig.x + dx; sh.y = orig.y + dy; }
@@ -505,7 +508,7 @@ const Sketch = (() => {
     const s      = states[id];
     if (!canvas || !wrap || !s) return;
 
-    const wd = s.shapes.find(sh => sh.type === 'wardrobe4door' || sh.type === 'wardrobeCorner');
+    const wd = s.shapes.find(sh => sh.type === 'wardrobe4door' || sh.type === 'wardrobeCorner' || sh.type === 'wardrobeChest' || sh.type === 'wardrobeDesk');
     let px = canvas.width * 0.08, py = canvas.height * 0.6;
     if (wd) {
       if      (prefix === 'W') { px = wd.x + wd.w * 0.2; py = wd.y + wd.h + 22; }
@@ -587,7 +590,7 @@ const Sketch = (() => {
   /* SKETCH:HANDLES ──────────────────────────────── */
   function drawSelectionHandles(ctx, sh) {
     ctx.save();
-    if (sh.type === 'rect' || sh.type === 'wardrobe4door' || sh.type === 'wardrobeCorner') {
+    if (sh.type === 'rect' || sh.type === 'wardrobe4door' || sh.type === 'wardrobeCorner' || sh.type === 'wardrobeChest' || sh.type === 'wardrobeDesk') {
       // Dashed selection border
       ctx.strokeStyle = '#1a6eb5';
       ctx.lineWidth   = 1.5;
@@ -795,6 +798,88 @@ const Sketch = (() => {
 
       ctx.restore();
     }
+    else if (sh.type === 'wardrobeChest') {
+      const { x, y, w, h } = sh;
+      const rows   = sh.rows || 5;
+      const railH  = h * 0.07;
+      const bodyH  = h - railH;
+      const dH     = bodyH / rows;
+
+      ctx.save();
+      ctx.strokeStyle = sh.colour || '#222';
+      ctx.lineWidth   = sh.lw || 3;
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+
+      // Outer carcass
+      ctx.strokeRect(x, y, w, h);
+
+      // Top rail
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x, y + railH); ctx.lineTo(x + w, y + railH); ctx.stroke();
+
+      // Drawers
+      for (let i = 0; i < rows; i++) {
+        const dy = y + railH + i * dH;
+        if (i > 0) {
+          ctx.strokeStyle = sh.colour || '#222'; ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.moveTo(x, dy); ctx.lineTo(x + w, dy); ctx.stroke();
+        }
+        // Handle bar centred in drawer
+        const hCx = x + w * 0.5;
+        const hCy = dy + dH * 0.5;
+        const hW  = Math.min(w * 0.30, 60);
+        const hH  = Math.max(5, Math.min(13, dH * 0.20));
+        ctx.strokeStyle = '#1a6eb5'; ctx.lineWidth = 2;
+        ctx.strokeRect(hCx - hW / 2, hCy - hH / 2, hW, hH);
+      }
+
+      ctx.restore();
+    }
+    else if (sh.type === 'wardrobeDesk') {
+      const { x, y, w, h } = sh;
+      const flip  = sh.flip || 'right';
+      const pedW  = w * 0.30;
+      const topH  = h * 0.10;
+      const kickH = h * 0.10;
+      const bodyH = h - topH - kickH;
+
+      const pedLeft  = flip === 'right' ? x + w - pedW : x;
+      const pedRight = flip === 'right' ? x + w        : x + pedW;
+      const divX     = flip === 'right' ? x + w - pedW : x + pedW;
+
+      ctx.save();
+      ctx.strokeStyle = sh.colour || '#222';
+      ctx.lineWidth   = sh.lw || 3;
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+
+      // Outer carcass
+      ctx.strokeRect(x, y, w, h);
+
+      ctx.lineWidth = 2;
+      // Desk top surface
+      ctx.beginPath(); ctx.moveTo(x, y + topH); ctx.lineTo(x + w, y + topH); ctx.stroke();
+      // Kickboard
+      ctx.beginPath(); ctx.moveTo(x, y + h - kickH); ctx.lineTo(x + w, y + h - kickH); ctx.stroke();
+
+      // Pedestal divider
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(divX, y + topH); ctx.lineTo(divX, y + h - kickH); ctx.stroke();
+
+      // 2-drawer divider (horizontal mid-point of pedestal body)
+      const dH  = bodyH / 2;
+      const midY = y + topH + dH;
+      ctx.beginPath(); ctx.moveTo(pedLeft, midY); ctx.lineTo(pedRight, midY); ctx.stroke();
+
+      // Drawer handles (blue)
+      ctx.strokeStyle = '#1a6eb5'; ctx.lineWidth = 2;
+      const hW  = Math.min(pedW * 0.46, 40);
+      const hH  = Math.max(4, Math.min(12, dH * 0.16));
+      const hCx = (pedLeft + pedRight) / 2;
+      ctx.strokeRect(hCx - hW / 2, y + topH + dH * 0.5 - hH / 2, hW, hH);
+      ctx.strokeRect(hCx - hW / 2, midY    + dH * 0.5 - hH / 2, hW, hH);
+
+      ctx.restore();
+    }
     else if (sh.type === 'text') {
       const isBold = sh.font === 'bold';
       ctx.font = isBold
@@ -926,10 +1011,22 @@ const Sketch = (() => {
 
   /* SKETCH:TEMPLATES ────────────────────────────── */
   function buildTemplate(name, W, H) {
-    const px = W * 0.04, py = H * 0.05;
-    const x  = px, y = py, w = W - px * 2, h = H - py * 2;
-    if (name === '4door')  return [{ type: 'wardrobe4door',  x, y, w, h, cols: 4,        colour: '#222', lw: 3 }];
-    if (name === 'corner') return [{ type: 'wardrobeCorner', x, y, w, h, flip: 'right',  colour: '#222', lw: 3 }];
+    if (name === '4door') {
+      const px = W * 0.04, py = H * 0.05;
+      return [{ type: 'wardrobe4door',  x: px, y: py, w: W-px*2, h: H-py*2, cols: 4,       colour: '#222', lw: 3 }];
+    }
+    if (name === 'corner') {
+      const px = W * 0.04, py = H * 0.05;
+      return [{ type: 'wardrobeCorner', x: px, y: py, w: W-px*2, h: H-py*2, flip: 'right', colour: '#222', lw: 3 }];
+    }
+    if (name === 'chest') {
+      const cw = W * 0.36, ch = H * 0.82;
+      return [{ type: 'wardrobeChest',  x: (W-cw)/2, y: (H-ch)/2, w: cw, h: ch, rows: 5,   colour: '#222', lw: 3 }];
+    }
+    if (name === 'desk') {
+      const px = W * 0.04, py = H * 0.10;
+      return [{ type: 'wardrobeDesk',   x: px, y: py, w: W-px*2, h: H-py*2, flip: 'right', colour: '#222', lw: 3 }];
+    }
     return [];
   }
 
@@ -1055,6 +1152,8 @@ const Sketch = (() => {
       if (sh.type === 'rect')          return { ...sh, x: sh.x*sx, y: sh.y*sy, w: sh.w*sx, h: sh.h*sy };
       if (sh.type === 'wardrobe4door') return { ...sh, x: sh.x*sx, y: sh.y*sy, w: sh.w*sx, h: sh.h*sy };
       if (sh.type === 'wardrobeCorner') return { ...sh, x: sh.x*sx, y: sh.y*sy, w: sh.w*sx, h: sh.h*sy };
+      if (sh.type === 'wardrobeChest') return { ...sh, x: sh.x*sx, y: sh.y*sy, w: sh.w*sx, h: sh.h*sy };
+      if (sh.type === 'wardrobeDesk')  return { ...sh, x: sh.x*sx, y: sh.y*sy, w: sh.w*sx, h: sh.h*sy };
       if (sh.type === 'text')          return { ...sh, x: sh.x*sx, y: sh.y*sy };
       return sh;
     });
@@ -1100,7 +1199,7 @@ const Sketch = (() => {
           const sh        = fs.shapes[fs.selectedIdx];
           fs.drawing      = true;
           fs.resizeHandle = handle;
-          fs.resizePivot  = (sh.type === 'rect' || sh.type === 'wardrobe4door' || sh.type === 'wardrobeCorner') ? resizePivotFor(handle, sh) : null;
+          fs.resizePivot  = (sh.type === 'rect' || sh.type === 'wardrobe4door' || sh.type === 'wardrobeCorner' || sh.type === 'wardrobeChest' || sh.type === 'wardrobeDesk') ? resizePivotFor(handle, sh) : null;
           return;
         }
         if (hitShapeBody(p.x, p.y, fs.shapes[fs.selectedIdx])) {
@@ -1134,7 +1233,7 @@ const Sketch = (() => {
           const sh        = fs.shapes[fs.selectedIdx];
           fs.drawing      = true;
           fs.resizeHandle = handle;
-          fs.resizePivot  = (sh.type === 'rect' || sh.type === 'wardrobe4door' || sh.type === 'wardrobeCorner') ? resizePivotFor(handle, sh) : null;
+          fs.resizePivot  = (sh.type === 'rect' || sh.type === 'wardrobe4door' || sh.type === 'wardrobeCorner' || sh.type === 'wardrobeChest' || sh.type === 'wardrobeDesk') ? resizePivotFor(handle, sh) : null;
           return;
         }
       }
@@ -1166,7 +1265,7 @@ const Sketch = (() => {
 
     if (fs.resizeHandle && fs.selectedIdx >= 0 && fs.selectedIdx < fs.shapes.length) {
       const sh = fs.shapes[fs.selectedIdx];
-      if (sh.type === 'rect' || sh.type === 'wardrobe4door' || sh.type === 'wardrobeCorner') {
+      if (sh.type === 'rect' || sh.type === 'wardrobe4door' || sh.type === 'wardrobeCorner' || sh.type === 'wardrobeChest' || sh.type === 'wardrobeDesk') {
         const piv = fs.resizePivot;
         sh.x = Math.min(p.x, piv.x); sh.y = Math.min(p.y, piv.y);
         sh.w = Math.abs(p.x - piv.x); sh.h = Math.abs(p.y - piv.y);
@@ -1181,7 +1280,7 @@ const Sketch = (() => {
     if (fs.moving && fs.selectedIdx >= 0 && fs.selectedIdx < fs.shapes.length) {
       const dx = p.x - fs.startX, dy = p.y - fs.startY;
       const orig = fs.moveShapeStart, sh = fs.shapes[fs.selectedIdx];
-      if (sh.type === 'rect' || sh.type === 'wardrobe4door' || sh.type === 'wardrobeCorner') { sh.x = orig.x + dx; sh.y = orig.y + dy; }
+      if (sh.type === 'rect' || sh.type === 'wardrobe4door' || sh.type === 'wardrobeCorner' || sh.type === 'wardrobeChest' || sh.type === 'wardrobeDesk') { sh.x = orig.x + dx; sh.y = orig.y + dy; }
       else if (sh.type === 'line') { sh.x1 = orig.x1+dx; sh.y1 = orig.y1+dy; sh.x2 = orig.x2+dx; sh.y2 = orig.y2+dy; }
       else if (sh.type === 'pen')  { sh.path = orig.path.map(pt => ({ x: pt.x+dx, y: pt.y+dy })); }
       else if (sh.type === 'text') { sh.x = orig.x + dx; sh.y = orig.y + dy; }
@@ -1352,15 +1451,20 @@ const Sketch = (() => {
 
     // Show/hide shape-specific controls based on selection
     const selSh    = fs.selectedIdx >= 0 && fs.selectedIdx < fs.shapes.length ? fs.shapes[fs.selectedIdx] : null;
-    const showSec  = selSh?.type === 'wardrobe4door';
-    const showFlip = selSh?.type === 'wardrobeCorner';
+    const showSec  = selSh?.type === 'wardrobe4door' || selSh?.type === 'wardrobeChest';
+    const showFlip = selSh?.type === 'wardrobeCorner' || selSh?.type === 'wardrobeDesk';
     ['fs-section-sep','fs-section-rem','fs-section-count','fs-section-add'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = showSec ? '' : 'none';
     });
     if (showSec) {
+      const isChest = selSh.type === 'wardrobeChest';
+      const remBtn  = document.getElementById('fs-section-rem');
+      const addBtn  = document.getElementById('fs-section-add');
       const countEl = document.getElementById('fs-section-count');
-      if (countEl) countEl.textContent = selSh.cols || 4;
+      if (remBtn) remBtn.textContent = isChest ? '– Drawer' : '– Door';
+      if (addBtn) addBtn.textContent = isChest ? '+ Drawer' : '+ Door';
+      if (countEl) countEl.textContent = isChest ? (selSh.rows || 5) : (selSh.cols || 4);
     }
     ['fs-corner-sep','fs-corner-flip'].forEach(id => {
       const el = document.getElementById(id);
@@ -1385,25 +1489,33 @@ const Sketch = (() => {
   function fsAddSection() {
     if (fs.selectedIdx < 0 || fs.selectedIdx >= fs.shapes.length) return;
     const sh = fs.shapes[fs.selectedIdx];
-    if (sh.type !== 'wardrobe4door' || (sh.cols || 4) >= 8) return;
-    fsSaveHistory();
-    sh.cols = (sh.cols || 4) + 1;
+    if (sh.type === 'wardrobe4door') {
+      if ((sh.cols || 4) >= 8) return;
+      fsSaveHistory(); sh.cols = (sh.cols || 4) + 1;
+    } else if (sh.type === 'wardrobeChest') {
+      if ((sh.rows || 5) >= 10) return;
+      fsSaveHistory(); sh.rows = (sh.rows || 5) + 1;
+    } else return;
     fsRedraw();
   }
 
   function fsRemoveSection() {
     if (fs.selectedIdx < 0 || fs.selectedIdx >= fs.shapes.length) return;
     const sh = fs.shapes[fs.selectedIdx];
-    if (sh.type !== 'wardrobe4door' || (sh.cols || 4) <= 1) return;
-    fsSaveHistory();
-    sh.cols = (sh.cols || 4) - 1;
+    if (sh.type === 'wardrobe4door') {
+      if ((sh.cols || 4) <= 1) return;
+      fsSaveHistory(); sh.cols = (sh.cols || 4) - 1;
+    } else if (sh.type === 'wardrobeChest') {
+      if ((sh.rows || 5) <= 1) return;
+      fsSaveHistory(); sh.rows = (sh.rows || 5) - 1;
+    } else return;
     fsRedraw();
   }
 
   function fsFlipCorner() {
     if (fs.selectedIdx < 0 || fs.selectedIdx >= fs.shapes.length) return;
     const sh = fs.shapes[fs.selectedIdx];
-    if (sh.type !== 'wardrobeCorner') return;
+    if (sh.type !== 'wardrobeCorner' && sh.type !== 'wardrobeDesk') return;
     fsSaveHistory();
     sh.flip = (sh.flip === 'left') ? 'right' : 'left';
     fsRedraw();
@@ -1413,7 +1525,7 @@ const Sketch = (() => {
     const s = states[id];
     if (!s || s.selectedIdx < 0 || s.selectedIdx >= s.shapes.length) return;
     const sh = s.shapes[s.selectedIdx];
-    if (sh.type !== 'wardrobeCorner') return;
+    if (sh.type !== 'wardrobeCorner' && sh.type !== 'wardrobeDesk') return;
     saveHistory(id);
     sh.flip = (sh.flip === 'left') ? 'right' : 'left';
     redraw(id);
@@ -1447,8 +1559,8 @@ const Sketch = (() => {
 
     // Smart placement near wardrobe if one is visible
     const selSh = fs.selectedIdx >= 0 && fs.selectedIdx < fs.shapes.length ? fs.shapes[fs.selectedIdx] : null;
-    const wd    = (selSh?.type === 'wardrobe4door' || selSh?.type === 'wardrobeCorner') ? selSh
-                : fs.shapes.find(s => s.type === 'wardrobe4door' || s.type === 'wardrobeCorner');
+    const wd    = (selSh?.type === 'wardrobe4door' || selSh?.type === 'wardrobeCorner' || selSh?.type === 'wardrobeChest' || selSh?.type === 'wardrobeDesk') ? selSh
+                : fs.shapes.find(s => s.type === 'wardrobe4door' || s.type === 'wardrobeCorner' || s.type === 'wardrobeChest' || s.type === 'wardrobeDesk');
 
     let px = canvas.width  * 0.12;
     let py = canvas.height * 0.5;
