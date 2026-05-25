@@ -38,7 +38,7 @@
 const Sketch = (() => {
   const states  = {};
   /* SKETCH:CONSTANTS */
-  const SNAP_R     = 20;
+  const SNAP_R     = 36;
   const HANDLE_R   = 8;   // visual radius of handles
   const HANDLE_HIT = 28;  // hit detection radius (touch-friendly)
   const EDGE_HIT   = 16;  // proximity for line/rect edge selection
@@ -118,7 +118,7 @@ const Sketch = (() => {
     for (const sh of shapes) {
       if (sh.type === 'line') {
         pts.push({ x: sh.x1, y: sh.y1 }, { x: sh.x2, y: sh.y2 });
-      } else if (sh.type === 'rect') {
+      } else if (sh.type === 'rect' || sh.type === 'wardrobe4door' || sh.type === 'wardrobeCorner') {
         pts.push(
           { x: sh.x,        y: sh.y },
           { x: sh.x + sh.w, y: sh.y },
@@ -1534,8 +1534,6 @@ const Sketch = (() => {
   function fsUpdateToolbar() {
     fsSetTool(fs.tool);
     fsSetColour(fs.colour);
-    const btn = document.getElementById('fs-straighten');
-    if (btn) btn.classList.toggle('active', fs.autoStraighten);
   }
 
   /* SKETCH:BOOT */
