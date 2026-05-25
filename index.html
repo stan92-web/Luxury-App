@@ -151,13 +151,15 @@
 <div id="fs-overlay">
   <div id="fs-bar">
     <div id="fs-tools">
-      <button class="sk-btn"        id="fs-tool-select" onclick="Sketch.fsSetTool('select')">☞ Select</button>
-      <button class="sk-btn active" id="fs-tool-pen"    onclick="Sketch.fsSetTool('pen')">✏️ Draw</button>
-      <button class="sk-btn"        id="fs-tool-line"   onclick="Sketch.fsSetTool('line')">╱ Line</button>
-      <button class="sk-btn"        id="fs-tool-rect"   onclick="Sketch.fsSetTool('rect')">▭ Box</button>
-      <button class="sk-btn"        id="fs-tool-text"   onclick="Sketch.fsSetTool('text')">✍ Write</button>
-      <button class="sk-btn"        id="fs-tool-eraser" onclick="Sketch.fsSetTool('eraser')">✕ Erase</button>
+      <!-- Drawing tools -->
+      <button class="sk-btn active" id="fs-tool-pen"    onclick="Sketch.fsSetTool('pen')"    title="Freehand draw">Pen</button>
+      <button class="sk-btn"        id="fs-tool-select" onclick="Sketch.fsSetTool('select')" title="Select &amp; move shapes">Select</button>
+      <button class="sk-btn"        id="fs-tool-line"   onclick="Sketch.fsSetTool('line')"   title="Draw straight line">Line</button>
+      <button class="sk-btn"        id="fs-tool-rect"   onclick="Sketch.fsSetTool('rect')"   title="Draw rectangle">Box</button>
+      <button class="sk-btn"        id="fs-tool-text"   onclick="Sketch.fsSetTool('text')"   title="Add text annotation">Text</button>
+      <button class="sk-btn"        id="fs-tool-eraser" onclick="Sketch.fsSetTool('eraser')" title="Erase freehand strokes">Erase</button>
       <div class="sk-sep"></div>
+      <!-- Colours -->
       <div class="colour-dots" id="fs-colours">
         <div class="colour-dot active" style="background:#222222" onclick="Sketch.fsSetColour('#222222',this)" title="Black"></div>
         <div class="colour-dot"        style="background:#c0392b" onclick="Sketch.fsSetColour('#c0392b',this)" title="Red"></div>
@@ -165,21 +167,35 @@
         <div class="colour-dot"        style="background:#27ae60" onclick="Sketch.fsSetColour('#27ae60',this)" title="Green"></div>
       </div>
       <div class="sk-sep"></div>
-      <button class="sk-btn active" id="fs-straighten" onclick="Sketch.fsToggleStraighten(this)" title="Snap hand-drawn lines to straight">⟋ Straighten</button>
+      <!-- Snap + History -->
+      <button class="sk-btn active" id="fs-straighten" onclick="Sketch.fsToggleStraighten(this)" title="Snap hand-drawn lines to H / V / 45°">Snap</button>
+      <button class="sk-btn" onclick="Sketch.fsUndo()"  title="Undo last action">Undo</button>
+      <button class="sk-btn" onclick="Sketch.fsClear()" title="Clear all shapes">Clear</button>
       <div class="sk-sep"></div>
-      <button class="sk-btn" onclick="Sketch.fsUndo()">↩ Undo</button>
-      <button class="sk-btn" onclick="Sketch.fsClear()">🗑 Clear</button>
+      <!-- Furniture templates -->
+      <button class="sk-btn sk-tpl-btn" onclick="Sketch.fsTpl('4door')"  title="Insert straight 4-door wardrobe">▭ 4-Door</button>
+      <button class="sk-btn sk-tpl-btn" onclick="Sketch.fsTpl('corner')" title="Insert L-corner wardrobe — select it then tap ⇄ Flip to mirror">⌐ Corner</button>
       <div class="sk-sep"></div>
-      <button class="sk-btn sk-tpl-btn" onclick="Sketch.fsTpl('4door')" title="Insert 4-door internal wardrobe">▭ 4-Door</button>
-      <div class="sk-sep" id="fs-section-sep" style="display:none"></div>
-      <button class="sk-btn sk-section-btn" id="fs-section-rem" onclick="Sketch.fsRemoveSection()" title="Remove one section" style="display:none">– Door</button>
-      <span class="sk-section-count" id="fs-section-count" style="display:none">4</span>
-      <button class="sk-btn sk-section-btn" id="fs-section-add" onclick="Sketch.fsAddSection()" title="Add one section" style="display:none">+ Door</button>
+      <!-- Future templates -->
+      <button class="sk-btn sk-future-btn" onclick="Sketch.fsComingSoon('Desk')"    title="Coming soon">▭ Desk</button>
+      <button class="sk-btn sk-future-btn" onclick="Sketch.fsComingSoon('Bedside')" title="Coming soon">▭ Bedside</button>
+      <button class="sk-btn sk-future-btn" onclick="Sketch.fsComingSoon('Chest')"   title="Coming soon">▭ Chest</button>
       <div class="sk-sep"></div>
-      <button class="sk-btn sk-meas-btn" onclick="Sketch.fsInsertMeasurement('Width','W')"  title="Add Width measurement label">↔ Width</button>
-      <button class="sk-btn sk-meas-btn" onclick="Sketch.fsInsertMeasurement('Height','H')" title="Add Height measurement label">↕ Height</button>
-      <button class="sk-btn sk-meas-btn" onclick="Sketch.fsInsertMeasurement('Depth','D')"  title="Add Depth measurement label">⬛ Depth</button>
-      <button class="sk-btn sk-del-btn" onclick="Sketch.fsDeleteSelected()" title="Delete selected shape">✕ Del</button>
+      <!-- 4-door door count (shown when 4-door wardrobe selected) -->
+      <button class="sk-btn sk-section-btn" id="fs-section-rem" onclick="Sketch.fsRemoveSection()" title="Remove one door section" style="display:none">– Door</button>
+      <span class="sk-section-count"        id="fs-section-count"                                   style="display:none">4</span>
+      <button class="sk-btn sk-section-btn" id="fs-section-add" onclick="Sketch.fsAddSection()"    title="Add one door section"    style="display:none">+ Door</button>
+      <div class="sk-sep"                   id="fs-section-sep"                                     style="display:none"></div>
+      <!-- Corner flip (shown when corner wardrobe selected) -->
+      <button class="sk-btn sk-section-btn" id="fs-corner-flip" onclick="Sketch.fsFlipCorner()" title="Mirror corner wardrobe left / right" style="display:none">⇄ Flip</button>
+      <div class="sk-sep"                   id="fs-corner-sep"                                   style="display:none"></div>
+      <!-- Measurements -->
+      <button class="sk-btn sk-meas-btn" onclick="Sketch.fsInsertMeasurement('Width','W')"  title="Insert Width label">↔ Width</button>
+      <button class="sk-btn sk-meas-btn" onclick="Sketch.fsInsertMeasurement('Height','H')" title="Insert Height label">↕ Height</button>
+      <button class="sk-btn sk-meas-btn" onclick="Sketch.fsInsertMeasurement('Depth','D')"  title="Insert Depth label">⬛ Depth</button>
+      <div class="sk-sep"></div>
+      <!-- Delete -->
+      <button class="sk-btn sk-del-btn" onclick="Sketch.fsDeleteSelected()" title="Delete selected shape">✕ Delete</button>
     </div>
     <button class="btn btn-red fs-done-btn" onclick="Sketch.closeFullscreen()">✓ Done</button>
   </div>
@@ -213,10 +229,10 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-<script src="js/auth.js?v=42"></script>
-<script src="js/data.js?v=42"></script>
-<script src="js/sketch.js?v=42"></script>
-<script src="js/survey.js?v=42"></script>
-<script src="js/orders.js?v=42"></script>
+<script src="js/auth.js?v=43"></script>
+<script src="js/data.js?v=43"></script>
+<script src="js/sketch.js?v=43"></script>
+<script src="js/survey.js?v=43"></script>
+<script src="js/orders.js?v=43"></script>
 </body>
 </html>

@@ -479,6 +479,7 @@ textarea:focus {
 .sk-dim-input   { width: 66px; height: 30px; border: 1.5px solid #555; border-radius: 4px; background: #2a2a2a; color: #fff; font-size: 13px; font-weight: 600; padding: 0 5px; text-align: center; }
 .sk-dim-input:focus { outline: none; border-color: #1a6eb5; }
 .sk-meas-btn    { background: #1a4a7a !important; color: #fff !important; border-color: #1a4a7a !important; }
+.sk-future-btn  { opacity: 0.38; cursor: default !important; }
 
 /* CSS:SKETCHDIMS */
 .sketch-dims {
