@@ -264,7 +264,7 @@ const Survey = (() => {
             <div class="sk-sep"></div>
             <button class="sk-btn sk-meas-btn" onclick="Sketch.insertMeasurement(${id},'Width','W')"  title="Add Width label">↔ Width</button>
             <button class="sk-btn sk-meas-btn" onclick="Sketch.insertMeasurement(${id},'Height','H')" title="Add Height label">↕ Height</button>
-            <button class="sk-btn sk-meas-btn" onclick="Sketch.insertMeasurement(${id},'Depth','D')"  title="Add Depth label">⬛ Depth</button>
+            <button class="sk-btn sk-meas-btn" onclick="Sketch.insertMeasurement(${id},'Deep','D')"  title="Add Deep label">⬛ Deep</button>
             <button class="sk-btn sk-del-btn"  onclick="Sketch.deleteSelected(${id})"                 title="Delete selected shape">✕ Del</button>
             <div class="sk-sep"></div>
             <button class="sk-btn sk-fullscreen-btn" onclick="Sketch.openFullscreen(${id})" title="Open fullscreen sketch editor">⛶ Full Screen</button>

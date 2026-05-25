@@ -86,3 +86,7 @@ Current types: `pen`, `line`, `rect`, `text`, `wardrobe4door`, `wardrobeCorner`,
 | v45 | 5-drawer chest, desk with 2 drawers |
 | v46 | Bedside table, Furniture dropdown, undo/clear highlight, measure auto-select |
 | v47 | Combined Undo/Clear button (tap=undo, hold=clear), CLAUDE.md |
+| v48 | "Depth" label renamed to "Deep" on button and placed canvas text |
+
+## Layout Rules
+- **Measurement buttons** (↔ Width, ↕ Height, ⬛ Deep) must always stay grouped together — they are primary buttons used on every job
