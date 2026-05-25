@@ -24,13 +24,17 @@
    SKETCH:HISTORY     saveHistory()
    SKETCH:CONTROLS    undo(), redrawScaled(), clear(), deleteSelected(), setTool(), setColour(), toggleStraighten()
    SKETCH:DATA        getShapes(), setShapes()
-   SKETCH:TEMPLATES   buildTemplate() 4-door, insertTemplate(), fsTpl()
+   SKETCH:TEMPLATES   buildTemplate() 4door/corner/chest/desk/bedside, insertTemplate(), fsTpl()
+                     Shape types: wardrobe4door, wardrobeCorner, wardrobeChest, wardrobeDesk, wardrobeBedside
+                     New shape needs registration in ~12 places — grep wardrobeDesk to find them all
    SKETCH:NOTIFY      notifyChange()
    SKETCH:FULLSCREEN  fs state, openFullscreen(), closeFullscreen(), scaleShapes()
    SKETCH:FSPOINTER   initFsCanvas(), fsGetPos(), fsDown(), fsMove(), fsUp(), fsCancelDraw()
    SKETCH:FSTEXT      fsShowTextInput()
    SKETCH:FSREDRAW    fsRedraw(), fsSaveHistory()
    SKETCH:FSCONTROLS  fsDeleteSelected(), fsSetTool(), fsSetColour(), fsUndo(), fsClear(), fsToggleStraighten(), fsUpdateToolbar()
+                     fsFurnitureMenu(), fsCloseFurniture() — dropdown toggle for furniture panel
+                     _fsUndoClearDown/Up/Cancel, _undoClearDown/Up/Cancel — long-press undo/clear buttons
    SKETCH:BOOT        DOMContentLoaded → initFsCanvas
    SKETCH:EXPORTS     return { ... }
 ══════════════════════════════════════════════ */
@@ -1692,6 +1696,50 @@ const Sketch = (() => {
     if (panel) panel.classList.remove('open');
   }
 
+  // Combined Undo/Clear button — tap=undo, hold 700ms=clear (fullscreen)
+  function _fsUndoClearDown(btn) {
+    btn._lpCleared = false;
+    btn.classList.add('sk-btn-holding');
+    btn._lpTimer = setTimeout(() => {
+      btn._lpCleared = true;
+      btn.classList.remove('sk-btn-holding');
+      fsClear();
+    }, 700);
+  }
+  function _fsUndoClearUp(btn) {
+    clearTimeout(btn._lpTimer);
+    btn.classList.remove('sk-btn-holding');
+    if (!btn._lpCleared) fsUndo();
+    btn._lpCleared = false;
+  }
+  function _fsUndoClearCancel(btn) {
+    clearTimeout(btn._lpTimer);
+    btn.classList.remove('sk-btn-holding');
+    btn._lpCleared = false;
+  }
+
+  // Combined Undo/Clear button — tap=undo, hold 700ms=clear (small canvas)
+  function _undoClearDown(btn, id) {
+    btn._lpCleared = false;
+    btn.classList.add('sk-btn-holding');
+    btn._lpTimer = setTimeout(() => {
+      btn._lpCleared = true;
+      btn.classList.remove('sk-btn-holding');
+      clear(id);
+    }, 700);
+  }
+  function _undoClearUp(btn, id) {
+    clearTimeout(btn._lpTimer);
+    btn.classList.remove('sk-btn-holding');
+    if (!btn._lpCleared) undo(id);
+    btn._lpCleared = false;
+  }
+  function _undoClearCancel(btn, id) {
+    clearTimeout(btn._lpTimer);
+    btn.classList.remove('sk-btn-holding');
+    btn._lpCleared = false;
+  }
+
   function fsUpdateToolbar() {
     fsSetTool(fs.tool);
     fsSetColour(fs.colour);
@@ -1710,6 +1758,8 @@ const Sketch = (() => {
     insertTemplate, insertMeasurement, flipCorner, fsTpl, fsAddSection, fsRemoveSection, fsFlipCorner, fsComingSoon, fsSaveDim, fsInsertMeasurement,
     openFullscreen, closeFullscreen,
     fsSetTool, fsSetColour, fsUndo, fsClear, fsDeleteSelected, fsToggleStraighten,
-    fsFurnitureMenu, fsCloseFurniture
+    fsFurnitureMenu, fsCloseFurniture,
+    _fsUndoClearDown, _fsUndoClearUp, _fsUndoClearCancel,
+    _undoClearDown, _undoClearUp, _undoClearCancel
   };
 })();

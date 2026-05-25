@@ -248,8 +248,12 @@ const Survey = (() => {
               <div class="colour-dot"        style="background:#27ae60" onclick="Sketch.setColour(${id},'#27ae60',this)" title="Green"></div>
             </div>
             <div class="sk-sep"></div>
-            <button class="sk-btn sk-undo-btn" onclick="Sketch.undo(${id})"  title="Undo last action">Undo</button>
-            <button class="sk-btn sk-clear-btn" onclick="Sketch.clear(${id})" title="Clear all shapes">Clear</button>
+            <button class="sk-btn sk-undo-btn"
+              onpointerdown="Sketch._undoClearDown(this,${id})"
+              onpointerup="Sketch._undoClearUp(this,${id})"
+              onpointercancel="Sketch._undoClearCancel(this,${id})"
+              oncontextmenu="return false"
+              title="Undo (tap) • Hold to clear all">↩ Undo</button>
             <div class="sk-sep"></div>
             <button class="sk-btn sk-tpl-btn"     onclick="Sketch.insertTemplate(${id},'4door')"   title="Insert 4-door wardrobe">▭ 4-Door</button>
             <button class="sk-btn sk-tpl-btn"     onclick="Sketch.insertTemplate(${id},'corner')"  title="Insert L-corner wardrobe">⌐ Corner</button>

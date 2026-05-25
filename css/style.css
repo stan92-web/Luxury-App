@@ -481,11 +481,13 @@ textarea:focus {
 .sk-meas-btn    { background: #1a4a7a !important; color: #fff !important; border-color: #1a4a7a !important; }
 .sk-future-btn  { opacity: 0.38; cursor: default !important; }
 
-/* Undo/Clear — distinct warning colours in both light and dark contexts */
-.sk-undo-btn  { border-color: #b87700 !important; color: #b87700 !important; background: #fffaf0 !important; }
-.sk-clear-btn { border-color: #c0392b !important; color: #c0392b !important; background: #fff5f5 !important; }
-#fs-tools .sk-undo-btn  { background: #261a00 !important; border-color: #9a6500 !important; color: #e8a800 !important; }
-#fs-tools .sk-clear-btn { background: #260000 !important; border-color: #9a0000 !important; color: #ff5555 !important; }
+/* Undo — distinct amber colour in both light and dark contexts */
+.sk-undo-btn { border-color: #b87700 !important; color: #b87700 !important; background: #fffaf0 !important; }
+#fs-tools .sk-undo-btn { background: #261a00 !important; border-color: #9a6500 !important; color: #e8a800 !important; }
+
+/* Long-hold feedback: button turns red while user holds for clear-all */
+.sk-btn-holding { border-color: #c0392b !important; color: #c0392b !important; background: #fff5f5 !important; }
+#fs-tools .sk-btn-holding { background: #260000 !important; border-color: #9a0000 !important; color: #ff5555 !important; }
 
 /* Furniture dropdown */
 .sk-furniture-wrap  { position: relative; flex-shrink: 0; }

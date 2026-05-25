@@ -167,9 +167,13 @@
         <div class="colour-dot"        style="background:#27ae60" onclick="Sketch.fsSetColour('#27ae60',this)" title="Green"></div>
       </div>
       <div class="sk-sep"></div>
-      <!-- History -->
-      <button class="sk-btn sk-undo-btn" onclick="Sketch.fsUndo()"  title="Undo last action">Undo</button>
-      <button class="sk-btn sk-clear-btn" onclick="Sketch.fsClear()" title="Clear all shapes">Clear</button>
+      <!-- History: tap=undo, hold=clear all -->
+      <button class="sk-btn sk-undo-btn"
+        onpointerdown="Sketch._fsUndoClearDown(this)"
+        onpointerup="Sketch._fsUndoClearUp(this)"
+        onpointercancel="Sketch._fsUndoClearCancel(this)"
+        oncontextmenu="return false"
+        title="Undo (tap) • Hold to clear all">↩ Undo</button>
       <div class="sk-sep"></div>
       <!-- Furniture dropdown -->
       <div class="sk-furniture-wrap">
@@ -231,10 +235,10 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-<script src="js/auth.js?v=46"></script>
-<script src="js/data.js?v=46"></script>
-<script src="js/sketch.js?v=46"></script>
-<script src="js/survey.js?v=46"></script>
-<script src="js/orders.js?v=46"></script>
+<script src="js/auth.js?v=47"></script>
+<script src="js/data.js?v=47"></script>
+<script src="js/sketch.js?v=47"></script>
+<script src="js/survey.js?v=47"></script>
+<script src="js/orders.js?v=47"></script>
 </body>
 </html>
