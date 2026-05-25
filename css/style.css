@@ -481,6 +481,30 @@ textarea:focus {
 .sk-meas-btn    { background: #1a4a7a !important; color: #fff !important; border-color: #1a4a7a !important; }
 .sk-future-btn  { opacity: 0.38; cursor: default !important; }
 
+/* Undo/Clear — distinct warning colours in both light and dark contexts */
+.sk-undo-btn  { border-color: #b87700 !important; color: #b87700 !important; background: #fffaf0 !important; }
+.sk-clear-btn { border-color: #c0392b !important; color: #c0392b !important; background: #fff5f5 !important; }
+#fs-tools .sk-undo-btn  { background: #261a00 !important; border-color: #9a6500 !important; color: #e8a800 !important; }
+#fs-tools .sk-clear-btn { background: #260000 !important; border-color: #9a0000 !important; color: #ff5555 !important; }
+
+/* Furniture dropdown */
+.sk-furniture-wrap  { position: relative; flex-shrink: 0; }
+.sk-furniture-panel {
+  display: none; flex-direction: column; gap: 5px;
+  position: absolute; top: calc(100% + 10px); left: 0; z-index: 600;
+  background: #1c1c1c; border: 1.5px solid #444; border-radius: 10px;
+  padding: 8px; min-width: 230px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.7);
+}
+.sk-furniture-panel.open { display: flex; }
+.sk-furn-item {
+  background: #2c5f2e; border: 1.5px solid #4a8a4c; color: #fff;
+  border-radius: 7px; padding: 12px 16px; font-size: 13px; font-weight: bold;
+  font-family: inherit; cursor: pointer; text-align: left;
+  touch-action: manipulation; white-space: nowrap; letter-spacing: 0.3px;
+}
+.sk-furn-item:active { opacity: 0.75; }
+
 /* CSS:SKETCHDIMS */
 .sketch-dims {
   display: flex;
