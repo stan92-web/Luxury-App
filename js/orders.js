@@ -603,33 +603,101 @@ const Orders = (() => {
     renderList();
   }
 
+  /* ── Fetch one order's fullData from Sheets via JSONP ── */
+  function fetchOrderData(orderId) {
+    return new Promise(resolve => {
+      if (!AppData.SHEETS_URL) return resolve(null);
+      const cbName = 'lhOrdCb' + Date.now();
+      const script = document.createElement('script');
+      const timer  = setTimeout(() => { cleanup(); resolve(null); }, 15000);
+      const cleanup = () => {
+        clearTimeout(timer);
+        delete window[cbName];
+        if (script.parentNode) script.parentNode.removeChild(script);
+      };
+      window[cbName] = data => {
+        cleanup();
+        resolve(data && data.ok && data.order ? (data.order['Full Data'] || null) : null);
+      };
+      script.onerror = () => { cleanup(); resolve(null); };
+      script.src = AppData.SHEETS_URL
+        + '?action=getOrder&orderId=' + encodeURIComponent(orderId)
+        + '&callback=' + cbName;
+      document.head.appendChild(script);
+    });
+  }
+
   /* ── Load an order into the form ─────────── */
-  function loadOrder(orderId) {
+  async function loadOrder(orderId) {
     const versions = allOrders
       .filter(o => o['Order ID'] === orderId)
       .sort((a, b) => Number(b['Version'] || 0) - Number(a['Version'] || 0));
 
     if (!versions.length) { Survey.toast('Order not found'); return; }
 
-    const fullData = versions[0]['Full Data'];
+    const order = versions[0];
+    let fullData = order['Full Data'];
+
     if (!fullData) {
-      Survey.toast('This order was saved with an older version — resave it from the form to enable loading');
-      return;
+      Survey.toast('Fetching order data…');
+      fullData = await fetchOrderData(orderId);
+      if (fullData) {
+        order['Full Data'] = fullData; // cache for this session
+      } else {
+        Survey.toast('Order data not found — resave it from the original device first');
+        return;
+      }
     }
 
-    const customer = versions[0]['Customer'] || orderId;
+    const customer = order['Customer'] || orderId;
     if (!confirm(`Load order for ${customer}?\n\nThis will replace everything on the current form.`)) return;
 
     try {
       localStorage.setItem('lh_survey_v1',     fullData);
       localStorage.setItem('lh_order_id',      orderId);
-      localStorage.setItem('lh_order_version', String(versions[0]['Version'] || 1));
-      localStorage.setItem('lh_order_status',  versions[0]['Status'] || 'Quote');
+      localStorage.setItem('lh_order_version', String(order['Version'] || 1));
+      localStorage.setItem('lh_order_status',  order['Status'] || 'Quote');
       closePanel();
       location.reload();
     } catch (_) {
       Survey.toast('Could not restore order — please try again');
     }
+  }
+
+  /* ── Clear all orders from cloud + local cache ── */
+  function clearCloud() {
+    if (!confirm('Delete ALL orders from the cloud spreadsheet?\n\nThis removes them from all devices. Each device will still keep its own local cache until it refreshes.\n\nContinue?')) return;
+
+    pendingOrders = [];
+    localStorage.removeItem('lh_pending_orders');
+    sessionSaved.length = 0;
+    allOrders = [];
+    renderList();
+
+    if (!AppData.SHEETS_URL) { Survey.toast('Cloud not connected'); return; }
+
+    Survey.toast('Clearing cloud…');
+    const cbName = 'lhClrCb' + Date.now();
+    const script = document.createElement('script');
+    const timer  = setTimeout(() => {
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+      Survey.toast('⚠ Clear timed out');
+    }, 15000);
+    window[cbName] = () => {
+      clearTimeout(timer);
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+      Survey.toast('☁ Cloud orders cleared');
+    };
+    script.onerror = () => {
+      clearTimeout(timer);
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+      Survey.toast('⚠ Clear failed');
+    };
+    script.src = AppData.SHEETS_URL + '?action=clear&callback=' + cbName;
+    document.head.appendChild(script);
   }
 
   /* ── Email quote via EmailJS ─────────────── */
@@ -688,5 +756,5 @@ const Orders = (() => {
     }
   });
 
-  return { save, openPanel, closePanel, setFilter, setSearch, loadOrder, sendEmail, refresh, promoteToOrder };
+  return { save, openPanel, closePanel, setFilter, setSearch, loadOrder, sendEmail, refresh, promoteToOrder, clearCloud };
 })();

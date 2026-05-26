@@ -131,7 +131,47 @@ function doGet(e) {
         .setMimeType(cb ? ContentService.MimeType.JAVASCRIPT : ContentService.MimeType.JSON);
     }
 
-    // ── Load all orders ──
+    // ── Clear all orders ?action=clear ──
+    if (e && e.parameter && e.parameter.action === 'clear') {
+      var clrSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Orders');
+      if (clrSheet && clrSheet.getLastRow() > 1) {
+        clrSheet.deleteRows(2, clrSheet.getLastRow() - 1);
+      }
+      var clrJson = JSON.stringify({ ok: true, cleared: true });
+      return ContentService
+        .createTextOutput(cb ? cb + '(' + clrJson + ')' : clrJson)
+        .setMimeType(cb ? ContentService.MimeType.JAVASCRIPT : ContentService.MimeType.JSON);
+    }
+
+    // ── Fetch one order with fullData ?action=getOrder&orderId=.. ──
+    if (e && e.parameter && e.parameter.action === 'getOrder') {
+      var targetId  = e.parameter.orderId || '';
+      var goSheet   = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Orders');
+      var goJson;
+      if (!goSheet || goSheet.getLastRow() < 2 || !targetId) {
+        goJson = JSON.stringify({ ok: false });
+      } else {
+        var goRows  = goSheet.getDataRange().getValues();
+        var goHdrs  = goRows[0];
+        var idIdx   = goHdrs.indexOf('Order ID');
+        var verIdx  = goHdrs.indexOf('Version');
+        var matched = goRows.slice(1).filter(function(r) { return r[idIdx] === targetId; });
+        if (!matched.length) {
+          goJson = JSON.stringify({ ok: false });
+        } else {
+          matched.sort(function(a, b) { return Number(b[verIdx]||0) - Number(a[verIdx]||0); });
+          var best = matched[0];
+          var goObj = {};
+          goHdrs.forEach(function(h, i) { goObj[h] = best[i]; });
+          goJson = JSON.stringify({ ok: true, order: goObj });
+        }
+      }
+      return ContentService
+        .createTextOutput(cb ? cb + '(' + goJson + ')' : goJson)
+        .setMimeType(cb ? ContentService.MimeType.JAVASCRIPT : ContentService.MimeType.JSON);
+    }
+
+    // ── Load all orders (fullData stripped — fetch per order on demand) ──
     var ss    = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = ss.getSheetByName('Orders');
     if (!sheet || sheet.getLastRow() < 2) {
@@ -145,7 +185,8 @@ function doGet(e) {
     var headers = rows[0];
     var orders  = rows.slice(1).map(function(row) {
       var obj = {};
-      headers.forEach(function(h, i) { obj[h] = row[i]; });
+      // fullData is omitted from the list — loaded on demand via ?action=getOrder
+      headers.forEach(function(h, i) { obj[h] = (h === 'Full Data') ? '' : row[i]; });
       return obj;
     });
 
