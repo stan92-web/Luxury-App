@@ -275,6 +275,43 @@ const Orders = (() => {
     }).catch(() => {});
   }
 
+  /* ── Convert a stored local order object back to a saveToSheets payload ── */
+  function orderToPayload(o) {
+    return {
+      orderId:  String(o['Order ID']  || ''),
+      property: String(o['Property']  || o['Address'] || ''),
+      version:  Number(o['Version']   || 1),
+      savedAt:  String(o['Saved At']  || new Date().toISOString()),
+      status:   String(o['Status']    || 'Quote'),
+      rep:      String(o['Rep']       || ''),
+      customer: String(o['Customer']  || ''),
+      phone:    String(o['Phone']     || ''),
+      doorNo:   String(o['Door No']   || ''),
+      address:  String(o['Address']   || ''),
+      rooms:    String(o['Rooms']     || ''),
+      total:    String(o['Total £']   || ''),
+      deposit:  String(o['Deposit £'] || ''),
+      balance:  String(o['Balance £'] || ''),
+      fullData: String(o['Full Data'] || ''),
+    };
+  }
+
+  /* ── Push this device's pending orders that haven't reached Sheets ── */
+  // Called after every Sheets fetch. Compares pendingOrders against what
+  // Sheets returned and silently POSTs anything that's missing. This means
+  // each device automatically contributes its local orders to the shared pool
+  // the first time it opens the Orders panel after an app update.
+  function pushUnsyncedPending(sheetsOrders) {
+    if (!AppData.SHEETS_URL || !pendingOrders.length) return;
+    const inSheets = new Set(sheetsOrders.map(o => String(o['Order ID'])));
+    const unsynced = pendingOrders.filter(p => !inSheets.has(String(p['Order ID'])));
+    if (!unsynced.length) return;
+    Survey.toast(`↑ Syncing ${unsynced.length} local order${unsynced.length > 1 ? 's' : ''} to cloud…`);
+    unsynced.slice(0, 20).forEach((p, i) => {
+      setTimeout(() => saveToSheets(orderToPayload(p)).catch(() => {}), i * 400);
+    });
+  }
+
   /* ── Load orders from Sheets (JSONP — bypasses CORS) ── */
   function fetchOrders() {
     if (!AppData.SHEETS_URL) return Promise.resolve([]);
@@ -361,10 +398,15 @@ const Orders = (() => {
     if (ind.parentNode) ind.parentNode.removeChild(ind);
 
     if (result === null) {
-      // Network / timeout — keep whatever is already showing
       Survey.toast('⚠ Could not reach Google Sheets — showing this device only');
       return;
     }
+
+    // Push any local orders that haven't reached Sheets yet
+    pushUnsyncedPending(result);
+
+    const sheetsIds = new Set(result.map(o => String(o['Order ID'])));
+    const localOnlyCount = pendingOrders.filter(p => !sheetsIds.has(String(p['Order ID']))).length;
 
     const before = allOrders.length;
     const merged = result.slice();
@@ -380,10 +422,12 @@ const Orders = (() => {
 
     if (document.getElementById('orders-overlay')?.classList.contains('open')) {
       renderList();
-      // Tell the user how many orders came from Sheets so they can confirm sync
-      const newCount = allOrders.length - before;
-      if (newCount > 0) {
-        Survey.toast(`☁ ${allOrders.length} orders loaded from all devices`);
+      const fromSheets = result.length;
+      if (fromSheets > 0 || localOnlyCount > 0) {
+        const parts = [];
+        if (fromSheets)      parts.push(`${fromSheets} from cloud`);
+        if (localOnlyCount)  parts.push(`${localOnlyCount} local (syncing…)`);
+        Survey.toast(`☁ ${parts.join(' · ')}`);
       }
     }
   }
@@ -421,30 +465,29 @@ const Orders = (() => {
       list.innerHTML = '<div class="orders-loading">Loading orders…</div>';
     }
 
-    // Fetch from Sheets in the background and merge when it arrives.
+    // Fetch from Sheets and merge when it arrives.
     const result = await fetchOrders();
 
     if (result === null) {
-      // JSONP timed out — keep showing what we already rendered above.
       if (!allOrders.length) {
         list.innerHTML = '<div class="orders-empty">⚠️ Could not load orders from Google Sheets — check your internet connection, then tap <strong>↻ Refresh</strong> to try again.</div>';
+      } else {
+        Survey.toast('⚠ Could not reach Sheets — showing local orders');
       }
       return;
     }
 
-    // Merge Sheets rows with local data.
-    // Rule: start with Sheets rows, then overlay any local version that has
-    // fullData where the Sheets version does not — so orders always remain
-    // loadable / editable even if Sheets stored a stripped copy.
-    // pendingOrders is intentionally NOT cleared here; it stays in localStorage
-    // so orders survive page reloads and remain loadable on this device.
+    // Push any local orders that haven't reached Sheets yet
+    pushUnsyncedPending(result);
+
+    // Merge: start with Sheets rows, then overlay local copies that have fullData
     const merged = result.slice();
     [...pendingOrders, ...sessionSaved].forEach(o => {
       const idx = merged.findIndex(r => r['Order ID'] === o['Order ID']);
       if (idx === -1) {
-        merged.unshift(o); // not in Sheets yet — add it
+        merged.unshift(o);
       } else if (o['Full Data'] && !merged[idx]['Full Data']) {
-        merged.splice(idx, 1, o); // prefer local copy that has fullData
+        merged.splice(idx, 1, o);
       }
     });
     allOrders = merged;
