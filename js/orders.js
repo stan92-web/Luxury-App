@@ -32,27 +32,58 @@ const Orders = (() => {
     return v;
   }
 
-  /* ── Save order text data (POST via Netlify proxy — no URL length limit) ── */
-  // Full payload including fullData is sent via fetch POST to the same-origin
-  // Netlify function, which forwards it to Apps Script doPost → writeOrderRow.
-  // This replaces the old JSONP GET which had to strip fullData for large quotes,
-  // making those orders appear as "resave to enable loading" on other devices.
+  /* ── Save order via JSONP GET (iOS-safe, no CORS, no redirect issues) ── */
+  // Uses the same <script>-tag injection as fetchOrders — Google does not
+  // redirect GET requests to a different URL the way POST exec requests are,
+  // so the callback always fires.  Apps Script doGet ?action=save handles it.
+  // If the full payload exceeds 20 000 chars (large sketches), fullData is
+  // stripped so metadata always reaches Sheets (order visible on all devices).
+  // The Netlify function is then attempted in the background as a best-effort
+  // channel to also store fullData.
+  function saveViaJSONP(payload) {
+    return new Promise(resolve => {
+      const cbName = 'lhSaveCb' + Date.now();
+      const timer  = setTimeout(() => { cleanup(); resolve({ ok: false }); }, 15000);
+      const cleanup = () => {
+        clearTimeout(timer);
+        delete window[cbName];
+        if (script.parentNode) script.parentNode.removeChild(script);
+      };
+      window[cbName] = data => { cleanup(); resolve(data || { ok: false }); };
+      const script   = document.createElement('script');
+      script.onerror = () => { cleanup(); resolve({ ok: false }); };
+      const qs = new URLSearchParams({
+        action:   'save',
+        data:     JSON.stringify(payload),
+        callback: cbName,
+      });
+      script.src = AppData.SHEETS_URL + '?' + qs.toString();
+      document.head.appendChild(script);
+    });
+  }
+
   async function saveToSheets(payload) {
     if (!AppData.SHEETS_URL) return;
-    try {
-      const res  = await fetch('/.netlify/functions/save-order', {
+    const JSONP_LIMIT  = 20000;
+    const payloadStr   = JSON.stringify(payload);
+    const fitsInUrl    = payloadStr.length <= JSONP_LIMIT;
+    const jsonpPayload = fitsInUrl ? payload : { ...payload, fullData: '' };
+
+    const result = await saveViaJSONP(jsonpPayload);
+
+    if (result && result.ok) {
+      Survey.toast('☁ Sheets saved ✓');
+    } else {
+      Survey.toast('⚠ Cloud save failed — saved on this device only');
+    }
+
+    // Large payloads: also try Netlify POST in background so fullData reaches Sheets
+    if (!fitsInUrl && payload.fullData) {
+      fetch('/.netlify/functions/save-order', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify(payload),
-      });
-      const data = await res.json();
-      if (data && data.ok) {
-        Survey.toast('☁ Sheets saved ✓');
-      } else {
-        Survey.toast('⚠ Sheets save failed — order saved on this device');
-      }
-    } catch (_) {
-      Survey.toast('⚠ Sheets save failed — order saved on this device');
+        body:    payloadStr,
+      }).catch(() => {});
     }
   }
 
