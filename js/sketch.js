@@ -922,20 +922,23 @@ const Sketch = (() => {
         ctx.stroke();
       }
 
-      // Blue handles centred in each section
+      // Vertical handles centred in each section
       ctx.strokeStyle = '#1a6eb5'; ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
       for (let i = 0; i < cols; i++) {
-        const segX0 = x + (w / cols) * i;
-        const segX1 = x + (w / cols) * (i + 1);
-        const cx    = (segX0 + segX1) / 2;
-        const tL    = tlY + (trY - tlY) * (i / cols);
-        const tR    = tlY + (trY - tlY) * ((i + 1) / cols);
+        const segX0  = x + (w / cols) * i;
+        const segX1  = x + (w / cols) * (i + 1);
+        const cx     = (segX0 + segX1) / 2;
+        const tL     = tlY + (trY - tlY) * (i / cols);
+        const tR     = tlY + (trY - tlY) * ((i + 1) / cols);
         const topMid = (tL + tR) / 2;
-        const secH  = (y + h) - topMid;
-        const cy    = topMid + secH * 0.5;
-        const hW    = Math.min((segX1 - segX0) * 0.46, 50);
-        const hH    = Math.max(4, Math.min(12, secH * 0.08));
-        ctx.strokeRect(cx - hW / 2, cy - hH / 2, hW, hH);
+        const secH   = (y + h) - topMid;
+        const hLen   = Math.min(secH * 0.30, 40);
+        const cy     = topMid + secH * 0.5;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - hLen / 2);
+        ctx.lineTo(cx, cy + hLen / 2);
+        ctx.stroke();
       }
 
       ctx.restore();
