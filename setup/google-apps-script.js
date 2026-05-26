@@ -131,15 +131,21 @@ function doGet(e) {
         .setMimeType(cb ? ContentService.MimeType.JAVASCRIPT : ContentService.MimeType.JSON);
     }
 
-    // ── Clear all orders ?action=clear ──
-    if (e && e.parameter && e.parameter.action === 'clear') {
-      var clrSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Orders');
-      if (clrSheet && clrSheet.getLastRow() > 1) {
-        clrSheet.deleteRows(2, clrSheet.getLastRow() - 1);
+    // ── Delete one order ?action=deleteOrder&orderId=.. ──
+    if (e && e.parameter && e.parameter.action === 'deleteOrder') {
+      var delId    = e.parameter.orderId || '';
+      var delSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Orders');
+      if (delSheet && delId) {
+        var delRows  = delSheet.getDataRange().getValues();
+        var delHdrs  = delRows[0];
+        var delIdIdx = delHdrs.indexOf('Order ID');
+        for (var di = delRows.length - 1; di >= 1; di--) {
+          if (String(delRows[di][delIdIdx]) === delId) delSheet.deleteRow(di + 1);
+        }
       }
-      var clrJson = JSON.stringify({ ok: true, cleared: true });
+      var delJson = JSON.stringify({ ok: true, deleted: delId });
       return ContentService
-        .createTextOutput(cb ? cb + '(' + clrJson + ')' : clrJson)
+        .createTextOutput(cb ? cb + '(' + delJson + ')' : delJson)
         .setMimeType(cb ? ContentService.MimeType.JAVASCRIPT : ContentService.MimeType.JSON);
     }
 

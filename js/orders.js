@@ -533,6 +533,7 @@ const Orders = (() => {
               <div class="order-date">${date}</div>
               ${repBadge}
               <span class="order-status ${sc}">${o['Status'] || 'Quote'}</span>
+              <button class="order-delete-btn" onclick="event.stopPropagation();Orders.deleteOrder('${oid}')" title="Delete this order">🗑 Delete</button>
             </div>
           </div>`;
       });
@@ -664,39 +665,45 @@ const Orders = (() => {
     }
   }
 
-  /* ── Clear all orders from cloud + local cache ── */
-  function clearCloud() {
-    if (!confirm('Delete ALL orders from the cloud spreadsheet?\n\nThis removes them from all devices. Each device will still keep its own local cache until it refreshes.\n\nContinue?')) return;
+  /* ── Delete a single order from cloud + local cache ── */
+  function deleteOrder(orderId) {
+    const o = allOrders.find(x => x['Order ID'] === orderId);
+    if (!o) return;
+    const label = [o['Customer'], o['Address']].filter(Boolean).join(' — ') || orderId;
+    if (!confirm(`Delete order?\n\n${label}\n\nThis removes it from the cloud permanently.`)) return;
 
-    pendingOrders = [];
-    localStorage.removeItem('lh_pending_orders');
-    sessionSaved.length = 0;
-    allOrders = [];
+    allOrders     = allOrders.filter(x => x['Order ID'] !== orderId);
+    pendingOrders = pendingOrders.filter(x => x['Order ID'] !== orderId);
+    localStorage.setItem('lh_pending_orders', JSON.stringify(pendingOrders));
+    const si = sessionSaved.findIndex(x => x['Order ID'] === orderId);
+    if (si !== -1) sessionSaved.splice(si, 1);
+
     renderList();
+    Survey.toast('Deleting…');
 
-    if (!AppData.SHEETS_URL) { Survey.toast('Cloud not connected'); return; }
-
-    Survey.toast('Clearing cloud…');
-    const cbName = 'lhClrCb' + Date.now();
+    if (!AppData.SHEETS_URL) return;
+    const cbName = 'lhDelCb' + Date.now();
     const script = document.createElement('script');
     const timer  = setTimeout(() => {
       delete window[cbName];
       if (script.parentNode) script.parentNode.removeChild(script);
-      Survey.toast('⚠ Clear timed out');
+      Survey.toast('⚠ Cloud delete timed out');
     }, 15000);
     window[cbName] = () => {
       clearTimeout(timer);
       delete window[cbName];
       if (script.parentNode) script.parentNode.removeChild(script);
-      Survey.toast('☁ Cloud orders cleared');
+      Survey.toast('Order deleted');
     };
     script.onerror = () => {
       clearTimeout(timer);
       delete window[cbName];
       if (script.parentNode) script.parentNode.removeChild(script);
-      Survey.toast('⚠ Clear failed');
+      Survey.toast('⚠ Cloud delete failed');
     };
-    script.src = AppData.SHEETS_URL + '?action=clear&callback=' + cbName;
+    script.src = AppData.SHEETS_URL
+      + '?action=deleteOrder&orderId=' + encodeURIComponent(orderId)
+      + '&callback=' + cbName;
     document.head.appendChild(script);
   }
 
@@ -756,5 +763,5 @@ const Orders = (() => {
     }
   });
 
-  return { save, openPanel, closePanel, setFilter, setSearch, loadOrder, sendEmail, refresh, promoteToOrder, clearCloud };
+  return { save, openPanel, closePanel, setFilter, setSearch, loadOrder, sendEmail, refresh, promoteToOrder, deleteOrder };
 })();
