@@ -64,25 +64,25 @@ const Orders = (() => {
 
   async function saveToSheets(payload) {
     if (!AppData.SHEETS_URL) return;
-    const JSONP_LIMIT  = 20000;
-    const payloadStr   = JSON.stringify(payload);
-    const fitsInUrl    = payloadStr.length <= JSONP_LIMIT;
-    const jsonpPayload = fitsInUrl ? payload : { ...payload, fullData: '' };
 
-    const result = await saveViaJSONP(jsonpPayload);
-
-    if (result && result.ok) {
-      Survey.toast('☁ Sheets saved ✓');
-    } else {
+    // Step 1 — metadata-only via JSONP GET (URL stays tiny, always reaches Sheets)
+    // This guarantees the order is visible on every device immediately.
+    const result = await saveViaJSONP({ ...payload, fullData: '' });
+    if (!(result && result.ok)) {
       Survey.toast('⚠ Cloud save failed — saved on this device only');
+      return;
     }
+    Survey.toast('☁ Sheets saved ✓');
 
-    // Large payloads: also try Netlify POST in background so fullData reaches Sheets
-    if (!fitsInUrl && payload.fullData) {
+    // Step 2 — full data (including fullData) via Netlify proxy in background.
+    // Netlify converts the POST to a server-side GET to Apps Script, which
+    // correctly follows the redirect without losing the payload.
+    // Fire-and-forget — metadata is already saved so this is best-effort.
+    if (payload.fullData) {
       fetch('/.netlify/functions/save-order', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    payloadStr,
+        body:    JSON.stringify(payload),
       }).catch(() => {});
     }
   }
@@ -318,7 +318,7 @@ const Orders = (() => {
     return new Promise(resolve => {
       const cbName = 'lhCb' + Date.now();
       const script = document.createElement('script');
-      const timer  = setTimeout(() => { cleanup(); resolve(null); }, 10000);
+      const timer  = setTimeout(() => { cleanup(); resolve(null); }, 25000);
 
       const cleanup = () => {
         clearTimeout(timer);
@@ -511,12 +511,16 @@ const Orders = (() => {
       );
     }
 
-    // Keep only the latest version per order ID
+    // Keep only the best row per order ID: highest version; on a tie prefer
+    // the row that has fullData so the order stays loadable after a background save.
     const byId = {};
     orders.forEach(o => {
       const id  = o['Order ID'];
       const ver = Number(o['Version'] || 0);
-      if (!byId[id] || ver > Number(byId[id]['Version'] || 0)) byId[id] = o;
+      const cur = byId[id];
+      if (!cur) { byId[id] = o; return; }
+      const cv  = Number(cur['Version'] || 0);
+      if (ver > cv || (ver === cv && o['Full Data'] && !cur['Full Data'])) byId[id] = o;
     });
 
     const latest = Object.values(byId).sort((a, b) =>

@@ -1,9 +1,17 @@
 /*
   Netlify serverless function — order save proxy
-  Browser POSTs the full order payload (including fullData) here,
-  then this function forwards it to Google Apps Script as a proper POST,
-  manually following the 302 redirect so the POST body is not lost.
-  Apps Script doPost → writeOrderRow saves the complete row to Sheets.
+
+  The browser cannot POST directly to Apps Script because:
+    1. The exec URL returns a 302 redirect, and re-POSTing to the redirect
+       target from an external server fails silently.
+    2. JSONP GET from the browser has browser URL-length limits (~8 KB) which
+       truncates large payloads.
+
+  Solution: browser POSTs here (same-origin, no CORS), and this function
+  converts it to a server-side GET to Apps Script.  From Node.js:
+    • redirect:'follow' on a GET correctly follows the 302 without losing params
+    • No browser URL-length limit — Node.js handles arbitrarily long URLs
+    • Apps Script doGet ?action=save handles the request normally
 */
 
 const APPS_SCRIPT_URL =
@@ -16,49 +24,32 @@ const CORS = {
 };
 
 exports.handler = async (event) => {
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers: CORS, body: '' };
-  }
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, headers: CORS, body: 'Method Not Allowed' };
-  }
+  if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers: CORS, body: '' };
+  if (event.httpMethod !== 'POST')    return { statusCode: 405, headers: CORS, body: 'Method Not Allowed' };
 
   try {
-    const payload = event.body;
+    const payload = JSON.parse(event.body);
 
-    // Step 1 — hit Apps Script exec URL without following its 302 redirect
-    const r1 = await fetch(APPS_SCRIPT_URL, {
-      method:   'POST',
-      headers:  { 'Content-Type': 'application/json' },
-      body:     payload,
-      redirect: 'manual',
-    });
+    // Convert to GET — Apps Script ?action=save endpoint, no redirect body loss
+    const qs  = new URLSearchParams({ action: 'save', data: JSON.stringify(payload) });
+    const url = `${APPS_SCRIPT_URL}?${qs.toString()}`;
+
+    const r = await fetch(url, { redirect: 'follow' });
 
     let result;
-    const location = r1.headers.get('location');
-
-    if (location && (r1.status === 301 || r1.status === 302)) {
-      // Step 2 — POST again to the real execution URL (googleusercontent.com)
-      const r2 = await fetch(location, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    payload,
-      });
-      result = await r2.json();
-    } else {
-      result = await r1.json();
-    }
+    try   { result = await r.json(); }
+    catch { result = { ok: false };  }
 
     return {
       statusCode: 200,
-      headers: { ...CORS, 'Content-Type': 'application/json' },
-      body: JSON.stringify(result),
+      headers:    { ...CORS, 'Content-Type': 'application/json' },
+      body:       JSON.stringify(result && result.ok ? result : { ok: false }),
     };
   } catch (err) {
     return {
       statusCode: 500,
-      headers: { ...CORS, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ok: false, error: err.message }),
+      headers:    { ...CORS, 'Content-Type': 'application/json' },
+      body:       JSON.stringify({ ok: false, error: err.message }),
     };
   }
 };
