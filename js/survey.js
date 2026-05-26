@@ -254,9 +254,10 @@ const Survey = (() => {
             <button class="sk-btn sk-tpl-btn"     onclick="Sketch.insertTemplate(${id},'corner')" title="Insert L-corner wardrobe">⌐ Corner</button>
             <button class="sk-btn sk-tpl-btn"     onclick="Sketch.insertTemplate(${id},'chest')"  title="Insert chest of drawers">▤ Chest</button>
             <button class="sk-btn sk-tpl-btn"     onclick="Sketch.insertTemplate(${id},'desk')"   title="Insert desk with 2 drawers">▭ Desk</button>
-            <button class="sk-btn sk-section-btn" onclick="Sketch.removeSection(${id})"           title="Remove door/drawer">–</button>
-            <button class="sk-btn sk-section-btn" onclick="Sketch.addSection(${id})"              title="Add door/drawer">+</button>
-            <button class="sk-btn sk-section-btn" onclick="Sketch.flipCorner(${id})"              title="Flip corner or desk pedestal">⇄ Flip</button>
+            <button class="sk-btn sk-tpl-btn"     onclick="Sketch.insertTemplate(${id},'angle')"  title="Insert angle/attic wardrobe">⊿ Angle</button>
+            <button class="sk-btn sk-section-btn" onclick="Sketch.removeSection(${id})"           title="Remove door/drawer/box">–</button>
+            <button class="sk-btn sk-section-btn" onclick="Sketch.addSection(${id})"              title="Add door/drawer/box">+</button>
+            <button class="sk-btn sk-section-btn" onclick="Sketch.flipCorner(${id})"              title="Flip corner, desk or angle wardrobe">⇄ Flip</button>
             <div class="sk-sep"></div>
             <!-- Measurements — always grouped -->
             <button class="sk-btn sk-meas-btn" onclick="Sketch.insertMeasurement(${id},'Width','W')"  title="Add Width label">↔ Width</button>

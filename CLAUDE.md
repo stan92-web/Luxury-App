@@ -24,7 +24,7 @@
 | `js/orders.js` | Orders panel, email, save to Sheets |
 
 ## Shape Types (sketch.js)
-Current types: `pen`, `line`, `rect`, `text`, `wardrobe4door`, `wardrobeCorner`, `wardrobeChest`, `wardrobeDesk`, `wardrobeBedside`
+Current types: `pen`, `line`, `rect`, `text`, `wardrobe4door`, `wardrobeCorner`, `wardrobeChest`, `wardrobeDesk`, `wardrobeBedside`, `wardrobeAngle`
 
 ### Adding a NEW shape type — grep `wardrobeDesk` to find all ~12 locations:
 1. `hitShapeHandle` — add to the if-condition for rect-like shapes
@@ -52,8 +52,8 @@ Current types: `pen`, `line`, `rect`, `text`, `wardrobe4door`, `wardrobeCorner`,
 | `fsTpl(name)` | Insert template into fullscreen canvas |
 | `insertTemplate(id, name)` | Insert template into small canvas |
 | `fsRedraw()` | Redraws fullscreen canvas + updates conditional toolbar visibility |
-| `fsAddSection/fsRemoveSection` | +/– doors (4door) or drawers (chest) |
-| `fsFlipCorner` | Mirror wardrobeCorner or wardrobeDesk pedestal |
+| `fsAddSection/fsRemoveSection` | +/– doors (4door), drawers (chest), or boxes (angle) |
+| `fsFlipCorner` | Mirror wardrobeCorner, wardrobeDesk pedestal, or wardrobeAngle slope |
 | `fsFurnitureMenu/fsCloseFurniture` | Toggle furniture dropdown panel |
 | `_fsUndoClearDown/Up/Cancel` | Long-press Undo/Clear for fullscreen button |
 | `_undoClearDown/Up/Cancel` | Long-press Undo/Clear for small-canvas button |
@@ -63,8 +63,8 @@ Current types: `pen`, `line`, `rect`, `text`, `wardrobe4door`, `wardrobeCorner`,
 ## Toolbar Conditional Elements (fullscreen)
 | Element ID | Shown when |
 |------------|-----------|
-| `fs-section-rem/count/add/sep` | wardrobe4door or wardrobeChest selected |
-| `fs-corner-flip/sep` | wardrobeCorner or wardrobeDesk selected |
+| `fs-section-rem/count/add/sep` | wardrobe4door, wardrobeChest, or wardrobeAngle selected |
+| `fs-corner-flip/sep` | wardrobeCorner, wardrobeDesk, or wardrobeAngle selected |
 | `fs-furn-panel` | `.open` class toggled by fsFurnitureMenu() |
 
 ## CSS Quick Reference
@@ -87,6 +87,11 @@ Current types: `pen`, `line`, `rect`, `text`, `wardrobe4door`, `wardrobeCorner`,
 | v46 | Bedside table, Furniture dropdown, undo/clear highlight, measure auto-select |
 | v47 | Combined Undo/Clear button (tap=undo, hold=clear), CLAUDE.md |
 | v48 | "Depth" label renamed to "Deep" on button and placed canvas text |
+| v49 | Clean up Bedside/Desk/Chest rendering; +/– section buttons on small canvas |
+| v50 | Remove Bedside template; toolbar reorganisation; tool buttons dark charcoal |
+| v51 | Placeholder text very light grey |
+| v52 | Conditional controls moved next to Furniture button for toolbar stability |
+| v53 | wardrobeAngle shape: under-stairs/attic trapezoid, 3 boxes default, flippable |
 
 ## Layout Rules
 - **Measurement buttons** (↔ Width, ↕ Height, ⬛ Deep) must always stay grouped together — they are primary buttons used on every job
