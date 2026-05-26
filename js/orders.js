@@ -533,7 +533,6 @@ const Orders = (() => {
               <div class="order-date">${date}</div>
               ${repBadge}
               <span class="order-status ${sc}">${o['Status'] || 'Quote'}</span>
-              <button class="order-delete-btn" onclick="event.stopPropagation();Orders.deleteOrder('${oid}')" title="Delete this order">🗑 Delete</button>
             </div>
           </div>`;
       });
@@ -763,5 +762,5 @@ const Orders = (() => {
     }
   });
 
-  return { save, openPanel, closePanel, setFilter, setSearch, loadOrder, sendEmail, refresh, promoteToOrder, deleteOrder };
+  return { save, openPanel, closePanel, setFilter, setSearch, loadOrder, sendEmail, refresh, promoteToOrder };
 })();
