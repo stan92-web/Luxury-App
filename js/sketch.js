@@ -922,13 +922,16 @@ const Sketch = (() => {
         ctx.stroke();
       }
 
-      // Vertical handles centred in each section
+      // Vertical handles — left or right of each section
       ctx.strokeStyle = '#1a6eb5'; ctx.lineWidth = 2;
       ctx.lineCap = 'round';
+      const hSide = sh.handleSide || 'left';
       for (let i = 0; i < cols; i++) {
         const segX0  = x + (w / cols) * i;
         const segX1  = x + (w / cols) * (i + 1);
-        const cx     = (segX0 + segX1) / 2;
+        const hx     = hSide === 'right'
+          ? segX0 + (segX1 - segX0) * 0.82
+          : segX0 + (segX1 - segX0) * 0.18;
         const tL     = tlY + (trY - tlY) * (i / cols);
         const tR     = tlY + (trY - tlY) * ((i + 1) / cols);
         const topMid = (tL + tR) / 2;
@@ -936,8 +939,8 @@ const Sketch = (() => {
         const hLen   = Math.min(secH * 0.30, 40);
         const cy     = topMid + secH * 0.5;
         ctx.beginPath();
-        ctx.moveTo(cx, cy - hLen / 2);
-        ctx.lineTo(cx, cy + hLen / 2);
+        ctx.moveTo(hx, cy - hLen / 2);
+        ctx.lineTo(hx, cy + hLen / 2);
         ctx.stroke();
       }
 
@@ -1540,6 +1543,15 @@ const Sketch = (() => {
       const el = document.getElementById(id);
       if (el) el.style.display = showFlip ? '' : 'none';
     });
+    const showHandle = selSh?.type === 'wardrobeAngle';
+    ['fs-handle-sep','fs-handle-side'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = showHandle ? '' : 'none';
+    });
+    if (showHandle) {
+      const btn = document.getElementById('fs-handle-side');
+      if (btn) btn.textContent = (selSh.handleSide === 'right') ? '⊢ Handle Left' : '⊣ Handle Right';
+    }
   }
 
   function fsSaveHistory() {
@@ -1604,6 +1616,26 @@ const Sketch = (() => {
     if (sh.type !== 'wardrobeCorner' && sh.type !== 'wardrobeDesk' && sh.type !== 'wardrobeAngle') return;
     saveHistory(id);
     sh.flip = (sh.flip === 'left') ? 'right' : 'left';
+    redraw(id);
+    notifyChange();
+  }
+
+  function fsToggleHandleSide() {
+    if (fs.selectedIdx < 0 || fs.selectedIdx >= fs.shapes.length) return;
+    const sh = fs.shapes[fs.selectedIdx];
+    if (sh.type !== 'wardrobeAngle') return;
+    fsSaveHistory();
+    sh.handleSide = (sh.handleSide === 'right') ? 'left' : 'right';
+    fsRedraw();
+  }
+
+  function toggleHandleSide(id) {
+    const s = states[id];
+    if (!s || s.selectedIdx < 0 || s.selectedIdx >= s.shapes.length) return;
+    const sh = s.shapes[s.selectedIdx];
+    if (sh.type !== 'wardrobeAngle') return;
+    saveHistory(id);
+    sh.handleSide = (sh.handleSide === 'right') ? 'left' : 'right';
     redraw(id);
     notifyChange();
   }
@@ -1824,7 +1856,7 @@ const Sketch = (() => {
   /* SKETCH:EXPORTS */
   return {
     init, resizeCanvas, redraw, redrawScaled, setTool, setColour, toggleStraighten, undo, clear, deleteSelected, getShapes, setShapes,
-    insertTemplate, insertMeasurement, flipCorner, addSection, removeSection, fsTpl, fsAddSection, fsRemoveSection, fsFlipCorner, fsComingSoon, fsSaveDim, fsInsertMeasurement,
+    insertTemplate, insertMeasurement, flipCorner, addSection, removeSection, toggleHandleSide, fsTpl, fsAddSection, fsRemoveSection, fsFlipCorner, fsToggleHandleSide, fsComingSoon, fsSaveDim, fsInsertMeasurement,
     openFullscreen, closeFullscreen,
     fsSetTool, fsSetColour, fsUndo, fsClear, fsDeleteSelected, fsToggleStraighten,
     fsFurnitureMenu, fsCloseFurniture,

@@ -273,6 +273,7 @@ const Survey = (() => {
             <button class="sk-btn sk-section-btn" onclick="Sketch.removeSection(${id})"           title="Remove door/drawer/box">–</button>
             <button class="sk-btn sk-section-btn" onclick="Sketch.addSection(${id})"              title="Add door/drawer/box">+</button>
             <button class="sk-btn sk-section-btn" onclick="Sketch.flipCorner(${id})"              title="Flip corner, desk or angle wardrobe">⇄ Flip</button>
+            <button class="sk-btn sk-section-btn" onclick="Sketch.toggleHandleSide(${id})"        title="Move angle wardrobe handles to other side">⊣ Handle</button>
             <div class="sk-sep"></div>
             <!-- Measurements — always grouped -->
             <button class="sk-btn sk-meas-btn" onclick="Sketch.insertMeasurement(${id},'Width','W')"  title="Add Width label">↔ Width</button>
