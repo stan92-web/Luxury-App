@@ -23,9 +23,10 @@
 ══════════════════════════════════════════════ */
 
 const Survey = (() => {
-  let nextId      = 0;
-  const activeIds = [];   // ordered list of active room ids
-  let saveTimer   = null;
+  let nextId         = 0;
+  const activeIds    = [];   // ordered list of active room ids
+  let saveTimer      = null;
+  let cloudSaveDirty = false;
 
   /* ── Init ── */
   function init() {
@@ -66,12 +67,26 @@ const Survey = (() => {
     // Load saved data — if nothing saved, start with one blank room
     const loaded = load();
     if (!loaded) addRoom();
+
+    // Auto-fill rep name for this device if surveyor field is empty
+    const repName = localStorage.getItem('lh_rep_name');
+    if (repName && !document.getElementById('surveyor')?.value) sv('surveyor', repName);
   }
 
   /* ── Save (debounced) ── */
   function scheduleSave() {
+    cloudSaveDirty = true;
+    updateCloudStatus();
     clearTimeout(saveTimer);
     saveTimer = setTimeout(save, 400);
+  }
+
+  function updateCloudStatus(state) {
+    const el = document.getElementById('cloud-status');
+    if (!el) return;
+    if (state === 'saving') { el.className = 'cloud-status saving'; el.textContent = '↻ Saving…'; return; }
+    if (cloudSaveDirty) { el.className = 'cloud-status dirty'; el.textContent = '● Unsaved'; }
+    else                { el.className = 'cloud-status clean';  el.textContent = '☁ Saved'; }
   }
 
   function recalcBalance() {
@@ -307,6 +322,7 @@ const Survey = (() => {
     localStorage.removeItem('lh_survey_v1');
     localStorage.removeItem('lh_order_id');
     localStorage.removeItem('lh_order_version');
+    localStorage.removeItem('lh_order_status');
     location.reload();
   }
 
@@ -551,11 +567,20 @@ const Survey = (() => {
       if (mq.addEventListener) mq.addEventListener('change', handler);
       else mq.addListener(handler); // older Safari
     }
+    // Auto-save to cloud every 5 minutes if form has changed since last cloud save
+    setInterval(() => {
+      if (cloudSaveDirty && typeof Orders !== 'undefined') {
+        cloudSaveDirty = false;
+        updateCloudStatus('saving');
+        Orders.save();
+      }
+    }, 5 * 60 * 1000);
   });
 
   return {
     addRoom, removeRoom, clearAll, print, sendToOffice, sendToCustomer, setDoorType,
-    toast: showToast,          // used by orders.js
-    captureSheet               // used by orders.js (email)
+    toast: showToast,            // used by orders.js
+    captureSheet,                // used by orders.js (email)
+    updateCloudStatus            // called by orders.js after save completes
   };
 })();

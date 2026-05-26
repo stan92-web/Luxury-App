@@ -804,27 +804,30 @@ textarea:focus {
 }
 #orders-overlay.open { display: flex; }
 #orders-bar {
-  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
-  background: var(--header); padding: 12px 18px;
+  display: flex; flex-direction: column; gap: 8px;
+  background: var(--header); padding: 10px 16px;
   border-bottom: 2px solid var(--red);
 }
-#orders-bar-left { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0; }
-.orders-title { font-size: 15px; font-weight: 700; color: #fff; white-space: nowrap; }
+.orders-bar-row {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+}
+.orders-bar-row2 { flex-wrap: wrap; gap: 8px; }
+.orders-title { font-size: 15px; font-weight: 700; color: #fff; white-space: nowrap; flex-shrink: 0; }
 #orders-search-input {
-  flex: 1; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
-  border-radius: 8px; color: #fff; padding: 8px 14px; font-size: 14px; font-family: inherit;
-  min-width: 0;
+  flex: 1; min-width: 0;
+  background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 8px; color: #fff; padding: 7px 12px; font-size: 14px; font-family: inherit;
 }
 #orders-search-input::placeholder { color: rgba(255,255,255,0.45); }
 #orders-search-input:focus { outline: none; border-color: rgba(255,255,255,0.5); }
-#orders-filters { display: flex; gap: 6px; }
+#orders-filters { display: flex; gap: 6px; flex-shrink: 0; }
 .ofilter-btn {
   background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
-  color: #ccc; padding: 7px 14px; border-radius: 20px; font-size: 12px;
+  color: #ccc; padding: 6px 14px; border-radius: 20px; font-size: 12px;
   font-weight: 600; cursor: pointer; font-family: inherit; transition: background 0.15s;
+  touch-action: manipulation;
 }
 .ofilter-btn.active { background: var(--red); color: #fff; border-color: var(--red); }
-#orders-bar-right { display: flex; gap: 8px; }
 #orders-list { flex: 1; overflow-y: auto; padding: 16px 18px; }
 .orders-loading { color: var(--muted); padding: 40px; text-align: center; font-size: 15px; }
 .orders-empty   { color: var(--muted); padding: 40px; text-align: center; font-size: 15px; line-height: 2; }
@@ -854,6 +857,53 @@ textarea:focus {
 .status-order     { background: #e8f5e9; color: #2e7d32; }
 .status-installed { background: #f3e5f5; color: #6a1b9a; }
 .order-no-data    { font-size: 10px; color: #c0392b; margin-left: 6px; }
+
+/* Month heading separators */
+.order-month-heading {
+  font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--muted); padding: 16px 4px 6px; border-bottom: 1px solid var(--border);
+  margin-bottom: 8px;
+}
+.order-month-heading:first-child { padding-top: 4px; }
+
+/* Confirmed order rows get a subtle green tint */
+.order-row-confirmed { background: #f6fdf7; border-color: #b8deba !important; }
+.order-row-confirmed:hover { border-color: #27ae60 !important; }
+
+/* Rep badge — colour set inline per rep */
+.order-rep-badge {
+  font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px;
+  border: 1px solid; white-space: nowrap;
+}
+
+/* Confirm Order button inside list rows */
+.order-confirm-btn {
+  margin-top: 5px; padding: 4px 10px; font-size: 11px; font-weight: 700;
+  border-radius: 5px; border: 1.5px solid #27ae60; background: #e8f5e9;
+  color: #2e7d32; cursor: pointer; font-family: inherit; white-space: nowrap;
+  touch-action: manipulation;
+}
+.order-confirm-btn:hover { background: #27ae60; color: #fff; }
+
+/* Rep name setup input in orders bar */
+.rep-setup { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.rep-setup-label { font-size: 11px; color: #aaa; white-space: nowrap; }
+.rep-name-input {
+  background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 6px; color: #fff; padding: 5px 10px; font-size: 13px;
+  font-family: inherit; width: 110px;
+}
+.rep-name-input::placeholder { color: rgba(255,255,255,0.35); }
+.rep-name-input:focus { outline: none; border-color: rgba(255,255,255,0.5); }
+
+/* Cloud save status indicator next to Save button */
+.cloud-status {
+  font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 12px;
+  white-space: nowrap; align-self: center;
+}
+.cloud-status.dirty  { background: #fff3cd; color: #856404; border: 1px solid #ffc107; }
+.cloud-status.clean  { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+.cloud-status.saving { background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; }
 
 /* CSS:PRINT ⚠ DO NOT MODIFY — single-page layout locked */
 @media print {

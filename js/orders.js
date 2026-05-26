@@ -139,6 +139,15 @@ const Orders = (() => {
     } catch (_) { return null; }
   }
 
+  /* ── Rep colour — consistent colour per rep name across devices ── */
+  function repColor(name) {
+    if (!name) return '#888';
+    const palette = ['#c0392b','#1a6eb5','#27ae60','#8e44ad','#d35400','#16a085','#c77a2a','#2c3e7a'];
+    let h = 0;
+    for (let i = 0; i < name.length; i++) h = (name.charCodeAt(i) + ((h << 5) - h)) | 0;
+    return palette[Math.abs(h) % palette.length];
+  }
+
   /* ── Public: save current quote ─────────── */
   async function save() {
     const raw = localStorage.getItem('lh_survey_v1');
@@ -166,12 +175,14 @@ const Orders = (() => {
       } catch (_) { fullData = ''; }
     }
 
+    const currentStatus = localStorage.getItem('lh_order_status') || 'Quote';
+
     const payload = {
       orderId,
       property: address,
       version,
       savedAt:  new Date().toISOString(),
-      status:   'Quote',
+      status:   currentStatus,
       rep:      data.customer?.surveyor   || '',
       customer: `${data.customer?.name || data.customer?.first || ''} ${data.customer?.last || ''}`.trim(),
       phone:    data.customer?.phone      || '',
@@ -191,7 +202,7 @@ const Orders = (() => {
     const localOrder = {
       'Order ID': orderId,  'Property': payload.property,
       'Saved At': payload.savedAt, 'Version': String(version),
-      'Status':   'Quote',  'Rep':      payload.rep,
+      'Status':   currentStatus, 'Rep':    payload.rep,
       'Customer': payload.customer, 'Phone':    payload.phone,
       'Door No':  '',                'Address':  payload.address,
       'Rooms':    payload.rooms,    'Total £':  payload.total,
@@ -219,6 +230,9 @@ const Orders = (() => {
     } else {
       Survey.toast(`Saved — ${orderId} v${version}`);
     }
+
+    // Mark cloud save as clean and update indicator
+    if (typeof Survey !== 'undefined' && Survey.updateCloudStatus) Survey.updateCloudStatus('clean');
 
     // Step 1 — text data via JSONP GET (same mechanism as load — works on iOS).
     saveToSheets(payload);
@@ -440,32 +454,103 @@ const Orders = (() => {
       return;
     }
 
-    list.innerHTML = latest.map(o => {
-      const sc = o['Status'] === 'Order' ? 'status-order'
-               : o['Status'] === 'Installed' ? 'status-installed'
-               : 'status-quote';
-      const total    = o['Total £'] ? `£${o['Total £']}` : '—';
-      const date     = fmtDate(o['Saved At']);
-      const addr     = [o['Door No'], o['Address']].filter(Boolean).join(' ');
-      const hasData  = !!(o['Full Data']);
-      const rowStyle = hasData ? '' : 'opacity:0.6';
-      const noData   = hasData ? '' : '<span class="order-no-data">⚠ resave to enable loading</span>';
-      return `
-        <div class="order-row" style="${rowStyle}" onclick="Orders.loadOrder('${(o['Order ID']||'').replace(/'/g,"\\'")}')">
-          <div class="order-id-badge">${o['Order ID'] || '—'}</div>
-          <div class="order-main">
-            <div class="order-customer">${o['Customer'] || '—'}</div>
-            <div class="order-addr">${addr || '—'}</div>
-            <div class="order-rooms">${o['Rooms'] || ''}${noData}</div>
-          </div>
-          <div class="order-side">
-            <div class="order-price">${total}</div>
-            <div class="order-date">${date}</div>
-            <div class="order-rep">${o['Rep'] || ''}</div>
-            <span class="order-status ${sc}">${o['Status'] || 'Quote'}</span>
-          </div>
-        </div>`;
-    }).join('');
+    // Group by month (most recent month first)
+    const byMonth = {};
+    const monthKeys = [];
+    latest.forEach(o => {
+      const d   = new Date(o['Saved At'] || 0);
+      const key = isNaN(d.getTime()) ? 'Unknown'
+        : d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+      if (!byMonth[key]) { byMonth[key] = []; monthKeys.push(key); }
+      byMonth[key].push(o);
+    });
+
+    let html = '';
+    monthKeys.forEach(month => {
+      html += `<div class="order-month-heading">${month}</div>`;
+      byMonth[month].forEach(o => {
+        const isQuote  = !o['Status'] || o['Status'] === 'Quote';
+        const sc       = o['Status'] === 'Order' ? 'status-order'
+                       : o['Status'] === 'Installed' ? 'status-installed'
+                       : 'status-quote';
+        const total    = o['Total £'] ? `£${o['Total £']}` : '—';
+        const date     = fmtDate(o['Saved At']);
+        const addr     = [o['Door No'], o['Address']].filter(Boolean).join(' ');
+        const hasData  = !!(o['Full Data']);
+        const rowStyle = hasData ? '' : 'opacity:0.6';
+        const noData   = hasData ? '' : '<span class="order-no-data">⚠ resave to enable loading</span>';
+        const oid      = (o['Order ID'] || '').replace(/'/g, "\\'");
+        const rep      = o['Rep'] || '';
+        const rc       = repColor(rep);
+        const repBadge = rep
+          ? `<span class="order-rep-badge" style="background:${rc}22;color:${rc};border-color:${rc}55">${rep}</span>`
+          : '';
+        const confirmBtn = isQuote
+          ? `<button class="order-confirm-btn" onclick="event.stopPropagation();Orders.promoteToOrder('${oid}')" title="Mark as confirmed Order">✓ Confirm Order</button>`
+          : '';
+        html += `
+          <div class="order-row${isQuote ? '' : ' order-row-confirmed'}" style="${rowStyle}" onclick="Orders.loadOrder('${oid}')">
+            <div class="order-id-badge">${o['Order ID'] || '—'}</div>
+            <div class="order-main">
+              <div class="order-customer">${o['Customer'] || '—'}</div>
+              <div class="order-addr">${addr || '—'}</div>
+              <div class="order-rooms">${o['Rooms'] || ''}${noData}</div>
+              ${confirmBtn}
+            </div>
+            <div class="order-side">
+              <div class="order-price">${total}</div>
+              <div class="order-date">${date}</div>
+              ${repBadge}
+              <span class="order-status ${sc}">${o['Status'] || 'Quote'}</span>
+            </div>
+          </div>`;
+      });
+    });
+
+    list.innerHTML = html;
+  }
+
+  /* ── Promote Quote → Order ─────────────── */
+  async function promoteToOrder(orderId) {
+    const o = allOrders.find(x => x['Order ID'] === orderId);
+    if (!o || o['Status'] === 'Order' || o['Status'] === 'Installed') return;
+
+    const label = [o['Customer'], o['Address']].filter(Boolean).join(' — ');
+    if (!confirm(`Confirm as Order?\n\n${label}`)) return;
+
+    o['Status'] = 'Order';
+
+    // Update pending cache and session
+    pendingOrders.forEach(p => { if (p['Order ID'] === orderId) p['Status'] = 'Order'; });
+    localStorage.setItem('lh_pending_orders', JSON.stringify(pendingOrders));
+
+    // If this is the currently loaded order, update stored status
+    if (localStorage.getItem('lh_order_id') === orderId) {
+      localStorage.setItem('lh_order_status', 'Order');
+    }
+
+    renderList();
+    Survey.toast('✓ Confirmed as Order');
+
+    // Push updated status to Sheets
+    const newVer = Number(o['Version'] || 1) + 1;
+    saveToSheets({
+      orderId,
+      property: o['Property'] || o['Address'] || '',
+      version:  newVer,
+      savedAt:  new Date().toISOString(),
+      status:   'Order',
+      rep:      o['Rep']      || '',
+      customer: o['Customer'] || '',
+      phone:    o['Phone']    || '',
+      doorNo:   o['Door No']  || '',
+      address:  o['Address']  || '',
+      rooms:    o['Rooms']    || '',
+      total:    o['Total £']  || '',
+      deposit:  o['Deposit £'] || '',
+      balance:  o['Balance £'] || '',
+      fullData: o['Full Data'] || ''
+    });
   }
 
   function fmtDate(iso) {
@@ -505,9 +590,11 @@ const Orders = (() => {
     if (!confirm(`Load order for ${customer}?\n\nThis will replace everything on the current form.`)) return;
 
     try {
-      localStorage.setItem('lh_survey_v1',    fullData);
-      localStorage.setItem('lh_order_id',     orderId);
+      localStorage.setItem('lh_survey_v1',     fullData);
+      localStorage.setItem('lh_order_id',      orderId);
       localStorage.setItem('lh_order_version', String(versions[0]['Version'] || 1));
+      localStorage.setItem('lh_order_status',  versions[0]['Status'] || 'Quote');
+      closePanel();
       location.reload();
     } catch (_) {
       Survey.toast('Could not restore order — please try again');
@@ -556,12 +643,19 @@ const Orders = (() => {
 
   /* ── Boot ────────────────────────────────── */
   document.addEventListener('DOMContentLoaded', () => {
-    // Clear order ID when starting a new quote
-    const orig = Survey.clearAll;
-    // Wire up search input
+    // Wire search input
     const si = document.getElementById('orders-search-input');
     if (si) si.addEventListener('input', e => setSearch(e.target.value));
+
+    // Rep name — load from storage and wire save-on-change
+    const repInput = document.getElementById('rep-name-input');
+    if (repInput) {
+      repInput.value = localStorage.getItem('lh_rep_name') || '';
+      repInput.addEventListener('input', () => {
+        localStorage.setItem('lh_rep_name', repInput.value.trim());
+      });
+    }
   });
 
-  return { save, openPanel, closePanel, setFilter, setSearch, loadOrder, sendEmail, refresh };
+  return { save, openPanel, closePanel, setFilter, setSearch, loadOrder, sendEmail, refresh, promoteToOrder };
 })();
