@@ -79,7 +79,10 @@ input, select, textarea {
   -webkit-user-select: text;
   user-select: text;
 }
-
+/* Placeholder text — very light so it's clear the field is empty */
+::placeholder               { color: #c8c4be !important; opacity: 1; }
+::-webkit-input-placeholder { color: #c8c4be !important; opacity: 1; }
+.room-name-input::placeholder { color: #c8c4be !important; font-weight: normal; }
 /* CSS:HEADER */
 header {
   background: var(--header);
@@ -352,7 +355,7 @@ textarea:focus {
   box-shadow: none;
 }
 .room-name-input:focus       { outline: none; border-bottom-color: var(--red); box-shadow: none; }
-.room-name-input::placeholder { color: #bbb; font-weight: normal; }
+.room-name-input::placeholder { color: #c8c4be; font-weight: normal; }
 .room-card-body { padding: 20px; }
 
 /* CSS:DIMS */
