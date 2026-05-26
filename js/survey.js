@@ -234,13 +234,14 @@ const Survey = (() => {
         <div class="sketch-section">
           <div class="sketch-label">✏️ Sketch / Measurements</div>
           <div class="sketch-toolbar no-print" id="toolbar-${id}">
-            <button class="sk-btn active" id="tool-pen-${id}"    onclick="Sketch.setTool(${id},'pen')"    title="Freehand draw">Pen</button>
-            <button class="sk-btn"        id="tool-select-${id}" onclick="Sketch.setTool(${id},'select')" title="Select &amp; move shapes">Select</button>
-            <button class="sk-btn"        id="tool-line-${id}"   onclick="Sketch.setTool(${id},'line')"   title="Draw straight line">Line</button>
-            <button class="sk-btn"        id="tool-rect-${id}"   onclick="Sketch.setTool(${id},'rect')"   title="Draw rectangle">Box</button>
-            <button class="sk-btn"        id="tool-text-${id}"   onclick="Sketch.setTool(${id},'text')"   title="Add text annotation">Text</button>
-            <button class="sk-btn"        id="tool-eraser-${id}" onclick="Sketch.setTool(${id},'eraser')" title="Erase freehand strokes">Erase</button>
+            <!-- Drawing tools -->
+            <button class="sk-btn sk-tool-btn active" id="tool-pen-${id}"    onclick="Sketch.setTool(${id},'pen')"    title="Freehand draw">Pen</button>
+            <button class="sk-btn sk-tool-btn"        id="tool-select-${id}" onclick="Sketch.setTool(${id},'select')" title="Select &amp; move shapes">Select</button>
+            <button class="sk-btn sk-tool-btn"        id="tool-line-${id}"   onclick="Sketch.setTool(${id},'line')"   title="Draw straight line">Line</button>
+            <button class="sk-btn sk-tool-btn"        id="tool-rect-${id}"   onclick="Sketch.setTool(${id},'rect')"   title="Draw rectangle">Box</button>
+            <button class="sk-btn sk-tool-btn"        id="tool-text-${id}"   onclick="Sketch.setTool(${id},'text')"   title="Add text annotation">Text</button>
             <div class="sk-sep"></div>
+            <!-- Colours -->
             <div class="colour-dots" id="colours-${id}">
               <div class="colour-dot active" style="background:#222222" onclick="Sketch.setColour(${id},'#222222',this)" title="Black"></div>
               <div class="colour-dot"        style="background:#c0392b" onclick="Sketch.setColour(${id},'#c0392b',this)" title="Red"></div>
@@ -248,28 +249,30 @@ const Survey = (() => {
               <div class="colour-dot"        style="background:#27ae60" onclick="Sketch.setColour(${id},'#27ae60',this)" title="Green"></div>
             </div>
             <div class="sk-sep"></div>
+            <!-- Furniture + shape modifiers -->
+            <button class="sk-btn sk-tpl-btn"     onclick="Sketch.insertTemplate(${id},'4door')"  title="Insert 4-door wardrobe">▭ 4-Door</button>
+            <button class="sk-btn sk-tpl-btn"     onclick="Sketch.insertTemplate(${id},'corner')" title="Insert L-corner wardrobe">⌐ Corner</button>
+            <button class="sk-btn sk-tpl-btn"     onclick="Sketch.insertTemplate(${id},'chest')"  title="Insert chest of drawers">▤ Chest</button>
+            <button class="sk-btn sk-tpl-btn"     onclick="Sketch.insertTemplate(${id},'desk')"   title="Insert desk with 2 drawers">▭ Desk</button>
+            <button class="sk-btn sk-section-btn" onclick="Sketch.removeSection(${id})"           title="Remove door/drawer">–</button>
+            <button class="sk-btn sk-section-btn" onclick="Sketch.addSection(${id})"              title="Add door/drawer">+</button>
+            <button class="sk-btn sk-section-btn" onclick="Sketch.flipCorner(${id})"              title="Flip corner or desk pedestal">⇄ Flip</button>
+            <div class="sk-sep"></div>
+            <!-- Measurements — always grouped -->
+            <button class="sk-btn sk-meas-btn" onclick="Sketch.insertMeasurement(${id},'Width','W')"  title="Add Width label">↔ Width</button>
+            <button class="sk-btn sk-meas-btn" onclick="Sketch.insertMeasurement(${id},'Height','H')" title="Add Height label">↕ Height</button>
+            <button class="sk-btn sk-meas-btn" onclick="Sketch.insertMeasurement(${id},'Deep','D')"   title="Add Deep label">⬛ Deep</button>
+            <div class="sk-sep"></div>
+            <!-- Erase / Undo / Delete / Full Screen — right side -->
+            <button class="sk-btn sk-tool-btn" id="tool-eraser-${id}" onclick="Sketch.setTool(${id},'eraser')" title="Erase freehand strokes">Erase</button>
             <button class="sk-btn sk-undo-btn"
               onpointerdown="Sketch._undoClearDown(this,${id})"
               onpointerup="Sketch._undoClearUp(this,${id})"
               onpointercancel="Sketch._undoClearCancel(this,${id})"
               oncontextmenu="return false"
               title="Undo (tap) • Hold to clear all">↩ Undo</button>
-            <div class="sk-sep"></div>
-            <button class="sk-btn sk-tpl-btn"     onclick="Sketch.insertTemplate(${id},'4door')"   title="Insert 4-door wardrobe">▭ 4-Door</button>
-            <button class="sk-btn sk-tpl-btn"     onclick="Sketch.insertTemplate(${id},'corner')"  title="Insert L-corner wardrobe">⌐ Corner</button>
-            <button class="sk-btn sk-tpl-btn"     onclick="Sketch.insertTemplate(${id},'chest')"   title="Insert chest of drawers">▤ Chest</button>
-            <button class="sk-btn sk-tpl-btn"     onclick="Sketch.insertTemplate(${id},'desk')"    title="Insert desk with 2 drawers">▭ Desk</button>
-            <button class="sk-btn sk-tpl-btn"     onclick="Sketch.insertTemplate(${id},'bedside')" title="Insert bedside table">▭ Bedside</button>
-            <button class="sk-btn sk-section-btn" onclick="Sketch.removeSection(${id})"            title="Remove door/drawer (select wardrobe or chest first)">–</button>
-            <button class="sk-btn sk-section-btn" onclick="Sketch.addSection(${id})"               title="Add door/drawer (select wardrobe or chest first)">+</button>
-            <button class="sk-btn sk-section-btn" onclick="Sketch.flipCorner(${id})"               title="Flip corner or desk pedestal">⇄ Flip</button>
-            <div class="sk-sep"></div>
-            <button class="sk-btn sk-meas-btn" onclick="Sketch.insertMeasurement(${id},'Width','W')"  title="Add Width label">↔ Width</button>
-            <button class="sk-btn sk-meas-btn" onclick="Sketch.insertMeasurement(${id},'Height','H')" title="Add Height label">↕ Height</button>
-            <button class="sk-btn sk-meas-btn" onclick="Sketch.insertMeasurement(${id},'Deep','D')"  title="Add Deep label">⬛ Deep</button>
-            <button class="sk-btn sk-del-btn"  onclick="Sketch.deleteSelected(${id})"                 title="Delete selected shape">✕ Del</button>
-            <div class="sk-sep"></div>
-            <button class="sk-btn sk-fullscreen-btn" onclick="Sketch.openFullscreen(${id})" title="Open fullscreen sketch editor">⛶ Full Screen</button>
+            <button class="sk-btn sk-del-btn"        onclick="Sketch.deleteSelected(${id})"                 title="Delete selected shape">✕ Del</button>
+            <button class="sk-btn sk-fullscreen-btn" onclick="Sketch.openFullscreen(${id})"                 title="Open fullscreen sketch editor">⛶ Full</button>
           </div>
           <div class="canvas-wrap" id="canvas-wrap-${id}">
             <canvas id="canvas-${id}" class="room-canvas"></canvas>

@@ -152,12 +152,11 @@
   <div id="fs-bar">
     <div id="fs-tools">
       <!-- Drawing tools -->
-      <button class="sk-btn active" id="fs-tool-pen"    onclick="Sketch.fsSetTool('pen')"    title="Freehand draw">Pen</button>
-      <button class="sk-btn"        id="fs-tool-select" onclick="Sketch.fsSetTool('select')" title="Select &amp; move shapes">Select</button>
-      <button class="sk-btn"        id="fs-tool-line"   onclick="Sketch.fsSetTool('line')"   title="Draw straight line">Line</button>
-      <button class="sk-btn"        id="fs-tool-rect"   onclick="Sketch.fsSetTool('rect')"   title="Draw rectangle">Box</button>
-      <button class="sk-btn"        id="fs-tool-text"   onclick="Sketch.fsSetTool('text')"   title="Add text annotation">Text</button>
-      <button class="sk-btn"        id="fs-tool-eraser" onclick="Sketch.fsSetTool('eraser')" title="Erase freehand strokes">Erase</button>
+      <button class="sk-btn sk-tool-btn active" id="fs-tool-pen"    onclick="Sketch.fsSetTool('pen')"    title="Freehand draw">Pen</button>
+      <button class="sk-btn sk-tool-btn"        id="fs-tool-select" onclick="Sketch.fsSetTool('select')" title="Select &amp; move shapes">Select</button>
+      <button class="sk-btn sk-tool-btn"        id="fs-tool-line"   onclick="Sketch.fsSetTool('line')"   title="Draw straight line">Line</button>
+      <button class="sk-btn sk-tool-btn"        id="fs-tool-rect"   onclick="Sketch.fsSetTool('rect')"   title="Draw rectangle">Box</button>
+      <button class="sk-btn sk-tool-btn"        id="fs-tool-text"   onclick="Sketch.fsSetTool('text')"   title="Add text annotation">Text</button>
       <div class="sk-sep"></div>
       <!-- Colours -->
       <div class="colour-dots" id="fs-colours">
@@ -167,14 +166,6 @@
         <div class="colour-dot"        style="background:#27ae60" onclick="Sketch.fsSetColour('#27ae60',this)" title="Green"></div>
       </div>
       <div class="sk-sep"></div>
-      <!-- History: tap=undo, hold=clear all -->
-      <button class="sk-btn sk-undo-btn"
-        onpointerdown="Sketch._fsUndoClearDown(this)"
-        onpointerup="Sketch._fsUndoClearUp(this)"
-        onpointercancel="Sketch._fsUndoClearCancel(this)"
-        oncontextmenu="return false"
-        title="Undo (tap) • Hold to clear all">↩ Undo</button>
-      <div class="sk-sep"></div>
       <!-- Furniture dropdown -->
       <div class="sk-furniture-wrap">
         <button class="sk-btn sk-tpl-btn" onclick="Sketch.fsFurnitureMenu()" title="Add furniture template">Furniture ▾</button>
@@ -183,25 +174,32 @@
           <button class="sk-furn-item" onclick="Sketch.fsTpl('corner'); Sketch.fsCloseFurniture()">⌐ Corner Wardrobe</button>
           <button class="sk-furn-item" onclick="Sketch.fsTpl('chest');  Sketch.fsCloseFurniture()">▤ Chest of Drawers</button>
           <button class="sk-furn-item" onclick="Sketch.fsTpl('desk');   Sketch.fsCloseFurniture()">▭ Desk w/ 2 Drawers</button>
-          <button class="sk-furn-item" onclick="Sketch.fsTpl('bedside');Sketch.fsCloseFurniture()">▭ Bedside Table</button>
         </div>
       </div>
       <div class="sk-sep"></div>
-      <!-- 4-door door count (shown when 4-door wardrobe selected) -->
-      <button class="sk-btn sk-section-btn" id="fs-section-rem" onclick="Sketch.fsRemoveSection()" title="Remove one door section" style="display:none">– Door</button>
-      <span class="sk-section-count"        id="fs-section-count"                                   style="display:none">4</span>
-      <button class="sk-btn sk-section-btn" id="fs-section-add" onclick="Sketch.fsAddSection()"    title="Add one door section"    style="display:none">+ Door</button>
-      <div class="sk-sep"                   id="fs-section-sep"                                     style="display:none"></div>
-      <!-- Corner flip (shown when corner wardrobe selected) -->
-      <button class="sk-btn sk-section-btn" id="fs-corner-flip" onclick="Sketch.fsFlipCorner()" title="Mirror corner wardrobe left / right" style="display:none">⇄ Flip</button>
-      <div class="sk-sep"                   id="fs-corner-sep"                                   style="display:none"></div>
-      <!-- Measurements -->
+      <!-- Measurements — always grouped together -->
       <button class="sk-btn sk-meas-btn" onclick="Sketch.fsInsertMeasurement('Width','W')"  title="Insert Width label">↔ Width</button>
       <button class="sk-btn sk-meas-btn" onclick="Sketch.fsInsertMeasurement('Height','H')" title="Insert Height label">↕ Height</button>
-      <button class="sk-btn sk-meas-btn" onclick="Sketch.fsInsertMeasurement('Deep','D')"  title="Insert Deep label">⬛ Deep</button>
+      <button class="sk-btn sk-meas-btn" onclick="Sketch.fsInsertMeasurement('Deep','D')"   title="Insert Deep label">⬛ Deep</button>
       <div class="sk-sep"></div>
-      <!-- Delete -->
-      <button class="sk-btn sk-del-btn" onclick="Sketch.fsDeleteSelected()" title="Delete selected shape">✕ Delete</button>
+      <!-- Erase / Undo / Delete — grouped near Done -->
+      <button class="sk-btn sk-tool-btn" id="fs-tool-eraser" onclick="Sketch.fsSetTool('eraser')" title="Erase freehand strokes">Erase</button>
+      <button class="sk-btn sk-undo-btn"
+        onpointerdown="Sketch._fsUndoClearDown(this)"
+        onpointerup="Sketch._fsUndoClearUp(this)"
+        onpointercancel="Sketch._fsUndoClearCancel(this)"
+        oncontextmenu="return false"
+        title="Undo (tap) • Hold to clear all">↩ Undo</button>
+      <button class="sk-btn sk-del-btn" onclick="Sketch.fsDeleteSelected()" title="Delete selected shape">✕ Del</button>
+      <div class="sk-sep"></div>
+      <!-- Shape controls: door/drawer count — appear at far right so main layout never shifts -->
+      <button class="sk-btn sk-section-btn" id="fs-section-rem" onclick="Sketch.fsRemoveSection()" title="Remove one door/drawer" style="display:none">– Door</button>
+      <span class="sk-section-count"        id="fs-section-count"                                   style="display:none">4</span>
+      <button class="sk-btn sk-section-btn" id="fs-section-add" onclick="Sketch.fsAddSection()"    title="Add one door/drawer"    style="display:none">+ Door</button>
+      <div class="sk-sep"                   id="fs-section-sep"                                     style="display:none"></div>
+      <!-- Shape controls: flip — at far right -->
+      <button class="sk-btn sk-section-btn" id="fs-corner-flip" onclick="Sketch.fsFlipCorner()" title="Mirror corner wardrobe / desk pedestal" style="display:none">⇄ Flip</button>
+      <div class="sk-sep"                   id="fs-corner-sep"                                   style="display:none"></div>
     </div>
     <button class="btn btn-red fs-done-btn" onclick="Sketch.closeFullscreen()">✓ Done</button>
   </div>
@@ -235,10 +233,10 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-<script src="js/auth.js?v=49"></script>
-<script src="js/data.js?v=49"></script>
-<script src="js/sketch.js?v=49"></script>
-<script src="js/survey.js?v=49"></script>
-<script src="js/orders.js?v=49"></script>
+<script src="js/auth.js?v=50"></script>
+<script src="js/data.js?v=50"></script>
+<script src="js/sketch.js?v=50"></script>
+<script src="js/survey.js?v=50"></script>
+<script src="js/orders.js?v=50"></script>
 </body>
 </html>

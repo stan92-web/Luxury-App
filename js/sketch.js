@@ -1034,10 +1034,6 @@ const Sketch = (() => {
       const px = W * 0.04, py = H * 0.10;
       return [{ type: 'wardrobeDesk',    x: px, y: py, w: W-px*2, h: H-py*2, flip: 'right', colour: '#222', lw: 3 }];
     }
-    if (name === 'bedside') {
-      const bw = W * 0.28, bh = H * 0.60;
-      return [{ type: 'wardrobeBedside', x: (W-bw)/2, y: (H-bh)/2, w: bw, h: bh, colour: '#222', lw: 3 }];
-    }
     return [];
   }
 
