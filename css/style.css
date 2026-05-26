@@ -696,11 +696,24 @@ textarea:focus {
 /* CSS:MOBILE */
 @media (max-width: 600px) {
   .form-grid      { grid-template-columns: 1fr; }
-  header          { padding: 0 14px; }
+  /* Header: shrink logo text + make button strip scrollable so all buttons reachable */
+  header          { padding: 0 10px; }
+  .logo-text      { font-size: 12px; letter-spacing: 2px; }
+  .logo-sub       { display: none; }
   .header-date    { display: none; }
-  .sketch-toolbar { gap: 5px; }
-  .sk-btn         { padding: 7px 10px; font-size: 11px; }
+  .header-right   { min-width: 0; flex-shrink: 1; overflow-x: auto;
+                    -webkit-overflow-scrolling: touch; scrollbar-width: none; gap: 5px; }
+  .header-right::-webkit-scrollbar { display: none; }
+  .btn-sm         { padding: 5px 9px; font-size: 10px; min-height: 28px;
+                    white-space: nowrap; flex-shrink: 0; }
+  .wa-icon        { width: 12px; height: 12px; }
+  /* Sketch toolbar: tighten up on small screens */
+  .sketch-toolbar { gap: 4px; }
+  .sk-btn         { padding: 6px 9px; font-size: 11px; min-height: 32px; }
   .dim-input      { font-size: 20px; }
+  /* Card padding smaller on phones */
+  .card           { padding: 16px; }
+  .room-card-body { padding: 14px; }
 }
 
 /* CSS:TABLET */
