@@ -149,6 +149,49 @@ function doGet(e) {
         .setMimeType(cb ? ContentService.MimeType.JAVASCRIPT : ContentService.MimeType.JSON);
     }
 
+    // ── Save compressed fullData for an existing order ──
+    // ?action=saveFullData&orderId=X&zdata=<gzip+base64url>&callback=cb
+    // The browser gzips the fullData JSON and base64url-encodes it so the
+    // URL stays small (~6 KB) regardless of order size.  Apps Script
+    // decompresses and writes the value into the latest version row in place.
+    if (e && e.parameter && e.parameter.action === 'saveFullData') {
+      var sfId    = e.parameter.orderId || '';
+      var sfZdata = e.parameter.zdata   || '';
+      var sfOk    = false;
+      if (sfId && sfZdata) {
+        try {
+          var sfB64   = sfZdata.replace(/-/g, '+').replace(/_/g, '/');
+          while (sfB64.length % 4) sfB64 += '=';
+          var sfBlob  = Utilities.newBlob(Utilities.base64Decode(sfB64), 'application/x-gzip');
+          var sfFull  = Utilities.ungzip(sfBlob).getDataAsString();
+          var sfSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Orders');
+          if (sfSheet && sfFull) {
+            var sfData  = sfSheet.getDataRange().getValues();
+            var sfHdrs  = sfData[0];
+            var sfIdCol = sfHdrs.indexOf('Order ID');
+            var sfVCol  = sfHdrs.indexOf('Version');
+            var sfFCol  = sfHdrs.indexOf('Full Data');
+            var sfBest  = -1, sfBestV = -1;
+            for (var sfi = 1; sfi < sfData.length; sfi++) {
+              if (String(sfData[sfi][sfIdCol]) === sfId) {
+                var sfV = Number(sfData[sfi][sfVCol] || 0);
+                if (sfV >= sfBestV) { sfBestV = sfV; sfBest = sfi; }
+              }
+            }
+            if (sfBest > 0 && sfFCol >= 0) {
+              sfSheet.getRange(sfBest + 1, sfFCol + 1).setValue(sfFull);
+              sfOk = true;
+              Logger.log('saveFullData OK: ' + sfId);
+            }
+          }
+        } catch (sfErr) { Logger.log('saveFullData error: ' + sfErr.message); }
+      }
+      var sfJson = JSON.stringify({ ok: sfOk, orderId: sfId });
+      return ContentService
+        .createTextOutput(cb ? cb + '(' + sfJson + ')' : sfJson)
+        .setMimeType(cb ? ContentService.MimeType.JAVASCRIPT : ContentService.MimeType.JSON);
+    }
+
     // ── Fetch one order with fullData ?action=getOrder&orderId=.. ──
     if (e && e.parameter && e.parameter.action === 'getOrder') {
       var targetId  = e.parameter.orderId || '';

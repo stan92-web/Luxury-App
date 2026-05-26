@@ -62,11 +62,48 @@ const Orders = (() => {
     });
   }
 
+  // Compress string with gzip → base64url for URL-safe fullData transmission
+  async function gzipBase64url(str) {
+    const bytes  = new TextEncoder().encode(str);
+    const cs     = new CompressionStream('gzip');
+    const writer = cs.writable.getWriter();
+    writer.write(bytes);
+    writer.close();
+    const buf = await new Response(cs.readable).arrayBuffer();
+    const arr = new Uint8Array(buf);
+    let binary = '';
+    for (let i = 0; i < arr.length; i += 8192) {
+      binary += String.fromCharCode(...arr.subarray(i, i + 8192));
+    }
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  }
+
+  // Save compressed fullData via JSONP — URL stays ~6 KB regardless of order size
+  async function saveFullDataViaJSONP(orderId, fullData) {
+    let zdata;
+    try { zdata = await gzipBase64url(fullData); }
+    catch (_) { return false; }
+    return new Promise(resolve => {
+      const cbName = 'lhFdCb' + Date.now();
+      const timer  = setTimeout(() => { cleanup(); resolve(false); }, 15000);
+      const cleanup = () => {
+        clearTimeout(timer);
+        delete window[cbName];
+        if (script.parentNode) script.parentNode.removeChild(script);
+      };
+      window[cbName] = data => { cleanup(); resolve(!!(data && data.ok)); };
+      const script   = document.createElement('script');
+      script.onerror = () => { cleanup(); resolve(false); };
+      const qs = new URLSearchParams({ action: 'saveFullData', orderId, zdata, callback: cbName });
+      script.src = AppData.SHEETS_URL + '?' + qs.toString();
+      document.head.appendChild(script);
+    });
+  }
+
   async function saveToSheets(payload) {
     if (!AppData.SHEETS_URL) return;
 
     // Step 1 — metadata-only via JSONP GET (URL stays tiny, always reaches Sheets)
-    // This guarantees the order is visible on every device immediately.
     const result = await saveViaJSONP({ ...payload, fullData: '' });
     if (!(result && result.ok)) {
       Survey.toast('⚠ Cloud save failed — saved on this device only');
@@ -74,11 +111,15 @@ const Orders = (() => {
     }
     Survey.toast('☁ Sheets saved ✓');
 
-    // Step 2 — full data (including fullData) via Netlify proxy in background.
-    // Netlify converts the POST to a server-side GET to Apps Script, which
-    // correctly follows the redirect without losing the payload.
-    // Fire-and-forget — metadata is already saved so this is best-effort.
-    if (payload.fullData) {
+    if (!payload.fullData) return;
+
+    // Step 2a — compressed fullData via JSONP (gzip keeps URL ~6 KB)
+    let fdSaved = false;
+    try { fdSaved = await saveFullDataViaJSONP(payload.orderId, payload.fullData); }
+    catch (_) {}
+
+    // Step 2b — Netlify proxy fallback if JSONP fullData save failed
+    if (!fdSaved) {
       fetch('/.netlify/functions/save-order', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -303,11 +344,17 @@ const Orders = (() => {
   // the first time it opens the Orders panel after an app update.
   function pushUnsyncedPending(sheetsOrders) {
     if (!AppData.SHEETS_URL || !pendingOrders.length) return;
-    const inSheets = new Set(sheetsOrders.map(o => String(o['Order ID'])));
-    const unsynced = pendingOrders.filter(p => !inSheets.has(String(p['Order ID'])));
-    if (!unsynced.length) return;
-    Survey.toast(`↑ Syncing ${unsynced.length} local order${unsynced.length > 1 ? 's' : ''} to cloud…`);
-    unsynced.slice(0, 20).forEach((p, i) => {
+    const inSheets      = new Set(sheetsOrders.map(o => String(o['Order ID'])));
+    const needsFullData = new Set(sheetsOrders.filter(o => !o['Full Data']).map(o => String(o['Order ID'])));
+    const toSync = pendingOrders.filter(p => {
+      const id = String(p['Order ID']);
+      if (!inSheets.has(id))                       return true; // not in Sheets at all
+      if (needsFullData.has(id) && p['Full Data']) return true; // in Sheets but missing fullData
+      return false;
+    });
+    if (!toSync.length) return;
+    Survey.toast(`↑ Syncing ${toSync.length} local order${toSync.length > 1 ? 's' : ''} to cloud…`);
+    toSync.slice(0, 20).forEach((p, i) => {
       setTimeout(() => saveToSheets(orderToPayload(p)).catch(() => {}), i * 400);
     });
   }
