@@ -49,16 +49,15 @@ function writeOrderRow(data) {
   if (!sheet) {
     sheet = ss.insertSheet('Orders');
     sheet.appendRow([
-      'Order ID', 'Property', 'Saved At', 'Version', 'Status',
+      'Order ID', 'Saved At', 'Version', 'Status',
       'Rep', 'Customer', 'Phone', 'Door No', 'Address',
       'Rooms', 'Total £', 'Deposit £', 'Balance £', 'Full Data'
     ]);
     sheet.setFrozenRows(1);
-    sheet.getRange(1, 1, 1, 15).setFontWeight('bold');
+    sheet.getRange(1, 1, 1, 14).setFontWeight('bold');
   }
   var rowBase = [
     data.orderId   || '',
-    data.property  || '',
     data.savedAt   || new Date().toISOString(),
     data.version   || 1,
     data.status    || 'Quote',
@@ -238,7 +237,7 @@ function doGet(e) {
       // fullData is omitted from the list — loaded on demand via ?action=getOrder
       // hasFullData boolean lets the client show/hide the "resave" badge correctly.
       headers.forEach(function(h, i) { obj[h] = (h === 'Full Data') ? '' : row[i]; });
-      obj['hasFullData'] = fdIdx >= 0 && !!(row[fdIdx] && String(row[fdIdx]).length > 10);
+      obj['hasFullData'] = fdIdx >= 0 && !!(row[fdIdx] && String(row[fdIdx]).length > 100);
       return obj;
     });
 
