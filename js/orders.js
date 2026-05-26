@@ -345,11 +345,15 @@ const Orders = (() => {
   function pushUnsyncedPending(sheetsOrders) {
     if (!AppData.SHEETS_URL || !pendingOrders.length) return;
     const inSheets      = new Set(sheetsOrders.map(o => String(o['Order ID'])));
-    const needsFullData = new Set(sheetsOrders.filter(o => !o['Full Data']).map(o => String(o['Order ID'])));
+    // hasFullData comes from the Apps Script list response — true when the Sheets
+    // cell is non-empty. 'Full Data' is always '' in the list (stripped for size).
+    const needsFullData = new Set(
+      sheetsOrders.filter(o => !o['hasFullData']).map(o => String(o['Order ID']))
+    );
     const toSync = pendingOrders.filter(p => {
       const id = String(p['Order ID']);
       if (!inSheets.has(id))                       return true; // not in Sheets at all
-      if (needsFullData.has(id) && p['Full Data']) return true; // in Sheets but missing fullData
+      if (needsFullData.has(id) && p['Full Data']) return true; // in Sheets but missing fullData locally available
       return false;
     });
     if (!toSync.length) return;
@@ -469,10 +473,10 @@ const Orders = (() => {
 
     if (document.getElementById('orders-overlay')?.classList.contains('open')) {
       renderList();
-      const fromSheets = result.length;
+      const fromSheets = sheetsIds.size; // unique orders, not raw rows
       if (fromSheets > 0 || localOnlyCount > 0) {
         const parts = [];
-        if (fromSheets)      parts.push(`${fromSheets} from cloud`);
+        if (fromSheets)      parts.push(`${fromSheets} order${fromSheets !== 1 ? 's' : ''} from cloud`);
         if (localOnlyCount)  parts.push(`${localOnlyCount} local (syncing…)`);
         Survey.toast(`☁ ${parts.join(' · ')}`);
       }
@@ -601,7 +605,7 @@ const Orders = (() => {
         const total    = o['Total £'] ? `£${o['Total £']}` : '—';
         const date     = fmtDate(o['Saved At']);
         const addr     = [o['Door No'], o['Address']].filter(Boolean).join(' ');
-        const hasData  = !!(o['Full Data']);
+        const hasData  = !!(o['Full Data'] || o['hasFullData']);
         const rowStyle = hasData ? '' : 'opacity:0.6';
         const noData   = hasData ? '' : '<span class="order-no-data">⚠ resave to enable loading</span>';
         const oid      = (o['Order ID'] || '').replace(/'/g, "\\'");

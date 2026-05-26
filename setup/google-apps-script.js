@@ -232,10 +232,13 @@ function doGet(e) {
 
     var rows    = sheet.getDataRange().getValues();
     var headers = rows[0];
+    var fdIdx   = headers.indexOf('Full Data');
     var orders  = rows.slice(1).map(function(row) {
       var obj = {};
       // fullData is omitted from the list — loaded on demand via ?action=getOrder
+      // hasFullData boolean lets the client show/hide the "resave" badge correctly.
       headers.forEach(function(h, i) { obj[h] = (h === 'Full Data') ? '' : row[i]; });
+      obj['hasFullData'] = fdIdx >= 0 && !!(row[fdIdx] && String(row[fdIdx]).length > 10);
       return obj;
     });
 
