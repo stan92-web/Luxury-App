@@ -805,31 +805,22 @@ const Sketch = (() => {
     }
     else if (sh.type === 'wardrobeChest') {
       const { x, y, w, h } = sh;
-      const rows   = sh.rows || 5;
-      const railH  = h * 0.07;
-      const bodyH  = h - railH;
-      const dH     = bodyH / rows;
+      const rows = sh.rows || 5;
+      const dH   = h / rows;
 
       ctx.save();
       ctx.strokeStyle = sh.colour || '#222';
       ctx.lineWidth   = sh.lw || 3;
       ctx.lineCap = 'round'; ctx.lineJoin = 'round';
 
-      // Outer carcass
       ctx.strokeRect(x, y, w, h);
 
-      // Top rail
-      ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(x, y + railH); ctx.lineTo(x + w, y + railH); ctx.stroke();
-
-      // Drawers
       for (let i = 0; i < rows; i++) {
-        const dy = y + railH + i * dH;
+        const dy = y + i * dH;
         if (i > 0) {
           ctx.strokeStyle = sh.colour || '#222'; ctx.lineWidth = 1.5;
           ctx.beginPath(); ctx.moveTo(x, dy); ctx.lineTo(x + w, dy); ctx.stroke();
         }
-        // Handle bar centred in drawer
         const hCx = x + w * 0.5;
         const hCy = dy + dH * 0.5;
         const hW  = Math.min(w * 0.30, 60);
@@ -844,9 +835,6 @@ const Sketch = (() => {
       const { x, y, w, h } = sh;
       const flip  = sh.flip || 'right';
       const pedW  = w * 0.30;
-      const topH  = h * 0.10;
-      const kickH = h * 0.10;
-      const bodyH = h - topH - kickH;
 
       const pedLeft  = flip === 'right' ? x + w - pedW : x;
       const pedRight = flip === 'right' ? x + w        : x + pedW;
@@ -857,40 +845,28 @@ const Sketch = (() => {
       ctx.lineWidth   = sh.lw || 3;
       ctx.lineCap = 'round'; ctx.lineJoin = 'round';
 
-      // Outer carcass
       ctx.strokeRect(x, y, w, h);
 
-      ctx.lineWidth = 2;
-      // Desk top surface
-      ctx.beginPath(); ctx.moveTo(x, y + topH); ctx.lineTo(x + w, y + topH); ctx.stroke();
-      // Kickboard
-      ctx.beginPath(); ctx.moveTo(x, y + h - kickH); ctx.lineTo(x + w, y + h - kickH); ctx.stroke();
-
-      // Pedestal divider
       ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.moveTo(divX, y + topH); ctx.lineTo(divX, y + h - kickH); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(divX, y); ctx.lineTo(divX, y + h); ctx.stroke();
 
-      // 2-drawer divider (horizontal mid-point of pedestal body)
-      const dH  = bodyH / 2;
-      const midY = y + topH + dH;
+      const dH   = h / 2;
+      const midY = y + dH;
       ctx.beginPath(); ctx.moveTo(pedLeft, midY); ctx.lineTo(pedRight, midY); ctx.stroke();
 
-      // Drawer handles (blue)
       ctx.strokeStyle = '#1a6eb5'; ctx.lineWidth = 2;
       const hW  = Math.min(pedW * 0.46, 40);
       const hH  = Math.max(4, Math.min(12, dH * 0.16));
       const hCx = (pedLeft + pedRight) / 2;
-      ctx.strokeRect(hCx - hW / 2, y + topH + dH * 0.5 - hH / 2, hW, hH);
-      ctx.strokeRect(hCx - hW / 2, midY    + dH * 0.5 - hH / 2, hW, hH);
+      ctx.strokeRect(hCx - hW / 2, y    + dH * 0.5 - hH / 2, hW, hH);
+      ctx.strokeRect(hCx - hW / 2, midY + dH * 0.5 - hH / 2, hW, hH);
 
       ctx.restore();
     }
     else if (sh.type === 'wardrobeBedside') {
       const { x, y, w, h } = sh;
-      const topH  = h * 0.10;
-      const kickH = h * 0.10;
-      const bodyH = h - topH - kickH;
-      const dH    = bodyH / 2;
+      const dH   = h / 2;
+      const midY = y + dH;
 
       ctx.save();
       ctx.strokeStyle = sh.colour || '#222';
@@ -899,11 +875,6 @@ const Sketch = (() => {
 
       ctx.strokeRect(x, y, w, h);
 
-      ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(x, y + topH);       ctx.lineTo(x + w, y + topH);       ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(x, y + h - kickH);  ctx.lineTo(x + w, y + h - kickH);  ctx.stroke();
-
-      const midY = y + topH + dH;
       ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.moveTo(x, midY); ctx.lineTo(x + w, midY); ctx.stroke();
 
@@ -911,8 +882,8 @@ const Sketch = (() => {
       const hW  = Math.min(w * 0.46, 50);
       const hH  = Math.max(4, Math.min(12, dH * 0.18));
       const hCx = x + w / 2;
-      ctx.strokeRect(hCx - hW / 2, y + topH + dH * 0.5 - hH / 2, hW, hH);
-      ctx.strokeRect(hCx - hW / 2, midY     + dH * 0.5 - hH / 2, hW, hH);
+      ctx.strokeRect(hCx - hW / 2, y    + dH * 0.5 - hH / 2, hW, hH);
+      ctx.strokeRect(hCx - hW / 2, midY + dH * 0.5 - hH / 2, hW, hH);
 
       ctx.restore();
     }
@@ -1573,6 +1544,34 @@ const Sketch = (() => {
     notifyChange();
   }
 
+  function addSection(id) {
+    const s = states[id];
+    if (!s || s.selectedIdx < 0 || s.selectedIdx >= s.shapes.length) return;
+    const sh = s.shapes[s.selectedIdx];
+    if (sh.type === 'wardrobe4door') {
+      if ((sh.cols || 4) >= 8) return;
+      saveHistory(id); sh.cols = (sh.cols || 4) + 1;
+    } else if (sh.type === 'wardrobeChest') {
+      if ((sh.rows || 5) >= 10) return;
+      saveHistory(id); sh.rows = (sh.rows || 5) + 1;
+    } else return;
+    redraw(id); notifyChange();
+  }
+
+  function removeSection(id) {
+    const s = states[id];
+    if (!s || s.selectedIdx < 0 || s.selectedIdx >= s.shapes.length) return;
+    const sh = s.shapes[s.selectedIdx];
+    if (sh.type === 'wardrobe4door') {
+      if ((sh.cols || 4) <= 1) return;
+      saveHistory(id); sh.cols = (sh.cols || 4) - 1;
+    } else if (sh.type === 'wardrobeChest') {
+      if ((sh.rows || 5) <= 1) return;
+      saveHistory(id); sh.rows = (sh.rows || 5) - 1;
+    } else return;
+    redraw(id); notifyChange();
+  }
+
   function fsComingSoon(name) {
     const t = document.getElementById('toast');
     if (!t) return;
@@ -1755,7 +1754,7 @@ const Sketch = (() => {
   /* SKETCH:EXPORTS */
   return {
     init, resizeCanvas, redraw, redrawScaled, setTool, setColour, toggleStraighten, undo, clear, deleteSelected, getShapes, setShapes,
-    insertTemplate, insertMeasurement, flipCorner, fsTpl, fsAddSection, fsRemoveSection, fsFlipCorner, fsComingSoon, fsSaveDim, fsInsertMeasurement,
+    insertTemplate, insertMeasurement, flipCorner, addSection, removeSection, fsTpl, fsAddSection, fsRemoveSection, fsFlipCorner, fsComingSoon, fsSaveDim, fsInsertMeasurement,
     openFullscreen, closeFullscreen,
     fsSetTool, fsSetColour, fsUndo, fsClear, fsDeleteSelected, fsToggleStraighten,
     fsFurnitureMenu, fsCloseFurniture,

@@ -260,6 +260,8 @@ const Survey = (() => {
             <button class="sk-btn sk-tpl-btn"     onclick="Sketch.insertTemplate(${id},'chest')"   title="Insert chest of drawers">▤ Chest</button>
             <button class="sk-btn sk-tpl-btn"     onclick="Sketch.insertTemplate(${id},'desk')"    title="Insert desk with 2 drawers">▭ Desk</button>
             <button class="sk-btn sk-tpl-btn"     onclick="Sketch.insertTemplate(${id},'bedside')" title="Insert bedside table">▭ Bedside</button>
+            <button class="sk-btn sk-section-btn" onclick="Sketch.removeSection(${id})"            title="Remove door/drawer (select wardrobe or chest first)">–</button>
+            <button class="sk-btn sk-section-btn" onclick="Sketch.addSection(${id})"               title="Add door/drawer (select wardrobe or chest first)">+</button>
             <button class="sk-btn sk-section-btn" onclick="Sketch.flipCorner(${id})"               title="Flip corner or desk pedestal">⇄ Flip</button>
             <div class="sk-sep"></div>
             <button class="sk-btn sk-meas-btn" onclick="Sketch.insertMeasurement(${id},'Width','W')"  title="Add Width label">↔ Width</button>
