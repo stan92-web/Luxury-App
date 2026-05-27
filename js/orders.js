@@ -737,7 +737,17 @@ const Orders = (() => {
       };
       window[cbName] = data => {
         cleanup();
-        resolve(data && data.ok && data.order ? (data.order['Full Data'] || null) : null);
+        if (!data || !data.ok || !data.order) { resolve(null); return; }
+        // New rows: fullData is in the 'Full Data' column
+        // Old rows (pre-column-fix): fullData landed in an unnamed column — returned as key ''
+        // Validate: real fullData is JSON starting with '{' and is long (>100 chars)
+        // This rejects balance values like "250" that sit in the 'Full Data' column on old rows
+        const candidates = [data.order['Full Data'], data.order['']];
+        const fd = candidates.find(v => {
+          const s = String(v || '');
+          return s.length > 100 && s.charAt(0) === '{';
+        });
+        resolve(fd ? String(fd) : null);
       };
       script.onerror = () => { cleanup(); resolve(null); };
       script.src = AppData.SHEETS_URL

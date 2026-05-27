@@ -241,7 +241,13 @@ function doGet(e) {
       // fullData is omitted from the list — loaded on demand via ?action=getOrder
       // hasFullData boolean lets the client show/hide the "resave" badge correctly.
       headers.forEach(function(h, i) { obj[h] = (h === 'Full Data') ? '' : row[i]; });
-      obj['hasFullData'] = fdIdx >= 0 && !!(row[fdIdx] && String(row[fdIdx]).length > 100);
+      // hasFullData: true if any cell contains a JSON blob (length > 100, starts with '{')
+      // Handles both new rows (col 14 = 'Full Data') and old mis-aligned rows
+      // where fullData landed in unnamed col 15 (returned as key '' in getOrder).
+      obj['hasFullData'] = row.some(function(cell) {
+        var s = String(cell || '');
+        return s.length > 100 && s.charAt(0) === '{';
+      });
       return obj;
     });
 
