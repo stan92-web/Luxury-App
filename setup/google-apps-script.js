@@ -207,7 +207,11 @@ function doGet(e) {
         if (!matched.length) {
           goJson = JSON.stringify({ ok: false });
         } else {
-          matched.sort(function(a, b) { return Number(b[verIdx]||0) - Number(a[verIdx]||0); });
+          matched.sort(function(a, b) {
+            var av = isNaN(Number(a[verIdx])) ? -1 : Number(a[verIdx]);
+            var bv = isNaN(Number(b[verIdx])) ? -1 : Number(b[verIdx]);
+            return bv - av;
+          });
           var best = matched[0];
           var goObj = {};
           goHdrs.forEach(function(h, i) { goObj[h] = best[i]; });

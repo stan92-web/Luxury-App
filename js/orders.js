@@ -483,7 +483,7 @@ const Orders = (() => {
       const idx = merged.findIndex(r => r['Order ID'] === o['Order ID']);
       if (idx === -1) {
         merged.unshift(o);
-      } else if (o['Full Data'] && !merged[idx]['Full Data']) {
+      } else if (o['Full Data'] && !merged[idx]['Full Data'] && !merged[idx]['hasFullData']) {
         merged.splice(idx, 1, o);
       }
     });
@@ -555,7 +555,7 @@ const Orders = (() => {
       const idx = merged.findIndex(r => r['Order ID'] === o['Order ID']);
       if (idx === -1) {
         merged.unshift(o);
-      } else if (o['Full Data'] && !merged[idx]['Full Data']) {
+      } else if (o['Full Data'] && !merged[idx]['Full Data'] && !merged[idx]['hasFullData']) {
         merged.splice(idx, 1, o);
       }
     });
@@ -582,14 +582,18 @@ const Orders = (() => {
 
     // Keep only the best row per order ID: highest version; on a tie prefer
     // the row that has fullData so the order stays loadable after a background save.
+    // NaN-safe: old rows stored timestamps in the Version column — treat as -1
+    // so any real version number (1, 2, …) always wins over those legacy rows.
     const byId = {};
     orders.forEach(o => {
       const id  = o['Order ID'];
-      const ver = Number(o['Version'] || 0);
+      const ver = isNaN(Number(o['Version']))   ? -1 : Number(o['Version']);
       const cur = byId[id];
       if (!cur) { byId[id] = o; return; }
-      const cv  = Number(cur['Version'] || 0);
-      if (ver > cv || (ver === cv && o['Full Data'] && !cur['Full Data'])) byId[id] = o;
+      const cv  = isNaN(Number(cur['Version'])) ? -1 : Number(cur['Version']);
+      const oHas  = !!(o['Full Data']   || o['hasFullData']);
+      const curHas = !!(cur['Full Data'] || cur['hasFullData']);
+      if (ver > cv || (ver === cv && oHas && !curHas)) byId[id] = o;
     });
 
     const latest = Object.values(byId).sort((a, b) =>
@@ -747,7 +751,11 @@ const Orders = (() => {
   async function loadOrder(orderId) {
     const versions = allOrders
       .filter(o => o['Order ID'] === orderId)
-      .sort((a, b) => Number(b['Version'] || 0) - Number(a['Version'] || 0));
+      .sort((a, b) => {
+        const av = isNaN(Number(a['Version'])) ? -1 : Number(a['Version']);
+        const bv = isNaN(Number(b['Version'])) ? -1 : Number(b['Version']);
+        return bv - av;
+      });
 
     if (!versions.length) { Survey.toast('Order not found'); return; }
 
