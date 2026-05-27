@@ -100,6 +100,22 @@ const Orders = (() => {
     });
   }
 
+  // Save fullData for an order that's already in Sheets — no new version row.
+  // Tries client-side gzip JSONP first (fast, no round-trip to Netlify).
+  // Falls back to Netlify server-side gzip for older iPads without CompressionStream.
+  async function saveFullDataOnly(orderId, fullData) {
+    if (!orderId || !fullData) return;
+    let saved = false;
+    try { saved = await saveFullDataViaJSONP(orderId, fullData); } catch (_) {}
+    if (!saved) {
+      fetch('/.netlify/functions/save-fulldata', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ orderId, fullData }),
+      }).catch(() => {});
+    }
+  }
+
   async function saveToSheets(payload) {
     if (!AppData.SHEETS_URL) return;
 
@@ -111,21 +127,8 @@ const Orders = (() => {
     }
     Survey.toast('☁ Sheets saved ✓');
 
-    if (!payload.fullData) return;
-
-    // Step 2a — compressed fullData via JSONP (gzip keeps URL ~6 KB)
-    let fdSaved = false;
-    try { fdSaved = await saveFullDataViaJSONP(payload.orderId, payload.fullData); }
-    catch (_) {}
-
-    // Step 2b — Netlify proxy fallback if JSONP fullData save failed
-    if (!fdSaved) {
-      fetch('/.netlify/functions/save-order', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify(payload),
-      }).catch(() => {});
-    }
+    // Step 2 — fullData: try client-side gzip JSONP, fall back to Netlify server gzip
+    if (payload.fullData) saveFullDataOnly(payload.orderId, payload.fullData);
   }
 
   /* ── Save Drive image via Netlify function proxy (full quality POST) ── */
@@ -345,22 +348,37 @@ const Orders = (() => {
   function pushUnsyncedPending(sheetsOrders) {
     if (!AppData.SHEETS_URL || !pendingOrders.length) return;
     const inSheets      = new Set(sheetsOrders.map(o => String(o['Order ID'])));
-    // hasFullData comes from the Apps Script list response — true when the Sheets
-    // cell is non-empty. 'Full Data' is always '' in the list (stripped for size).
+    // hasFullData: true means the Sheets row already has fullData — skip those.
     const needsFullData = new Set(
       sheetsOrders.filter(o => !o['hasFullData']).map(o => String(o['Order ID']))
     );
-    const toSync = pendingOrders.filter(p => {
+
+    // Orders not in Sheets at all — full save (metadata + fullData)
+    const notInSheets = pendingOrders.filter(p => !inSheets.has(String(p['Order ID'])));
+
+    // Orders in Sheets but fullData missing — push fullData only, no new version row
+    const fdOnly = pendingOrders.filter(p => {
       const id = String(p['Order ID']);
-      if (!inSheets.has(id))                       return true; // not in Sheets at all
-      if (needsFullData.has(id) && p['Full Data']) return true; // in Sheets but missing fullData locally available
-      return false;
+      return inSheets.has(id) && needsFullData.has(id) && p['Full Data'];
     });
-    if (!toSync.length) return;
-    Survey.toast(`↑ Syncing ${toSync.length} local order${toSync.length > 1 ? 's' : ''} to cloud…`);
-    toSync.slice(0, 20).forEach((p, i) => {
-      setTimeout(() => saveToSheets(orderToPayload(p)).catch(() => {}), i * 400);
-    });
+
+    if (!notInSheets.length && !fdOnly.length) return;
+
+    if (notInSheets.length) {
+      Survey.toast(`↑ Syncing ${notInSheets.length} order${notInSheets.length !== 1 ? 's' : ''} to cloud…`);
+      notInSheets.slice(0, 20).forEach((p, i) => {
+        setTimeout(() => saveToSheets(orderToPayload(p)).catch(() => {}), i * 400);
+      });
+    }
+
+    if (fdOnly.length) {
+      const offset = notInSheets.length * 400;
+      fdOnly.slice(0, 20).forEach((p, i) => {
+        setTimeout(() => {
+          saveFullDataOnly(String(p['Order ID']), String(p['Full Data'])).catch(() => {});
+        }, offset + i * 400);
+      });
+    }
   }
 
   /* ── Load orders from Sheets (JSONP — bypasses CORS) ── */
