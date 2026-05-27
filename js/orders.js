@@ -512,10 +512,48 @@ const Orders = (() => {
         if (localOnlyCount)  parts.push(`${localOnlyCount} local (syncing…)`);
         Survey.toast(`☁ ${parts.join(' · ')}`);
       }
+      // Silently try to load fullData for any orders still showing the "resave" badge.
+      // If the data is in Sheets (even in an old mis-aligned column) the badge clears.
+      prefetchMissingFullData().catch(() => {});
     }
   }
 
-  function closePanel() {
+  /* ── Silently pre-fetch fullData for orders showing "resave" badge ── */
+  // After any Sheets sync, orders whose fullData wasn't saved to the cloud
+  // show a "resave to enable loading" badge.  For OLD orders (saved before the
+  // two-step save was introduced) the fullData may actually be in Sheets but in
+  // an unexpected column — this prefetch will find it and clear the badge
+  // automatically without the user doing anything.
+  // Runs sequentially, up to 5 most-recent orders at a time, 600 ms apart so
+  // we don't overwhelm Apps Script's rate limits.
+  async function prefetchMissingFullData() {
+    const missing = allOrders
+      .filter(o => !o['Full Data'] && !o['hasFullData'])
+      .sort((a, b) => new Date(b['Saved At'] || 0) - new Date(a['Saved At'] || 0))
+      .slice(0, 5);
+
+    if (!missing.length) return;
+
+    let anyFound = false;
+    for (const o of missing) {
+      try {
+        const fd = await fetchOrderData(o['Order ID']);
+        if (fd) {
+          // Cache fullData in the in-memory order so the badge clears
+          // and the order loads instantly if tapped.
+          const live = allOrders.find(x => x['Order ID'] === o['Order ID']);
+          if (live) { live['Full Data'] = fd; live['hasFullData'] = true; }
+          anyFound = true;
+        }
+      } catch (_) {}
+      // Pause between JSONP requests to stay within Apps Script rate limits
+      await new Promise(r => setTimeout(r, 600));
+    }
+
+    if (anyFound && document.getElementById('orders-overlay')?.classList.contains('open')) {
+      renderList(); // re-render — badges gone for orders whose data was found
+    }
+  }
     const el = document.getElementById('orders-overlay');
     if (el) el.classList.remove('open');
     document.body.style.overflow = '';
@@ -575,6 +613,8 @@ const Orders = (() => {
     });
     allOrders = merged;
     renderList();
+    // Silently try to load fullData for orders still showing the "resave" badge
+    prefetchMissingFullData().catch(() => {});
   }
 
   function renderList() {
