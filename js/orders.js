@@ -345,7 +345,8 @@ const Orders = (() => {
   // Sheets returned and silently POSTs anything that's missing. This means
   // each device automatically contributes its local orders to the shared pool
   // the first time it opens the Orders panel after an app update.
-  function pushUnsyncedPending(sheetsOrders) {
+  // Pass silent=true to suppress the "Syncing…" toast (used by startupSync).
+  function pushUnsyncedPending(sheetsOrders, silent) {
     if (!AppData.SHEETS_URL || !pendingOrders.length) return;
     const inSheets      = new Set(sheetsOrders.map(o => String(o['Order ID'])));
     // hasFullData: true means the Sheets row already has fullData — skip those.
@@ -365,7 +366,7 @@ const Orders = (() => {
     if (!notInSheets.length && !fdOnly.length) return;
 
     if (notInSheets.length) {
-      Survey.toast(`↑ Syncing ${notInSheets.length} order${notInSheets.length !== 1 ? 's' : ''} to cloud…`);
+      if (!silent) Survey.toast(`↑ Syncing ${notInSheets.length} order${notInSheets.length !== 1 ? 's' : ''} to cloud…`);
       notInSheets.slice(0, 20).forEach((p, i) => {
         setTimeout(() => saveToSheets(orderToPayload(p)).catch(() => {}), i * 400);
       });
@@ -379,6 +380,19 @@ const Orders = (() => {
         }, offset + i * 400);
       });
     }
+  }
+
+  /* ── Silent background sync on startup ────── */
+  // Runs 6 seconds after page load — checks if any locally-saved orders are
+  // missing their fullData in Sheets, and re-uploads silently.
+  // This means an iPad that saved orders will automatically contribute them
+  // to the shared Sheets even if the user never opens the Orders panel.
+  async function startupSync() {
+    if (!AppData.SHEETS_URL || !pendingOrders.length) return;
+    try {
+      const result = await fetchOrders();
+      if (result && Array.isArray(result)) pushUnsyncedPending(result, true); // silent
+    } catch (_) {}
   }
 
   /* ── Load orders from Sheets (JSONP — bypasses CORS) ── */
@@ -894,6 +908,13 @@ const Orders = (() => {
         localStorage.setItem('lh_rep_name', repInput.value.trim());
       });
     }
+
+    // Startup sync — silently upload any locally-saved orders that are missing
+    // their fullData in Google Sheets.  Runs 6 s after load so it doesn't
+    // compete with the initial page render.  This ensures every device
+    // contributes its orders to the shared Sheets automatically — even if the
+    // user never opens the Orders panel.
+    setTimeout(() => startupSync().catch(() => {}), 6000);
   });
 
   return { save, openPanel, closePanel, setFilter, setSearch, loadOrder, sendEmail, refresh, promoteToOrder };
