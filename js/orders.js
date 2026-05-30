@@ -554,6 +554,8 @@ const Orders = (() => {
       renderList(); // re-render — badges gone for orders whose data was found
     }
   }
+
+  function closePanel() {
     const el = document.getElementById('orders-overlay');
     if (el) el.classList.remove('open');
     document.body.style.overflow = '';
