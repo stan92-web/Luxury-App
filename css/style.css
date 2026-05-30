@@ -907,14 +907,26 @@ textarea:focus {
   border: 1px solid; white-space: nowrap;
 }
 
-/* Confirm Order button inside list rows */
-.order-confirm-btn {
-  margin-top: 5px; padding: 4px 10px; font-size: 11px; font-weight: 700;
-  border-radius: 5px; border: 1.5px solid #27ae60; background: #e8f5e9;
-  color: #2e7d32; cursor: pointer; font-family: inherit; white-space: nowrap;
-  touch-action: manipulation;
+/* ── Status selector: Quote → Order → Installed ── */
+.order-status-sel { display: flex; align-items: center; gap: 3px; margin-top: 7px; flex-wrap: wrap; }
+.oss-arrow { color: #ccc; font-size: 9px; }
+.oss-btn {
+  font-size: 10px; font-weight: 600; padding: 3px 10px; border-radius: 4px;
+  border: 1.5px solid #ddd; background: transparent; color: #bbb;
+  cursor: pointer; font-family: inherit; touch-action: manipulation; transition: all 0.15s;
 }
-.order-confirm-btn:hover { background: #27ae60; color: #fff; }
+.oss-btn:hover { border-color: #999; color: #666; }
+.oss-q-active { border-color: #1a6eb5 !important; color: #1a6eb5 !important; background: #eef4fd !important; }
+.oss-o-active { border-color: #2e7d32 !important; color: #2e7d32 !important; background: #e8f5e9 !important; }
+.oss-i-active { border-color: #6a1b9a !important; color: #6a1b9a !important; background: #f3e5f5 !important; }
+
+/* ── Installed row tint ── */
+.order-row-installed { background: #faf5ff; border-color: #d4b8e8 !important; }
+.order-row-installed:hover { border-color: #8e44ad !important; }
+
+/* ── Mine filter button — blue when active ── */
+.ofilter-btn[data-type="mine"].active { background: #1a6eb5; border-color: #1a6eb5; }
+.ofilter-sep { color: rgba(255,255,255,0.25); font-size: 14px; padding: 0 2px; }
 
 .order-delete-btn {
   margin-top: 4px; padding: 3px 8px; font-size: 11px; font-weight: 600;

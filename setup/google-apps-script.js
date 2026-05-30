@@ -148,6 +148,42 @@ function doGet(e) {
         .setMimeType(cb ? ContentService.MimeType.JAVASCRIPT : ContentService.MimeType.JSON);
     }
 
+    // ── Update status of an existing order in-place ──
+    // ?action=updateStatus&orderId=X&status=Order&callback=cb
+    // Finds the latest version row for the order and updates only the Status
+    // cell — no new row, no fullData disturbance.
+    if (e && e.parameter && e.parameter.action === 'updateStatus') {
+      var usId     = e.parameter.orderId || '';
+      var usStatus = e.parameter.status  || '';
+      var usOk     = false;
+      if (usId && usStatus) {
+        var usSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Orders');
+        if (usSheet) {
+          var usData  = usSheet.getDataRange().getValues();
+          var usHdrs  = usData[0];
+          var usIdCol = usHdrs.indexOf('Order ID');
+          var usVCol  = usHdrs.indexOf('Version');
+          var usStCol = usHdrs.indexOf('Status');
+          var usBest  = -1, usBestV = -1;
+          for (var usi = 1; usi < usData.length; usi++) {
+            if (String(usData[usi][usIdCol]) === usId) {
+              var usV = isNaN(Number(usData[usi][usVCol])) ? -1 : Number(usData[usi][usVCol]);
+              if (usV >= usBestV) { usBestV = usV; usBest = usi; }
+            }
+          }
+          if (usBest > 0 && usStCol >= 0) {
+            usSheet.getRange(usBest + 1, usStCol + 1).setValue(usStatus);
+            usOk = true;
+            Logger.log('updateStatus OK: ' + usId + ' → ' + usStatus);
+          }
+        }
+      }
+      var usJson = JSON.stringify({ ok: usOk, orderId: usId });
+      return ContentService
+        .createTextOutput(cb ? cb + '(' + usJson + ')' : usJson)
+        .setMimeType(cb ? ContentService.MimeType.JAVASCRIPT : ContentService.MimeType.JSON);
+    }
+
     // ── Save compressed fullData for an existing order ──
     // ?action=saveFullData&orderId=X&zdata=<gzip+base64url>&callback=cb
     // The browser gzips the fullData JSON and base64url-encodes it so the

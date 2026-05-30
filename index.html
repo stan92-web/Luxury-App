@@ -17,7 +17,7 @@
     <div class="auth-logo-mark">LH</div>
     <div class="auth-logo-text">Luxury House</div>
     <div class="auth-logo-sub">Quote &amp; Order</div>
-    <div class="app-version">v71</div>
+    <div class="app-version">v72</div>
     <div class="auth-label">Enter Access Code</div>
     <input id="auth-input" type="password" inputmode="numeric"
       placeholder="——————" maxlength="10" autocomplete="off">
@@ -34,7 +34,7 @@
     <div class="logo-mark">LH</div>
     <div>
       <div class="logo-text">Luxury House</div>
-      <div class="logo-sub">Quote &amp; Order <span class="app-version">v71</span></div>
+      <div class="logo-sub">Quote &amp; Order <span class="app-version">v72</span></div>
     </div>
   </div>
   <div class="header-right">
@@ -226,6 +226,8 @@
     <!-- Row 2: filters + rep name for this device -->
     <div class="orders-bar-row orders-bar-row2">
       <div id="orders-filters">
+        <button class="ofilter-btn" data-type="mine" onclick="Orders.toggleMine(this)">👤 Mine</button>
+        <span class="ofilter-sep">|</span>
         <button class="ofilter-btn active" data-status="" onclick="Orders.setFilter('',this)">All</button>
         <button class="ofilter-btn" data-status="Quote"     onclick="Orders.setFilter('Quote',this)">Quotes</button>
         <button class="ofilter-btn" data-status="Order"     onclick="Orders.setFilter('Order',this)">Orders</button>
@@ -244,10 +246,10 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-<script src="js/auth.js?v=71"></script>
-<script src="js/data.js?v=71"></script>
-<script src="js/sketch.js?v=71"></script>
-<script src="js/survey.js?v=71"></script>
-<script src="js/orders.js?v=71"></script>
+<script src="js/auth.js?v=72"></script>
+<script src="js/data.js?v=72"></script>
+<script src="js/sketch.js?v=72"></script>
+<script src="js/survey.js?v=72"></script>
+<script src="js/orders.js?v=72"></script>
 </body>
 </html>

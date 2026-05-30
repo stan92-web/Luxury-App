@@ -8,6 +8,7 @@ const Orders = (() => {
   let allOrders     = [];
   let pendingOrders = JSON.parse(localStorage.getItem('lh_pending_orders') || '[]');
   let filterStatus  = '';
+  let filterMine    = false;
   let searchTerm    = '';
   const sessionSaved = []; // orders saved this page session — never wiped by JSONP
 
@@ -626,6 +627,10 @@ const Orders = (() => {
     let orders = allOrders.slice();
 
     if (filterStatus) orders = orders.filter(o => o['Status'] === filterStatus);
+    if (filterMine) {
+      const myName = (localStorage.getItem('lh_rep_name') || '').trim().toLowerCase();
+      if (myName) orders = orders.filter(o => (o['Rep'] || '').trim().toLowerCase() === myName);
+    }
     if (searchTerm) {
       const q = searchTerm.toLowerCase();
       orders = orders.filter(o =>
@@ -676,15 +681,15 @@ const Orders = (() => {
     monthKeys.forEach(month => {
       html += `<div class="order-month-heading">${month}</div>`;
       byMonth[month].forEach(o => {
-        const isQuote  = !o['Status'] || o['Status'] === 'Quote';
-        const sc       = o['Status'] === 'Order' ? 'status-order'
-                       : o['Status'] === 'Installed' ? 'status-installed'
-                       : 'status-quote';
+        const stat     = o['Status'] || 'Quote';
+        const isQuote  = stat === 'Quote';
+        const rowCls   = stat === 'Order' ? ' order-row-confirmed'
+                       : stat === 'Installed' ? ' order-row-installed' : '';
         const total    = o['Total £'] ? `£${o['Total £']}` : '—';
         const date     = fmtDate(o['Saved At']);
         const addr     = [o['Door No'], o['Address']].filter(Boolean).join(' ');
         const hasData  = !!(o['Full Data'] || o['hasFullData']);
-        const rowStyle = hasData ? '' : 'opacity:0.6';
+        const rowStyle = hasData ? '' : 'opacity:0.65';
         const noData   = hasData ? '' : '<span class="order-no-data">⚠ resave to enable loading</span>';
         const oid      = (o['Order ID'] || '').replace(/'/g, "\\'");
         const rep      = o['Rep'] || '';
@@ -692,23 +697,30 @@ const Orders = (() => {
         const repBadge = rep
           ? `<span class="order-rep-badge" style="background:${rc}22;color:${rc};border-color:${rc}55">${rep}</span>`
           : '';
-        const confirmBtn = isQuote
-          ? `<button class="order-confirm-btn" onclick="event.stopPropagation();Orders.promoteToOrder('${oid}')" title="Mark as confirmed Order">✓ Confirm Order</button>`
-          : '';
+        const qa = stat === 'Quote'     ? ' oss-q-active' : '';
+        const oa = stat === 'Order'     ? ' oss-o-active' : '';
+        const ia = stat === 'Installed' ? ' oss-i-active' : '';
+        const statusSel = `
+          <div class="order-status-sel" onclick="event.stopPropagation()">
+            <button class="oss-btn${qa}" onclick="Orders.setStatus('${oid}','Quote')">Quote</button>
+            <span class="oss-arrow">›</span>
+            <button class="oss-btn${oa}" onclick="Orders.setStatus('${oid}','Order')">Order</button>
+            <span class="oss-arrow">›</span>
+            <button class="oss-btn${ia}" onclick="Orders.setStatus('${oid}','Installed')">Installed</button>
+          </div>`;
         html += `
-          <div class="order-row${isQuote ? '' : ' order-row-confirmed'}" style="${rowStyle}" onclick="Orders.loadOrder('${oid}')">
+          <div class="order-row${rowCls}" style="${rowStyle}" onclick="Orders.loadOrder('${oid}')">
             <div class="order-id-badge">${o['Order ID'] || '—'}</div>
             <div class="order-main">
               <div class="order-customer">${o['Customer'] || '—'}</div>
               <div class="order-addr">${addr || '—'}</div>
               <div class="order-rooms">${o['Rooms'] || ''}${noData}</div>
-              ${confirmBtn}
+              ${statusSel}
             </div>
             <div class="order-side">
               <div class="order-price">${total}</div>
               <div class="order-date">${date}</div>
               ${repBadge}
-              <span class="order-status ${sc}">${o['Status'] || 'Quote'}</span>
             </div>
           </div>`;
       });
@@ -717,47 +729,54 @@ const Orders = (() => {
     list.innerHTML = html;
   }
 
-  /* ── Promote Quote → Order ─────────────── */
-  async function promoteToOrder(orderId) {
+  /* ── Set status: Quote / Order / Installed ── */
+  // Updates status in-place via Apps Script ?action=updateStatus — no new
+  // version row is created, so fullData on existing rows is never disturbed.
+  function setStatus(orderId, newStatus) {
     const o = allOrders.find(x => x['Order ID'] === orderId);
-    if (!o || o['Status'] === 'Order' || o['Status'] === 'Installed') return;
+    if (!o || o['Status'] === newStatus) return;
 
-    const label = [o['Customer'], o['Address']].filter(Boolean).join(' — ');
-    if (!confirm(`Confirm as Order?\n\n${label}`)) return;
+    o['Status'] = newStatus;
 
-    o['Status'] = 'Order';
-
-    // Update pending cache and session
-    pendingOrders.forEach(p => { if (p['Order ID'] === orderId) p['Status'] = 'Order'; });
+    // Update pending cache and session record
+    pendingOrders.forEach(p => { if (p['Order ID'] === orderId) p['Status'] = newStatus; });
     localStorage.setItem('lh_pending_orders', JSON.stringify(pendingOrders));
+    const ss = sessionSaved.find(x => x['Order ID'] === orderId);
+    if (ss) ss['Status'] = newStatus;
 
-    // If this is the currently loaded order, update stored status
+    // Update active order status if it is the currently-loaded order
     if (localStorage.getItem('lh_order_id') === orderId) {
-      localStorage.setItem('lh_order_status', 'Order');
+      localStorage.setItem('lh_order_status', newStatus);
     }
 
     renderList();
-    Survey.toast('✓ Confirmed as Order');
+    Survey.toast(`Status → ${newStatus}`);
 
-    // Push updated status to Sheets
-    const newVer = Number(o['Version'] || 1) + 1;
-    saveToSheets({
-      orderId,
-      property: o['Property'] || o['Address'] || '',
-      version:  newVer,
-      savedAt:  new Date().toISOString(),
-      status:   'Order',
-      rep:      o['Rep']      || '',
-      customer: o['Customer'] || '',
-      phone:    o['Phone']    || '',
-      doorNo:   o['Door No']  || '',
-      address:  o['Address']  || '',
-      rooms:    o['Rooms']    || '',
-      total:    o['Total £']  || '',
-      deposit:  o['Deposit £'] || '',
-      balance:  o['Balance £'] || '',
-      fullData: o['Full Data'] || ''
-    });
+    if (AppData.SHEETS_URL) updateStatusInSheets(orderId, newStatus);
+  }
+
+  // JSONP call to Apps Script ?action=updateStatus — updates the Status cell
+  // of the latest version row without creating a new row or touching fullData.
+  function updateStatusInSheets(orderId, status) {
+    const cbName = 'lhUsCb' + Date.now();
+    const script = document.createElement('script');
+    const timer  = setTimeout(() => {
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+    }, 15000);
+    window[cbName] = () => {
+      clearTimeout(timer);
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+    };
+    script.onerror = () => {
+      clearTimeout(timer);
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+    };
+    const qs = new URLSearchParams({ action: 'updateStatus', orderId, status, callback: cbName });
+    script.src = AppData.SHEETS_URL + '?' + qs.toString();
+    document.head.appendChild(script);
   }
 
   function fmtDate(iso) {
@@ -769,8 +788,17 @@ const Orders = (() => {
 
   function setFilter(status, btn) {
     filterStatus = status;
-    document.querySelectorAll('.ofilter-btn').forEach(b => b.classList.remove('active'));
+    // Only remove active from status-filter buttons, not the Mine toggle
+    document.querySelectorAll('.ofilter-btn:not([data-type="mine"])').forEach(b => b.classList.remove('active'));
     if (btn) btn.classList.add('active');
+    renderList();
+  }
+
+  function toggleMine(btn) {
+    const myName = (localStorage.getItem('lh_rep_name') || '').trim();
+    if (!myName) { Survey.toast('Set your name in the "My Name" box first'); return; }
+    filterMine = !filterMine;
+    if (btn) btn.classList.toggle('active', filterMine);
     renderList();
   }
 
@@ -959,5 +987,5 @@ const Orders = (() => {
     setTimeout(() => startupSync().catch(() => {}), 6000);
   });
 
-  return { save, openPanel, closePanel, setFilter, setSearch, loadOrder, sendEmail, refresh, promoteToOrder };
+  return { save, openPanel, closePanel, setFilter, toggleMine, setSearch, loadOrder, sendEmail, refresh, setStatus };
 })();
