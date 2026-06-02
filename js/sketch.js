@@ -697,6 +697,64 @@ const Sketch = (() => {
     ctx.restore();
   }
 
+  // ── Furniture detail rendering helpers ──────────────────────────────────────
+  // drawRail — cylindrical hanging rod using three parallel lines (pseudo-3D)
+  function drawRail(ctx, x1, y1, x2, y2) {
+    const horiz = Math.abs(y2 - y1) < Math.abs(x2 - x1);
+    const off   = 1.4;
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineWidth = 1.5; ctx.strokeStyle = '#787878';
+    ctx.beginPath();
+    if (horiz) { ctx.moveTo(x1, y1 + off); ctx.lineTo(x2, y2 + off); }
+    else        { ctx.moveTo(x1 + off, y1); ctx.lineTo(x2 + off, y2); }
+    ctx.stroke();
+    ctx.lineWidth = 3; ctx.strokeStyle = '#bebebe';
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    ctx.lineWidth = 1.2; ctx.strokeStyle = '#ebebeb';
+    ctx.beginPath();
+    if (horiz) { ctx.moveTo(x1, y1 - off); ctx.lineTo(x2, y2 - off); }
+    else        { ctx.moveTo(x1 - off, y1); ctx.lineTo(x2 - off, y2); }
+    ctx.stroke();
+    ctx.fillStyle = '#999';
+    [{ x: x1, y: y1 }, { x: x2, y: y2 }].forEach(p => {
+      ctx.beginPath(); ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2); ctx.fill();
+    });
+    ctx.restore();
+  }
+
+  // drawHandle — brushed-steel bar handle for drawers/doors
+  function drawHandle(ctx, cx, cy, w, h) {
+    ctx.save();
+    const r  = Math.min(h / 2, 4);
+    const lx = cx - w / 2, ty = cy - h / 2;
+    ctx.beginPath();
+    ctx.moveTo(lx + r, ty);
+    ctx.arcTo(lx + w, ty,     lx + w, ty + h, r);
+    ctx.arcTo(lx + w, ty + h, lx,     ty + h, r);
+    ctx.arcTo(lx,     ty + h, lx,     ty,     r);
+    ctx.arcTo(lx,     ty,     lx + w, ty,     r);
+    ctx.closePath();
+    ctx.fillStyle = '#d4d4d4'; ctx.fill();
+    ctx.strokeStyle = '#888'; ctx.lineWidth = 0.8; ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.65)'; ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.moveTo(lx + r, ty + 1.3); ctx.lineTo(lx + w - r, ty + 1.3); ctx.stroke();
+    ctx.restore();
+  }
+
+  // drawVertHandle — vertical bar handle (angle wardrobe doors)
+  function drawVertHandle(ctx, hx, cy, len) {
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineWidth = 1; ctx.strokeStyle = '#787878';
+    ctx.beginPath(); ctx.moveTo(hx + 1.2, cy - len / 2 + 1.2); ctx.lineTo(hx + 1.2, cy + len / 2 + 1.2); ctx.stroke();
+    ctx.lineWidth = 3; ctx.strokeStyle = '#bebebe';
+    ctx.beginPath(); ctx.moveTo(hx, cy - len / 2); ctx.lineTo(hx, cy + len / 2); ctx.stroke();
+    ctx.lineWidth = 1; ctx.strokeStyle = '#ebebeb';
+    ctx.beginPath(); ctx.moveTo(hx - 1.2, cy - len / 2); ctx.lineTo(hx - 1.2, cy + len / 2); ctx.stroke();
+    ctx.restore();
+  }
+
   function renderShape(ctx, sh) {
     ctx.strokeStyle = sh.colour;
     ctx.fillStyle   = sh.colour;
@@ -719,11 +777,10 @@ const Sketch = (() => {
       for (let i = 1; i < cols; i++) {
         ctx.beginPath(); ctx.moveTo(x + i * colW, y); ctx.lineTo(x + i * colW, y + h); ctx.stroke();
       }
-      // Hanging bars (blue)
-      ctx.strokeStyle = '#1a6eb5'; ctx.lineWidth = 2.5;
+      // Hanging bars — steel rod appearance
       for (let i = 0; i < cols; i++) {
         const cx = x + i * colW;
-        ctx.beginPath(); ctx.moveTo(cx + colW * 0.12, hangY); ctx.lineTo(cx + colW * 0.88, hangY); ctx.stroke();
+        drawRail(ctx, cx + colW * 0.12, hangY, cx + colW * 0.88, hangY);
       }
       // Dimension annotation (W/H/D) — shown if values are stored on the shape
       if (sh.dimW || sh.dimH || sh.dimD) {
@@ -783,12 +840,11 @@ const Sketch = (() => {
         ctx.moveTo(mainX + i * colW, y); ctx.lineTo(mainX + i * colW, y + mH); ctx.stroke();
       }
 
-      // Main arm: hanging rails (blue, horizontal)
-      ctx.strokeStyle = '#1a6eb5'; ctx.lineWidth = 2.5;
+      // Main arm: hanging rails — steel rod appearance
       const rY = y + topH + (mH - topH) * 0.52;
       for (let i = 0; i < cols; i++) {
         const cx = mainX + i * colW;
-        ctx.beginPath(); ctx.moveTo(cx + colW * 0.1, rY); ctx.lineTo(cx + colW * 0.9, rY); ctx.stroke();
+        drawRail(ctx, cx + colW * 0.1, rY, cx + colW * 0.9, rY);
       }
 
       // Side arm: depth shelf line (vertical, near back wall)
@@ -796,10 +852,9 @@ const Sketch = (() => {
       const shelfX = flip === 'right' ? armX + aW * 0.78 : armX + aW * 0.22;
       ctx.beginPath(); ctx.moveTo(shelfX, y); ctx.lineTo(shelfX, y + h); ctx.stroke();
 
-      // Side arm: hanging rail (blue, vertical)
-      ctx.strokeStyle = '#1a6eb5'; ctx.lineWidth = 2.5;
+      // Side arm: hanging rail — steel rod appearance (vertical)
       const railX = armX + aW * 0.5;
-      ctx.beginPath(); ctx.moveTo(railX, y + topH * 0.5); ctx.lineTo(railX, y + h - topH * 0.5); ctx.stroke();
+      drawRail(ctx, railX, y + topH * 0.5, railX, y + h - topH * 0.5);
 
       ctx.restore();
     }
@@ -823,10 +878,9 @@ const Sketch = (() => {
         }
         const hCx = x + w * 0.5;
         const hCy = dy + dH * 0.5;
-        const hW  = Math.min(w * 0.30, 60);
-        const hH  = Math.max(5, Math.min(13, dH * 0.20));
-        ctx.strokeStyle = '#1a6eb5'; ctx.lineWidth = 2;
-        ctx.strokeRect(hCx - hW / 2, hCy - hH / 2, hW, hH);
+        const hW  = Math.min(w * 0.32, 62);
+        const hH  = Math.max(6, Math.min(14, dH * 0.22));
+        drawHandle(ctx, hCx, hCy, hW, hH);
       }
 
       ctx.restore();
@@ -854,12 +908,11 @@ const Sketch = (() => {
       const midY = y + dH;
       ctx.beginPath(); ctx.moveTo(pedLeft, midY); ctx.lineTo(pedRight, midY); ctx.stroke();
 
-      ctx.strokeStyle = '#1a6eb5'; ctx.lineWidth = 2;
-      const hW  = Math.min(pedW * 0.46, 40);
-      const hH  = Math.max(4, Math.min(12, dH * 0.16));
+      const hW  = Math.min(pedW * 0.50, 42);
+      const hH  = Math.max(5, Math.min(13, dH * 0.18));
       const hCx = (pedLeft + pedRight) / 2;
-      ctx.strokeRect(hCx - hW / 2, y    + dH * 0.5 - hH / 2, hW, hH);
-      ctx.strokeRect(hCx - hW / 2, midY + dH * 0.5 - hH / 2, hW, hH);
+      drawHandle(ctx, hCx, y    + dH * 0.5, hW, hH);
+      drawHandle(ctx, hCx, midY + dH * 0.5, hW, hH);
 
       ctx.restore();
     }
@@ -878,12 +931,11 @@ const Sketch = (() => {
       ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.moveTo(x, midY); ctx.lineTo(x + w, midY); ctx.stroke();
 
-      ctx.strokeStyle = '#1a6eb5'; ctx.lineWidth = 2;
       const hW  = Math.min(w * 0.46, 50);
-      const hH  = Math.max(4, Math.min(12, dH * 0.18));
+      const hH  = Math.max(5, Math.min(13, dH * 0.18));
       const hCx = x + w / 2;
-      ctx.strokeRect(hCx - hW / 2, y    + dH * 0.5 - hH / 2, hW, hH);
-      ctx.strokeRect(hCx - hW / 2, midY + dH * 0.5 - hH / 2, hW, hH);
+      drawHandle(ctx, hCx, y    + dH * 0.5, hW, hH);
+      drawHandle(ctx, hCx, midY + dH * 0.5, hW, hH);
 
       ctx.restore();
     }
@@ -922,9 +974,7 @@ const Sketch = (() => {
         ctx.stroke();
       }
 
-      // Vertical handles — left or right of each section
-      ctx.strokeStyle = '#1a6eb5'; ctx.lineWidth = 2;
-      ctx.lineCap = 'round';
+      // Vertical handles — steel bar appearance
       const hSide = sh.handleSide || 'left';
       for (let i = 0; i < cols; i++) {
         const segX0  = x + (w / cols) * i;
@@ -938,10 +988,7 @@ const Sketch = (() => {
         const secH   = (y + h) - topMid;
         const hLen   = Math.min(secH * 0.30, 40);
         const cy     = topMid + secH * 0.5;
-        ctx.beginPath();
-        ctx.moveTo(hx, cy - hLen / 2);
-        ctx.lineTo(hx, cy + hLen / 2);
-        ctx.stroke();
+        drawVertHandle(ctx, hx, cy, hLen);
       }
 
       ctx.restore();

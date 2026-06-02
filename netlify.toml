@@ -3,7 +3,30 @@
   command = ""
   functions = "netlify/functions"
 
+# HTML — always revalidate so version bumps take effect immediately
 [[headers]]
-  for = "/*"
+  for = "/"
   [headers.values]
     Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+# JS / CSS / fonts — cache for 1 year; safe because every deploy bumps ?v=XX
+# which creates a new browser cache key, so stale files are never served.
+[[headers]]
+  for = "/js/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/css/*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/fonts/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"

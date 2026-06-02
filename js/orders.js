@@ -1045,15 +1045,13 @@ const Orders = (() => {
     refresh();
   }
 
-  return { save, autoSave, openPanel, closePanel, setFilter, toggleMine, setSearch, loadOrder, sendEmail, refresh, setStatus, diagnostic, clearLocalCache };
-
   function diagnostic() {
-    const pending  = JSON.parse(localStorage.getItem('lh_pending_orders') || '[]');
+    const pending   = JSON.parse(localStorage.getItem('lh_pending_orders') || '[]');
     const surveyRaw = localStorage.getItem('lh_survey_v1');
     const surveyObj = surveyRaw ? (() => { try { return JSON.parse(surveyRaw); } catch(_) { return null; } })() : null;
     const activeId  = localStorage.getItem('lh_order_id') || '—';
     const lines = [
-      `=== DEVICE DIAGNOSTIC v73 ===`,
+      `=== DEVICE DIAGNOSTIC ===`,
       ``,
       `Locally stored orders: ${pending.length}`,
       ...pending.map(p =>
@@ -1070,4 +1068,6 @@ const Orders = (() => {
     alert(msg);
     console.log(msg);
   }
+
+  return { save, autoSave, openPanel, closePanel, setFilter, toggleMine, setSearch, loadOrder, sendEmail, refresh, setStatus, diagnostic, clearLocalCache };
 })();
