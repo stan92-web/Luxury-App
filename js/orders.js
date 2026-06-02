@@ -10,6 +10,7 @@ const Orders = (() => {
   let filterStatus  = '';
   let filterMine    = false;
   let searchTerm    = '';
+  let pollInterval  = null; // auto-refresh timer while Orders panel is open
   const sessionSaved = []; // orders saved this page session — never wiped by JSONP
 
   /* ── Order ID ────────────────────────────── */
@@ -432,18 +433,26 @@ const Orders = (() => {
     if (!el) return;
     el.classList.add('open');
     document.body.style.overflow = 'hidden';
-    showLocal(); // instant — local orders appear immediately
+    showLocal();
 
-    // Auto-fetch from Sheets so orders saved on other devices show up
-    // without the user needing to tap ↻ Refresh.
-    // 2-second delay lets any in-progress save reach Apps Script first,
-    // preventing the race where a fresh fetch returns before the write commits.
     if (AppData.SHEETS_URL) {
+      // Initial fetch — 2 s delay so any in-progress save reaches Apps Script first
       setTimeout(() => {
         if (document.getElementById('orders-overlay')?.classList.contains('open')) {
-          silentRefresh();
+          silentRefresh(false); // false = show the "Checking…" indicator on first load
         }
       }, 2000);
+
+      // Auto-poll every 30 s while the panel is open so status changes and new
+      // orders from other iPads appear without anyone tapping Refresh.
+      clearInterval(pollInterval);
+      pollInterval = setInterval(() => {
+        if (document.getElementById('orders-overlay')?.classList.contains('open')) {
+          silentRefresh(true); // true = quiet, no indicator for background polls
+        } else {
+          clearInterval(pollInterval);
+        }
+      }, 30000);
     }
   }
 
@@ -470,34 +479,35 @@ const Orders = (() => {
   // Background Sheets sync triggered automatically on panel open.
   // Shows a subtle indicator while fetching, then merges remote orders in.
   // Identical merge rules to refresh() — local copies with fullData always win.
-  async function silentRefresh() {
+  // quiet=true suppresses the "Checking…" indicator and the count toast
+  // — used by the 30-second auto-poll so the list doesn't flash every poll.
+  async function silentRefresh(quiet) {
     if (!AppData.SHEETS_URL) return;
 
-    // Append a subtle "checking…" note at the bottom of the visible list
     const list = document.getElementById('orders-list');
-    const ind  = document.createElement('div');
-    ind.id = 'orders-sync-ind';
-    ind.style.cssText = 'text-align:center;padding:8px 0 4px;font-size:11px;color:#aaa;';
-    ind.textContent = '↻ Checking other devices…';
-    if (list) list.appendChild(ind);
+    let ind;
+    if (!quiet) {
+      ind = document.createElement('div');
+      ind.id = 'orders-sync-ind';
+      ind.style.cssText = 'text-align:center;padding:8px 0 4px;font-size:11px;color:#aaa;';
+      ind.textContent = '↻ Checking other devices…';
+      if (list) list.appendChild(ind);
+    }
 
     const result = await fetchOrders();
 
-    // Remove indicator however the fetch ended
-    if (ind.parentNode) ind.parentNode.removeChild(ind);
+    if (ind && ind.parentNode) ind.parentNode.removeChild(ind);
 
     if (result === null) {
-      Survey.toast('⚠ Could not reach Google Sheets — showing this device only');
+      if (!quiet) Survey.toast('⚠ Could not reach Google Sheets — showing this device only');
       return;
     }
 
-    // Push any local orders that haven't reached Sheets yet
     pushUnsyncedPending(result);
 
-    const sheetsIds = new Set(result.map(o => String(o['Order ID'])));
+    const sheetsIds      = new Set(result.map(o => String(o['Order ID'])));
     const localOnlyCount = pendingOrders.filter(p => !sheetsIds.has(String(p['Order ID']))).length;
 
-    const before = allOrders.length;
     const merged = result.slice();
     [...pendingOrders, ...sessionSaved].forEach(o => {
       const idx = merged.findIndex(r => r['Order ID'] === o['Order ID']);
@@ -511,15 +521,15 @@ const Orders = (() => {
 
     if (document.getElementById('orders-overlay')?.classList.contains('open')) {
       renderList();
-      const fromSheets = sheetsIds.size; // unique orders, not raw rows
-      if (fromSheets > 0 || localOnlyCount > 0) {
-        const parts = [];
-        if (fromSheets)      parts.push(`${fromSheets} order${fromSheets !== 1 ? 's' : ''} from cloud`);
-        if (localOnlyCount)  parts.push(`${localOnlyCount} local (syncing…)`);
-        Survey.toast(`☁ ${parts.join(' · ')}`);
+      if (!quiet) {
+        const fromSheets = sheetsIds.size;
+        if (fromSheets > 0 || localOnlyCount > 0) {
+          const parts = [];
+          if (fromSheets)     parts.push(`${fromSheets} order${fromSheets !== 1 ? 's' : ''} from cloud`);
+          if (localOnlyCount) parts.push(`${localOnlyCount} local (syncing…)`);
+          Survey.toast(`☁ ${parts.join(' · ')}`);
+        }
       }
-      // Silently try to load fullData for any orders still showing the "resave" badge.
-      // If the data is in Sheets (even in an old mis-aligned column) the badge clears.
       prefetchMissingFullData().catch(() => {});
     }
   }
@@ -565,6 +575,8 @@ const Orders = (() => {
     const el = document.getElementById('orders-overlay');
     if (el) el.classList.remove('open');
     document.body.style.overflow = '';
+    clearInterval(pollInterval);
+    pollInterval = null;
   }
 
   async function refresh() {
