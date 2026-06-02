@@ -687,21 +687,37 @@ const Orders = (() => {
       html += `<div class="order-month-heading">${month}</div>`;
       byMonth[month].forEach(o => {
         const stat     = o['Status'] || 'Quote';
-        const isQuote  = stat === 'Quote';
         const rowCls   = stat === 'Order' ? ' order-row-confirmed'
                        : stat === 'Installed' ? ' order-row-installed' : '';
         const total    = o['Total £'] ? `£${o['Total £']}` : '—';
         const date     = fmtDate(o['Saved At']);
         const addr     = [o['Door No'], o['Address']].filter(Boolean).join(' ');
         const hasData  = !!(o['Full Data'] || o['hasFullData']);
-        const rowStyle = hasData ? '' : 'opacity:0.65';
         const noData   = hasData ? '' : '<span class="order-no-data">⚠ resave to enable loading</span>';
         const oid      = (o['Order ID'] || '').replace(/'/g, "\\'");
         const rep      = o['Rep'] || '';
-        const rc       = repColor(rep);
-        const repBadge = rep
-          ? `<span class="order-rep-badge" style="background:${rc}22;color:${rc};border-color:${rc}55">${rep}</span>`
+        const rc       = rep ? repColor(rep) : '#888';
+
+        // Is this order from the current device's rep?
+        const myName   = (localStorage.getItem('lh_rep_name') || '').trim().toLowerCase();
+        const isMine   = !myName || !rep || rep.trim().toLowerCase() === myName;
+
+        // Left border uses rep colour; non-mine rows are slightly dimmed
+        const borderStyle = `border-left:4px solid ${rc};`;
+        const dimStyle    = (!isMine && myName) ? 'opacity:0.75;' : '';
+        const dataStyle   = hasData ? '' : 'opacity:0.65;';
+        const rowStyle    = borderStyle + dimStyle + dataStyle;
+
+        // Rep badge — prominent, top of right column
+        const repLabel = rep || (isMine && myName ? myName : '');
+        const repBadge = repLabel
+          ? `<div class="order-rep-badge-lg" style="background:${rc}18;color:${rc};border-color:${rc}66">${repLabel}</div>`
           : '';
+
+        // "Not yours" label
+        const notMine  = (!isMine && myName)
+          ? `<div class="order-not-mine">👤 ${rep}'s order</div>` : '';
+
         const qa = stat === 'Quote'     ? ' oss-q-active' : '';
         const oa = stat === 'Order'     ? ' oss-o-active' : '';
         const ia = stat === 'Installed' ? ' oss-i-active' : '';
@@ -715,17 +731,20 @@ const Orders = (() => {
           </div>`;
         html += `
           <div class="order-row${rowCls}" style="${rowStyle}" onclick="Orders.loadOrder('${oid}')">
-            <div class="order-id-badge">${o['Order ID'] || '—'}</div>
             <div class="order-main">
+              <div class="order-header-row">
+                <span class="order-id-badge">${o['Order ID'] || '—'}</span>
+                ${notMine}
+              </div>
               <div class="order-customer">${o['Customer'] || '—'}</div>
               <div class="order-addr">${addr || '—'}</div>
               <div class="order-rooms">${o['Rooms'] || ''}${noData}</div>
               ${statusSel}
             </div>
             <div class="order-side">
+              ${repBadge}
               <div class="order-price">${total}</div>
               <div class="order-date">${date}</div>
-              ${repBadge}
             </div>
           </div>`;
       });
@@ -873,7 +892,14 @@ const Orders = (() => {
     }
 
     const customer = order['Customer'] || orderId;
-    if (!confirm(`Load order for ${customer}?\n\nThis will replace everything on the current form.`)) return;
+    const orderRep = (order['Rep'] || '').trim();
+    const myName   = (localStorage.getItem('lh_rep_name') || '').trim();
+    const isOther  = myName && orderRep && orderRep.toLowerCase() !== myName.toLowerCase();
+
+    const confirmMsg = isOther
+      ? `⚠ This order belongs to ${orderRep}.\n\nCustomer: ${customer}\n\nLoading it will replace everything on YOUR current form. Only do this if you mean to.\n\nContinue?`
+      : `Load order for ${customer}?\n\nThis will replace everything on the current form.`;
+    if (!confirm(confirmMsg)) return;
 
     try {
       localStorage.setItem('lh_survey_v1',     fullData);
