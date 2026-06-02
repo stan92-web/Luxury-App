@@ -990,15 +990,24 @@ const Orders = (() => {
   return { save, openPanel, closePanel, setFilter, toggleMine, setSearch, loadOrder, sendEmail, refresh, setStatus, diagnostic };
 
   function diagnostic() {
-    const pending = JSON.parse(localStorage.getItem('lh_pending_orders') || '[]');
+    const pending  = JSON.parse(localStorage.getItem('lh_pending_orders') || '[]');
+    const surveyRaw = localStorage.getItem('lh_survey_v1');
+    const surveyObj = surveyRaw ? (() => { try { return JSON.parse(surveyRaw); } catch(_) { return null; } })() : null;
+    const activeId  = localStorage.getItem('lh_order_id') || '—';
     const lines = [
-      `Device local orders (pendingOrders): ${pending.length}`,
-      ...pending.map(p => `  ${p['Order ID']} v${p['Version']} — ${p['Customer'] || '?'} — ${p['Status'] || 'Quote'} — fullData: ${p['Full Data'] ? 'YES (' + String(p['Full Data']).length + ' chars)' : 'NO'}`),
+      `=== DEVICE DIAGNOSTIC v73 ===`,
       ``,
-      `allOrders in memory: ${allOrders.length}`,
-      `App version: v72`,
-      `SHEETS_URL set: ${!!AppData.SHEETS_URL}`,
-    ];
+      `Locally stored orders: ${pending.length}`,
+      ...pending.map(p =>
+        `  ${p['Order ID']} v${p['Version']} | ${p['Customer'] || '?'} | ${p['Status'] || 'Quote'} | fullData: ${p['Full Data'] ? 'YES' : 'NO'}`
+      ),
+      ``,
+      `Active order on form: ${activeId}`,
+      `Form data present: ${surveyRaw ? 'YES (' + surveyRaw.length + ' chars)' : 'NO'}`,
+      surveyObj ? `  Customer: ${((surveyObj.customer || {}).name || (surveyObj.customer || {}).first || '?')} ${((surveyObj.customer || {}).last || '')}`.trim() : '',
+      ``,
+      `Sheets URL configured: ${!!AppData.SHEETS_URL}`,
+    ].filter(l => l !== null);
     const msg = lines.join('\n');
     alert(msg);
     console.log(msg);
