@@ -987,5 +987,20 @@ const Orders = (() => {
     setTimeout(() => startupSync().catch(() => {}), 6000);
   });
 
-  return { save, openPanel, closePanel, setFilter, toggleMine, setSearch, loadOrder, sendEmail, refresh, setStatus };
+  return { save, openPanel, closePanel, setFilter, toggleMine, setSearch, loadOrder, sendEmail, refresh, setStatus, diagnostic };
+
+  function diagnostic() {
+    const pending = JSON.parse(localStorage.getItem('lh_pending_orders') || '[]');
+    const lines = [
+      `Device local orders (pendingOrders): ${pending.length}`,
+      ...pending.map(p => `  ${p['Order ID']} v${p['Version']} — ${p['Customer'] || '?'} — ${p['Status'] || 'Quote'} — fullData: ${p['Full Data'] ? 'YES (' + String(p['Full Data']).length + ' chars)' : 'NO'}`),
+      ``,
+      `allOrders in memory: ${allOrders.length}`,
+      `App version: v72`,
+      `SHEETS_URL set: ${!!AppData.SHEETS_URL}`,
+    ];
+    const msg = lines.join('\n');
+    alert(msg);
+    console.log(msg);
+  }
 })();
