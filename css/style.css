@@ -272,6 +272,8 @@ textarea:focus {
 .btn-red            { background: var(--red); color: #fff; box-shadow: 0 2px 8px rgba(139,26,26,0.25); }
 .btn-red:hover      { background: #7a1616; }
 .btn-outline        { background: #fff; border: 1.5px solid var(--red); color: var(--red); }
+.btn-danger-outline { background: #fff; border: 1.5px solid #888; color: #666; }
+.btn-danger-outline:hover { border-color: #c0392b; color: #c0392b; }
 .btn-dark           { background: var(--header); border: 1px solid #333; color: #fff; }
 .btn-danger         { background: #c0392b; color: #fff; }
 .btn-sm             { padding: 8px 14px; font-size: 11px; min-height: 36px; }

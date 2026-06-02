@@ -17,7 +17,7 @@
     <div class="auth-logo-mark">LH</div>
     <div class="auth-logo-text">Luxury House</div>
     <div class="auth-logo-sub">Quote &amp; Order</div>
-    <div class="app-version">v77</div>
+    <div class="app-version">v78</div>
     <div class="auth-label">Enter Access Code</div>
     <input id="auth-input" type="password" inputmode="numeric"
       placeholder="——————" maxlength="10" autocomplete="off">
@@ -34,7 +34,7 @@
     <div class="logo-mark">LH</div>
     <div>
       <div class="logo-text">Luxury House</div>
-      <div class="logo-sub">Quote &amp; Order <span class="app-version">v77</span></div>
+      <div class="logo-sub">Quote &amp; Order <span class="app-version">v78</span></div>
     </div>
   </div>
   <div class="header-right">
@@ -222,6 +222,7 @@
       <input type="text" id="orders-search-input" placeholder="Search name, address, order ID…" oninput="Orders.setSearch(this.value)">
       <button class="btn btn-outline btn-sm" onclick="Orders.refresh()">↻ Refresh</button>
       <button class="btn btn-outline btn-sm" onclick="Orders.diagnostic()" title="Show what this device has stored locally">🔍 Diagnose</button>
+      <button class="btn btn-outline btn-sm btn-danger-outline" onclick="Orders.clearLocalCache()" title="Remove old orders from this device's local cache (does NOT delete from Sheets)">🗑 Clear Cache</button>
       <button class="btn btn-dark btn-sm"    onclick="Orders.closePanel()">✕ Close</button>
     </div>
     <!-- Row 2: filters + rep name for this device -->
@@ -247,10 +248,10 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-<script src="js/auth.js?v=77"></script>
-<script src="js/data.js?v=77"></script>
-<script src="js/sketch.js?v=77"></script>
-<script src="js/survey.js?v=77"></script>
-<script src="js/orders.js?v=77"></script>
+<script src="js/auth.js?v=78"></script>
+<script src="js/data.js?v=78"></script>
+<script src="js/sketch.js?v=78"></script>
+<script src="js/survey.js?v=78"></script>
+<script src="js/orders.js?v=78"></script>
 </body>
 </html>

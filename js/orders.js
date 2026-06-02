@@ -1030,7 +1030,22 @@ const Orders = (() => {
     setTimeout(() => startupSync().catch(() => {}), 6000);
   });
 
-  return { save, autoSave, openPanel, closePanel, setFilter, toggleMine, setSearch, loadOrder, sendEmail, refresh, setStatus, diagnostic };
+  /* ── Clear local cache (pendingOrders) ─── */
+  // Wipes the local list of saved orders so stale/deleted Sheets rows don't
+  // re-upload on next sync.  Immediately refreshes from Sheets so the panel
+  // shows the current cloud state.  Use this on each device after cleaning up
+  // old rows directly in Google Sheets.
+  function clearLocalCache() {
+    const count = pendingOrders.length;
+    if (!confirm(`Clear the ${count} order(s) cached on this device?\n\nThis does NOT delete anything from Google Sheets — it only removes the local copy so old deleted rows cannot sync back.\n\nThe panel will reload from the cloud immediately.`)) return;
+    pendingOrders = [];
+    localStorage.removeItem('lh_pending_orders');
+    allOrders = [];
+    Survey.toast('Local cache cleared — refreshing from cloud…');
+    refresh();
+  }
+
+  return { save, autoSave, openPanel, closePanel, setFilter, toggleMine, setSearch, loadOrder, sendEmail, refresh, setStatus, diagnostic, clearLocalCache };
 
   function diagnostic() {
     const pending  = JSON.parse(localStorage.getItem('lh_pending_orders') || '[]');
