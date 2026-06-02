@@ -23,10 +23,11 @@
 ══════════════════════════════════════════════ */
 
 const Survey = (() => {
-  let nextId         = 0;
-  const activeIds    = [];   // ordered list of active room ids
-  let saveTimer      = null;
-  let cloudSaveDirty = false;
+  let nextId          = 0;
+  const activeIds     = [];   // ordered list of active room ids
+  let saveTimer       = null;
+  let cloudAutoTimer  = null; // 45-second cloud auto-save timer
+  let cloudSaveDirty  = false;
 
   /* ── Init ── */
   function init() {
@@ -77,8 +78,15 @@ const Survey = (() => {
   function scheduleSave() {
     cloudSaveDirty = true;
     updateCloudStatus();
+    // Local save — fast, 400 ms debounce
     clearTimeout(saveTimer);
     saveTimer = setTimeout(save, 400);
+    // Cloud auto-save — 45 s after last change, completely silent
+    // Ensures data reaches Google Sheets even if the rep never taps Save.
+    clearTimeout(cloudAutoTimer);
+    cloudAutoTimer = setTimeout(() => {
+      if (typeof Orders !== 'undefined' && Orders.autoSave) Orders.autoSave().catch(() => {});
+    }, 45000);
   }
 
   function updateCloudStatus(state) {

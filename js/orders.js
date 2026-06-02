@@ -117,18 +117,16 @@ const Orders = (() => {
     }
   }
 
-  async function saveToSheets(payload) {
+  async function saveToSheets(payload, silent) {
     if (!AppData.SHEETS_URL) return;
 
-    // Step 1 — metadata-only via JSONP GET (URL stays tiny, always reaches Sheets)
     const result = await saveViaJSONP({ ...payload, fullData: '' });
     if (!(result && result.ok)) {
-      Survey.toast('⚠ Cloud save failed — saved on this device only');
+      if (!silent) Survey.toast('⚠ Cloud save failed — saved on this device only');
       return;
     }
-    Survey.toast('☁ Sheets saved ✓');
+    if (!silent) Survey.toast('☁ Sheets saved ✓');
 
-    // Step 2 — fullData: try client-side gzip JSONP, fall back to Netlify server gzip
     if (payload.fullData) saveFullDataOnly(payload.orderId, payload.fullData);
   }
 
@@ -225,9 +223,11 @@ const Orders = (() => {
   }
 
   /* ── Public: save current quote ─────────── */
-  async function save() {
+  // silent=true suppresses all toasts — used by auto-save so the user
+  // is not interrupted every 45 seconds while working.
+  async function save(silent) {
     const raw = localStorage.getItem('lh_survey_v1');
-    if (!raw) { Survey.toast('Nothing to save yet'); return; }
+    if (!raw) { if (!silent) Survey.toast('Nothing to save yet'); return; }
 
     const data    = JSON.parse(raw);
     const orderId = currentOrderId();
@@ -239,9 +239,6 @@ const Orders = (() => {
 
     const address = data.customer?.address || '';
 
-    // Google Sheets has a 50,000 char cell limit.
-    // If fullData is too large (detailed sketches), strip shapes so the
-    // order info saves reliably. The sketch stays on this device in localStorage.
     let fullData = raw;
     if (fullData.length > 44000) {
       try {
@@ -271,10 +268,8 @@ const Orders = (() => {
       fullData
     };
 
-    Survey.toast('Saving…');
+    if (!silent) Survey.toast('Saving…');
 
-    // Build the local order record first — used for both the in-memory list
-    // and the pendingOrders cache so it survives if the POST doesn't reach Sheets.
     const localOrder = {
       'Order ID': orderId,  'Property': payload.property,
       'Saved At': payload.savedAt, 'Version': String(version),
@@ -286,14 +281,11 @@ const Orders = (() => {
       'Full Data': payload.fullData
     };
 
-    // Persist locally so the order is ALWAYS visible even if the POST fails
-    // or the next JSONP refresh returns an empty sheet.
     pendingOrders = pendingOrders.filter(p => p['Order ID'] !== orderId);
     pendingOrders.unshift(localOrder);
     if (pendingOrders.length > 50) pendingOrders = pendingOrders.slice(0, 50);
     localStorage.setItem('lh_pending_orders', JSON.stringify(pendingOrders));
 
-    // Session-permanent record — survives any JSONP result within this page load
     sessionSaved.unshift(localOrder);
 
     allOrders = allOrders.filter(o => o['Order ID'] !== orderId);
@@ -302,22 +294,35 @@ const Orders = (() => {
     if (panel && panel.classList.contains('open')) renderList();
 
     if (!AppData.SHEETS_URL) {
-      Survey.toast('Add your Google Sheets URL to js/data.js first');
+      if (!silent) Survey.toast('Add your Google Sheets URL to js/data.js first');
     } else {
-      Survey.toast(`Saved — ${orderId} v${version}`);
+      if (!silent) Survey.toast(`Saved — ${orderId} v${version}`);
     }
 
-    // Mark cloud save as clean and update indicator
     if (typeof Survey !== 'undefined' && Survey.updateCloudStatus) Survey.updateCloudStatus('clean');
 
-    // Step 1 — text data via JSONP GET (same mechanism as load — works on iOS).
-    saveToSheets(payload);
+    saveToSheets(payload, silent);
 
-    // Step 2 — Drive image via Netlify proxy (full-quality html2canvas screenshot).
-    // Fire-and-forget: runs after save toast so it doesn't block the UI.
-    buildOrderImage().then(imageData => {
-      if (imageData) saveDriveImage(payload, imageData);
-    }).catch(() => {});
+    // Drive image only on manual save — avoid capturing every 45 seconds
+    if (!silent) {
+      buildOrderImage().then(imageData => {
+        if (imageData) saveDriveImage(payload, imageData);
+      }).catch(() => {});
+    }
+  }
+
+  // Auto-save: silent cloud save triggered by inactivity timer in survey.js.
+  // Only runs if there is meaningful content (customer name or address).
+  async function autoSave() {
+    const raw = localStorage.getItem('lh_survey_v1');
+    if (!raw) return;
+    try {
+      const data = JSON.parse(raw);
+      const name = ((data.customer?.name || data.customer?.first || '') + ' ' + (data.customer?.last || '')).trim();
+      const addr = (data.customer?.address || '').trim();
+      if (!name && !addr) return; // blank form — nothing worth saving
+    } catch (_) { return; }
+    await save(true);
   }
 
   /* ── Convert a stored local order object back to a saveToSheets payload ── */
@@ -987,7 +992,7 @@ const Orders = (() => {
     setTimeout(() => startupSync().catch(() => {}), 6000);
   });
 
-  return { save, openPanel, closePanel, setFilter, toggleMine, setSearch, loadOrder, sendEmail, refresh, setStatus, diagnostic };
+  return { save, autoSave, openPanel, closePanel, setFilter, toggleMine, setSearch, loadOrder, sendEmail, refresh, setStatus, diagnostic };
 
   function diagnostic() {
     const pending  = JSON.parse(localStorage.getItem('lh_pending_orders') || '[]');
