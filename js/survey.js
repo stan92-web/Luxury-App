@@ -429,6 +429,32 @@ const Survey = (() => {
         backgroundColor: '#ffffff',
         logging:         false,
         onclone: (doc) => {
+          // ── Step 1: sync live .value → cloned DOM ────────────────────────
+          // html2canvas clones HTML attributes but NOT the DOM .value property
+          // that holds text the user typed. Without this, every field is blank.
+          document.querySelectorAll('input, textarea, select').forEach(orig => {
+            if (!orig.id) return;
+            const clone = doc.getElementById(orig.id);
+            if (clone) clone.value = orig.value;
+          });
+
+          // ── Step 2: replace textareas with divs ──────────────────────────
+          // iOS Safari html2canvas renders <textarea> content as empty even
+          // after .value is set. Replace each one with a styled <div> so the
+          // notes text is guaranteed to appear in the captured image.
+          doc.querySelectorAll('textarea').forEach(ta => {
+            const div = doc.createElement('div');
+            div.textContent = ta.value || '';
+            div.style.cssText =
+              'white-space:pre-wrap;word-break:break-word;font-size:13px;' +
+              'line-height:1.6;color:#222;padding:8px 10px;' +
+              'min-height:' + Math.max(52, (ta.rows || 3) * 22) + 'px;' +
+              'border:1px solid #ddd;border-radius:6px;background:#fafafa;' +
+              'width:100%;box-sizing:border-box;margin:0;';
+            ta.parentNode.replaceChild(div, ta);
+          });
+
+          // ── Step 3: remove non-print UI and style the sheet ──────────────
           doc.querySelectorAll('.no-print').forEach(el => el.remove());
           doc.getElementById('toast')?.remove();
           doc.body.style.background = '#fff';
