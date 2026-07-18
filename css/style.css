@@ -285,6 +285,8 @@ textarea:focus {
 .btn-email:hover    { background: #6e1414; }
 .btn-orders         { background: #3d3d3d; color: #fff; border: none; }
 .btn-orders:hover   { background: #555; }
+.btn-ninja          { background: #5b3d8a; color: #fff; border: none; }
+.btn-ninja:hover    { background: #4a3070; }
 .wa-icon            { width: 18px; height: 18px; flex-shrink: 0; }
 .btn-row            { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 24px; align-items: center; }
 

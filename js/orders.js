@@ -1045,6 +1045,76 @@ const Orders = (() => {
     refresh();
   }
 
+  /* ── Push to Invoice Ninja ───────────────────
+     Creates a versioned invoice (v1, v2, v3…) each time — the previous
+     version is left untouched in Invoice Ninja so old quotes are safe.
+     Client is created on first push; contact details are updated on re-push.
+     Design notes (room notes, door styles, dimensions) are formatted clearly
+     in the invoice public_notes section. ── */
+  async function pushToNinja() {
+    const raw = localStorage.getItem('lh_survey_v1');
+    if (!raw) { Survey.toast('No order data — fill in the form first'); return; }
+
+    let order;
+    try { order = JSON.parse(raw); } catch (_) { Survey.toast('Invalid order data'); return; }
+
+    const orderId = localStorage.getItem('lh_order_id');
+    if (!orderId) { Survey.toast('Save to Cloud first, then push to Invoice Ninja'); return; }
+
+    const existing    = JSON.parse(localStorage.getItem(`lh_ninja_${orderId}`) || '[]');
+    const versionNum  = existing.length + 1;
+
+    const cust     = order.customer || {};
+    const fullName = [(cust.name || cust.first || ''), (cust.last || '')].filter(Boolean).join(' ') || 'Unknown';
+
+    const prevNote = existing.length > 0
+      ? `Previous version (v${existing.length}) will stay safe in Invoice Ninja.\n\n`
+      : '';
+
+    if (!confirm(
+      `Push to Invoice Ninja as ${orderId} v${versionNum}?\n\n` +
+      `Customer: ${fullName}\n` +
+      `Address: ${cust.address || '—'}\n\n` +
+      prevNote +
+      'A new versioned invoice will be created.'
+    )) return;
+
+    Survey.toast(`Pushing to Invoice Ninja (v${versionNum})…`);
+
+    // Compact image for Ninja — scale:1 keeps payload under 500 KB
+    let imageData = null;
+    try {
+      const canvas = await Survey.captureSheet({ scale: 1 });
+      imageData = canvas.toDataURL('image/jpeg', 0.6);
+    } catch (_) { /* non-fatal — invoice will be created without image */ }
+
+    const enriched = {
+      ...order,
+      rep: localStorage.getItem('lh_rep_name') || cust.surveyor || '',
+    };
+
+    try {
+      const resp = await fetch('/.netlify/functions/ninja-push', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ order: enriched, orderId, versionNum, imageData }),
+      });
+
+      const result = await resp.json();
+      if (!result.ok) {
+        Survey.toast(`⚠ Invoice Ninja failed: ${result.error || 'unknown error'}`);
+        return;
+      }
+
+      existing.push(result.invoiceId);
+      localStorage.setItem(`lh_ninja_${orderId}`, JSON.stringify(existing));
+
+      Survey.toast(`Invoice Ninja v${versionNum} created ✓`);
+    } catch (_) {
+      Survey.toast('⚠ Invoice Ninja push failed — check connection');
+    }
+  }
+
   function diagnostic() {
     const pending   = JSON.parse(localStorage.getItem('lh_pending_orders') || '[]');
     const surveyRaw = localStorage.getItem('lh_survey_v1');
@@ -1069,5 +1139,5 @@ const Orders = (() => {
     console.log(msg);
   }
 
-  return { save, autoSave, openPanel, closePanel, setFilter, toggleMine, setSearch, loadOrder, sendEmail, refresh, setStatus, diagnostic, clearLocalCache };
+  return { save, autoSave, openPanel, closePanel, setFilter, toggleMine, setSearch, loadOrder, sendEmail, refresh, setStatus, diagnostic, clearLocalCache, pushToNinja };
 })();

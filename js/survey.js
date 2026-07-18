@@ -418,13 +418,14 @@ const Survey = (() => {
     return n;
   }
 
-  async function captureSheet() {
+  async function captureSheet(opts) {
+    const imgScale = (opts && opts.scale) || 2;
     window.scrollTo(0, 0);
     activeIds.forEach(scaleCanvasForPrint);
     await new Promise(r => requestAnimationFrame(r));
     try {
       return await html2canvas(document.getElementById('app-wrap'), {
-        scale:           2,
+        scale:           imgScale,
         useCORS:         true,
         backgroundColor: '#ffffff',
         logging:         false,

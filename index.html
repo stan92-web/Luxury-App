@@ -17,7 +17,7 @@
     <div class="auth-logo-mark">LH</div>
     <div class="auth-logo-text">Luxury House</div>
     <div class="auth-logo-sub">Quote &amp; Order</div>
-    <div class="app-version">v80</div>
+    <div class="app-version">v81</div>
     <div class="auth-label">Enter Access Code</div>
     <input id="auth-input" type="password" inputmode="numeric"
       placeholder="——————" maxlength="10" autocomplete="off">
@@ -34,7 +34,7 @@
     <div class="logo-mark">LH</div>
     <div>
       <div class="logo-text">Luxury House</div>
-      <div class="logo-sub">Quote &amp; Order <span class="app-version">v80</span></div>
+      <div class="logo-sub">Quote &amp; Order <span class="app-version">v81</span></div>
     </div>
   </div>
   <div class="header-right">
@@ -140,6 +140,7 @@
     <button class="btn btn-red" onclick="Survey.addRoom()">+ Add Wardrobe / Room</button>
     <button class="btn btn-save" onclick="Orders.save()" title="Save to Google Sheets &amp; cloud">💾 Save to Cloud</button>
     <span id="cloud-status" class="cloud-status"></span>
+    <button class="btn btn-ninja no-print" onclick="Orders.pushToNinja()" title="Create versioned invoice in Invoice Ninja — keeps previous version safe">📄 → Invoice Ninja</button>
     <button class="btn btn-dark" onclick="Survey.clearAll()" style="margin-left:auto">🗑 New Quote</button>
   </div>
 
@@ -248,10 +249,10 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-<script src="js/auth.js?v=80"></script>
-<script src="js/data.js?v=80"></script>
-<script src="js/sketch.js?v=80"></script>
-<script src="js/survey.js?v=80"></script>
-<script src="js/orders.js?v=80"></script>
+<script src="js/auth.js?v=81"></script>
+<script src="js/data.js?v=81"></script>
+<script src="js/sketch.js?v=81"></script>
+<script src="js/survey.js?v=81"></script>
+<script src="js/orders.js?v=81"></script>
 </body>
 </html>

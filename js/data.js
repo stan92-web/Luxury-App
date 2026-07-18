@@ -23,6 +23,15 @@ const AppData = (() => {
      5. Copy the Web App URL and paste below        */
   const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbyZa4WLmRU0GuUTfN3HsmhGujADWU8HiEsCd_FQEl2GLJoVK7mQi9wlHbDU3abHQ7gP/exec';
 
+  /* ── Invoice Ninja ────────────────────────────
+     1. Log in to Invoice Ninja (invoicing.co or self-hosted)
+     2. Settings → API Tokens → create a token and copy it
+     3. In Netlify dashboard → Site settings → Environment variables, add:
+          NINJA_URL  =  https://invoicing.co   (your Invoice Ninja base URL)
+          NINJA_KEY  =  your_api_token_here
+     4. Paste your Invoice Ninja base URL below (used to open invoices):  */
+  const NINJA_URL = ''; // ← e.g. 'https://invoicing.co'
+
   /* ── EmailJS ──────────────────────────────────
      1. Register free at emailjs.com
      2. Add Email Service (connect Gmail)
@@ -83,6 +92,7 @@ const AppData = (() => {
   return {
     OFFICE_WA,
     SHEETS_URL,
+    NINJA_URL,
     EMAILJS_SERVICE,
     EMAILJS_TEMPLATE,
     EMAILJS_PUBLIC,
